@@ -879,11 +879,138 @@ var menuTree = allAuthInfos
 
 ---
 
+### 附录 K. BP 容器层 React 陷阱清单(踩坑沉淀)
+
+> 后续接入 SRM/WMS/MES 等子应用时**容器层 BpLayout / TabsContext / SubAppHostPool 不再大改**,仅子应用本体改造。本附录列已发现的容器层陷阱,**接入新子应用前先扫一遍代码确认这些陷阱没回归**。
+
+#### K.1 useEffect deps 误填导致状态被覆盖(2026-05-08 BP 菜单 2 天踩坑)
+
+**反模式**:
+```jsx
+// TabsContext.jsx — 启动恢复 Tab 列表
+const navigate = useNavigate();
+useEffect(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    // ... 读 localStorage 旧值 setTabs([WORKBENCH_TAB, ...businessTabs])
+}, [navigate]);  // ❌ deps 写 [navigate]
+```
+
+**根因链**:
+1. React Router 6 的 `useNavigate()` 在 `location` 变化后**返回新函数引用**(内部依赖 NavigationContext)
+2. 用户点新菜单 → openTab 设新 Tab + setActiveKey + `navigate(path)` → location 变化
+3. → BpLayout 重 render → TabsProvider 重 render → useNavigate 返回新引用
+4. → `useEffect [navigate]` deps 变化 → effect 重跑
+5. → 读 localStorage **旧值**(写入 effect 还没跑) → `setTabs([WORKBENCH_TAB, ...旧 Tab 列表])`
+6. → 覆盖刚 openTab 设的新 Tab → React diff 发现新 Tab 消失 → unmount 新 iframe
+7. **症状**:点新菜单后页面空白,需要再点一次同菜单(此时 localStorage 已写入新 Tab)才显示
+
+**正确写法**:
+```jsx
+useEffect(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    // ... mount 时一次性恢复
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);  // ✅ 空 deps,只 mount 时跑一次
+```
+
+**判断规则**:
+- effect 体内**未使用 navigate** → deps 必空数组,加 eslint-disable 注释
+- effect 体内**实际使用 navigate**(如 navigate('/login'))→ 用 `useRef(navigate)` + 空 deps,避免 effect 在 navigate 变化时重跑
+- **任何"启动恢复 / mount-once 副作用"**都必须空 deps
+
+#### K.2 React.StrictMode 双 mount 让 iframe.onLoad 不触发
+
+**反模式**:
+```jsx
+// main.jsx
+ReactDOM.createRoot(...).render(
+  <React.StrictMode>  // ❌ dev 双 mount
+    <App />
+  </React.StrictMode>
+);
+```
+
+**根因**:
+- Strict Mode 在 dev 让组件经历 `mount → unmount → remount` 模拟副作用清理
+- iframe DOM 第一次 mount 后 `src` 设置 → 浏览器开始 fetch
+- Strict Mode unmount → iframe DOM 销毁 → fetch 中断 → `onLoad` 永不触发
+- Strict Mode remount → 新 iframe + `src` 设置 → 但浏览器认为是同一 src 重复请求 → `onLoad` 也可能不触发
+- 结果:`iframeLoaded` 永远 false,Spin 卡住
+
+**修法**:**dev 关掉 Strict Mode**(prod 本来就没)
+```jsx
+ReactDOM.createRoot(...).render(<App />);
+```
+
+**为啥不用 Strict Mode 的"标准"修法**:
+- 让 iframe 脱离 React lifecycle(`useRef + useEffect` imperative 创建)— 大改动 ~150 行
+- 接受"Strict Mode 关掉 → 失去 dev 副作用检测"的代价 — BP 容器复杂度低,可接受
+
+#### K.3 React Fragment 子节点数量不稳定导致整树 unmount/remount
+
+**反模式**:
+```jsx
+function PreloadHost() {
+    const { apps } = useApps();  // 异步加载
+    if (apps.length === 0) return null;  // ❌ 渲染从 null 变 <div>
+    return <div>{...preload iframes...}</div>;
+}
+
+function SubAppHostPool() {
+    return (
+        <>
+            <PreloadHost />            {/* 0 → 1 个元素 */}
+            <div>{业务 iframe pool}</div>  {/* React diff 时位置错乱 */}
+        </>
+    );
+}
+```
+
+**根因**:
+- `apps` 异步加载,加载前 PreloadHost return null,加载后 return `<div>`
+- React Fragment 子节点数量从 1 变 2 → diff 算法把 `<div>{业务 iframe pool}</div>` 当成新元素
+- → 业务 iframe pool 整体 unmount + remount → iframe 加载中断
+
+**修法**:**Fragment 子节点必须数量稳定**
+```jsx
+function PreloadHost() {
+    const { apps } = useApps();
+    return (
+        <div style={{ display: 'none' /* 或绝对定位 hidden */ }}>
+            {apps.length > 0 && apps.map(...)}
+        </div>
+    );  // ✅ 永远返回 <div>,内部条件渲染
+}
+```
+
+#### K.4 跨子组件 React bug 必须配 mount/render trace + 自动化复现
+
+**反模式**:
+- 浏览器肉眼看 console + 截屏诊断
+- 在子组件层(SubAppHostPool / iframe)反复改方案
+- 涛哥肉眼一次只看一个截屏,**第二次 render 缺某子组件日志这种关键证据看不出来**
+
+**正确流程**:
+1. **每个关键组件加 `[XXX-DIAG] render` trace**(mount/render/unmount/state 关键值)
+2. 加 mount age = `Date.now() - mountTimeRef.current` 看是否 unmount/remount
+3. **配 Playwright 全自动复现**(headless,跑出完整 console 时间线)
+4. **看缺失的 render 日志** — 第二次 render 缺某子组件 = 该子组件被 unmount 的硬证据
+
+#### 自检清单(新子应用接入前)
+
+- [ ] BpLayout / TabsContext / 任何 Provider 的 useEffect deps 不含 `[navigate]` `[location]` 等不稳定引用
+- [ ] main.jsx 没用 `<React.StrictMode>` 包裹 BP 容器(子应用本体不限)
+- [ ] SubAppHostPool 任何 Fragment 子节点数量在所有 state 下保持稳定(用占位 div + 内部条件渲染)
+- [ ] 容器层未使用 React 18 `useTransition` / `useDeferredValue` 包业务 Tab 切换(可能引入新一轮 unmount/remount)
+
+---
+
 ## 3. 历史与变更
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-05-07 | 1.0 | 首版落地(Platform spec P-C 同步);MDM 作首个参考实现 |
+| 2026-05-08 | 1.1 | 加附录 K — BP 容器层 React 陷阱清单(BP 菜单 2 天踩坑教训沉淀);后续 SRM/WMS/MES 接入前必扫 K.5 自检清单 |
 
 ---
 
