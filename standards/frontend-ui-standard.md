@@ -1,12 +1,34 @@
 # 前端 UI 设计标准 / Frontend UI Design Standard
 
 > **2026-05-05 涛哥拍板,跨前端通用设计标准**
->
-> 适用范围:**所有 SYSV2 前端应用**(SYS.3 / BP / AuditPortal / MDM)的列表页 + 编辑表单 + 过滤组件 + 工具栏
->
-> **设计标杆**:`AI.REACT.SYS.3/src/views/HREmp/index.jsx`(员工档案页)
->
-> 新建 / 重构 / 迁移列表页**默认套用**,不需要单独 spec 拍板;违反标准 = `code-reviewer` HIGH。
+> **2026-05-09 涛哥校准**:适用范围精确限定 **List Page**(含 Table + Toolbar + Pagination 的 CRUD Index Page),非列表型页面只做技术栈迁移 + 功能骨架等价
+
+## 适用范围(精确判定)
+
+### ✅ 强制套用 — List Page(列表型页面)
+
+也称 Index Page / Master List / Resource Grid,**同时满足**:
+1. 含表格组件(`ProTable` / `Table` / `DataGrid`)
+2. 含工具栏(Toolbar with action buttons,如新增/导出/批量操作)
+3. 含分页(Pagination)
+
+通常是 **CRUD Index Page**(`material/index.jsx` / `supplier/index.jsx` / `HREmp/index.jsx`)。
+
+### ❌ 不适用 — 非列表型页面
+
+只做技术栈迁移(craco→Vite / antd 4→5 / class→hooks)+ 功能骨架等价(详 ADR-014 + memory `feedback_skeleton_equivalent_migration.md`),**不强制**套用本标准:
+
+| 页面类型(术语) | 特征 | 示例 |
+|---|---|---|
+| **Form Page**(Single Form / Edit Drawer / Detail View / Master-Detail Form) | 单/多 form / Drawer / Modal,**无 Table** | `material/edit.jsx` / `supplier/edit.jsx` |
+| **Dashboard**(KPI Board / Analytics Page) | 卡片网格 + 图表 + 数据可视化 | `Dashboard/index.jsx` / `Workbench` |
+| **Wizard**(Multi-step Flow / Stepper Page) | 多步骤 Step + Next/Prev | 数据导入向导 |
+| **Upload Page**(File Upload / Import / Export) | Dropzone + FileList + Progress | `BasicDataImport/index.jsx` |
+| **Settings Page**(Configuration Page) | 左侧 Tab + 右侧表单,无 Table | `Security/SysParams` |
+
+**设计标杆**:`AI.REACT.SYS.3/src/views/HREmp/index.jsx`(员工档案页 — List Page 标准实现)
+
+新建 / 重构 / 迁移**列表页**默认套用,不需要单独 spec 拍板;违反标准 = `code-reviewer` HIGH。
 
 ## 1. 技术栈基线
 
