@@ -74,6 +74,17 @@ Deprecated   → 废弃但未被取代
 | [ADR-007](ADR-007-auth-4-rigidity.md) | 鉴权 4 条刚性 | Accepted | 2026-05-05 回溯 | 跨项目 | 本仓 |
 | [ADR-008](ADR-008-end-to-end-8-checks.md) | 端到端交付 8 项核对清单 | Accepted | 2026-05-05 回溯 | 跨项目 | 本仓 |
 | [ADR-009](ADR-009-claude-md-cheatsheet-distillation.md) | 全局 CLAUDE.md 精简到 cheatsheet 本质 | Accepted | 2026-05-05 | 跨项目 | 本仓 |
+| [ADR-010](../../SYSV2/docs/decisions/ADR-010-platform-spec-overrides-mdm-no-touch-app-center.md) | Platform spec 不动应用中心(MDM 路径切换 /srm/ → /MDM/) | Accepted | 2026-05-06 | 项目级(SYSV2) | SYSV2 |
+| [ADR-011](ADR-011-bp-business-portal-boundary.md) | BP 业务门户边界 | Accepted | 2026-05-07 | 跨项目 | 本仓 |
+| [ADR-012](ADR-012-subapp-onboarding-sop-enforcement.md) | SubApp Onboarding SOP 强制执行 | Accepted | 2026-05-07 | 跨项目 | 本仓 |
+| [ADR-013](ADR-013-codebase-profile-maintenance.md) | Codebase 画像维护(自动化历史扫描) | Accepted | 2026-05-09 | 跨项目 | 本仓 |
+| [ADR-014](ADR-014-migration-refactor-workflow.md) | 迁移改造工作流(Front-load + Back-automate) | Accepted | 2026-05-09 | 跨项目 | 本仓 |
+| [ADR-015](ADR-015-fact-driven-no-speculation.md) | 事实驱动禁臆测 4 步硬规则 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
+| [ADR-016](ADR-016-spec-start-grep-history-first.md) | Spec/Plan 启动前必扫历史目录 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
+| [ADR-017](ADR-017-batch-contract-extended.md) | 批次合同扩大版 — Y 一次跑完不打断 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
+| [ADR-018](ADR-018-decision-authorization-tiers-and-boundary-matrix.md) | 决策授权三档 + 边界判定显式矩阵 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
+| [ADR-019](ADR-019-solve-problem-first-rules-negotiable.md) | 解决问题第一 + 规则可推翻 + 敢于说不 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
+| [ADR-020](ADR-020-frontend-i18n-scope-boundary.md) | 前端中英 i18n 范围边界(用户输入不双语,平台 UI 必双语) | Accepted | 2026-05-10 | 跨项目 | 本仓 |
 
 ---
 

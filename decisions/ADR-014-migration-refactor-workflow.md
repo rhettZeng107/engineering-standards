@@ -22,7 +22,7 @@
 - ADR-008:E2E 8 项核对清单 ✓ — 但**未约束 spec 阶段必嵌**
 - memory `feedback_batch_contract_extended.md`:中断白名单 4 类
 - memory `feedback_code_reviewer_trigger_matrix.md`:每次代码改动后触发(分散)
-- 全局 CLAUDE.md「双轨工作流」3 路: 标准 / 简单 / experiment
+- 全局 CLAUDE.md「工作流路径」(本 ADR 落地后变更:2026-05-06 拍板时为「双轨」3 路 = 标准/简单/experiment;2026-05-09 ADR-014 加迁移改造路径变 4 路;2026-05-09 涛哥拍板**删 experiment 通道**,**最终 = 三轨:标准 / 简单 / 迁移改造**)
 
 ### 决策不做的代价
 
@@ -32,7 +32,7 @@
 
 ## Decision(决策本身)
 
-**一句话**:老项目迁移改造系列(SYS / MDM / SRM / MES / WMS / EAM / TPM)走**「迁移改造路径」**(双轨工作流第 4 路),核心 = **Spec 阶段 Front-load(Claude 自主深度风险识别)+ Plan 阶段 Back-automate(自治不中断 + 完结自动 CR + 自治修复)**。
+**一句话**:老项目迁移改造系列(SYS / MDM / SRM / MES / WMS / EAM / TPM)走**「迁移改造路径」**(三轨工作流第 3 路;2026-05-09 实时同步:experiment 通道已删除),核心 = **Spec 阶段 Front-load(Claude 自主深度风险识别)+ Plan 阶段 Back-automate(自治不中断 + 完结自动 CR + 自治修复)**。
 
 ### 1. Spec 阶段 Front-load(Claude 自主能力强化,非涛哥拍板矩阵)
 
@@ -154,7 +154,7 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
   - 升级 `feedback_code_reviewer_trigger_matrix.md`(plan 完结自动触发 + 自治修复 2 轮)
   - 新建 `feedback_e2e_double_layer_risk_checklist.md`(E2E checklist)
   - 新建 `feedback_skeleton_equivalent_migration.md`(功能骨架等价)
-- 影响全局 CLAUDE.md「双轨工作流」段:3 路 → 4 路加迁移改造路径
+- 影响全局 CLAUDE.md「工作流路径」段:3 路 → 4 路加迁移改造路径(2026-05-09 涛哥后续删 experiment 通道,最终落定为三轨)
 
 ---
 
@@ -185,7 +185,7 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
   - `feedback_skeleton_equivalent_migration.md`(功能骨架等价)
   - `feedback_batch_contract_extended.md`(批次合同扩大版,迁移改造路径中断白名单 3 类)
   - `feedback_code_reviewer_trigger_matrix.md`(plan 完结自动触发 + 自治修复)
-- 全局 CLAUDE.md「双轨工作流」段(3 路 → 4 路加迁移改造路径)
+- 全局 CLAUDE.md「三轨工作流」段(2026-05-09 最终落定:标准 / 简单 / 迁移改造)
 - 试点:SYSV2 BP 切换组织 spec(2026-05-09 落地)
 
 ## History

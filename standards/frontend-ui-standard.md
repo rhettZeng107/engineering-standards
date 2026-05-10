@@ -33,7 +33,7 @@
 ## 1. 技术栈基线
 
 - **核心库**:`antd 5` + `@ant-design/pro-components`(ProTable / ProForm / ProDescriptions)
-- **国际化**:`react-i18next` + `useTranslation()` + 业务 key 命名 `<page>.<field>`(如 `t("hrEmp.empTab")`)
+- **国际化**:`react-i18next` + `useTranslation()` + 业务 key 命名 `<page>.<field>`(如 `t("hrEmp.empTab")`);**范围边界**详见 [`frontend-i18n-standard.md`](frontend-i18n-standard.md)(2026-05-10 涛哥拍板:平台 UI 必双语 / 用户输入数据不翻译 / 客户自定义兜底中文)
 - **路由**:`react-router-dom` + 路由配置中央化(MDM 现代化后参照 `routes.config.js` 模式)
 - **❌ 不引入私有库**(`@org/private-antd-components` 仅 SYS.3 历史依赖,新前端 / 重构前端**禁引**;SYS.3 后续按独立 spec 迁出)
 
