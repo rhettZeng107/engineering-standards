@@ -1,0 +1,19 @@
+## .NET build output
+bin/
+obj/
+*.user
+*.suo
+
+## NuGet 本地 feed(打包产物,不入 git)
+local-feed/
+
+## IDE
+.vs/
+.vscode/
+*.swp
+
+## Test output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
