@@ -1,0 +1,28 @@
+# 前端 .env.production 标准模板
+#
+# 适用:SYSV2 所有 Vite React 前端(SYS.3 / BP / AP / MDM / 后续子应用)
+# 部署目标:10.8 IIS,数据库:10.26 SQL Server
+# 详细 IP 表:docs/ops/deployment-ip-map.md
+#
+# 关键决策(违反 = pipeline pre-check 失败阻塞):
+# 1. VITE_APIHOST 必填:10.8:<端口> 形式,SYSV2 各前端端口约定:
+#    - SYS.3 控制台 @ 8001 → VITE_APIHOST=172.21.10.8:8001
+#    - BP 业务门户 @ 8002 → VITE_APIHOST=172.21.10.8:8002
+#    - AP 审计门户 @ 8003 → VITE_APIHOST=172.21.10.8:8003
+#    - MDM 子应用 @ 5026 → VITE_APIHOST=172.21.10.8:5026
+# 2. 后端 API 路径前缀走 hostMap,前端代码用 Api.XxxApi.YyyAction 常量,禁硬编码
+# 3. wujie 子应用部署在父应用子 VDir 下时,VITE_PUBLIC_PATH 必填为 `/<SubApp>/`(如 `/MDM/`)
+# 4. 严禁把测试/开发 IP(localhost / 172.21.10.18 / 172.21.10.22)写入 production
+#
+# 占位符替换:
+#   {{API_HOST}} = 部署 IIS 站点地址(如 172.21.10.8:8001)
+#   {{PUBLIC_PATH}} = Vite BASE_URL(主应用 / 或子应用 /SubApp/)
+
+VITE_APIHOST={{API_HOST}}
+VITE_PUBLIC_PATH={{PUBLIC_PATH}}
+
+# 后端业务 API 直连地址(MDM/SRM 等子应用业务调用走的)
+# VITE_Url=http://{{API_HOST}}/
+
+# 关闭 Vite source map(production 防泄漏 + 减体积)
+VITE_SOURCEMAP=false

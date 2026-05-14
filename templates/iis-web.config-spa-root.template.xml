@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IIS web.config 标准模板 — SPA 主应用根站点
+
+  适用:SYSV2 顶层 SPA 应用根目录(SYS.3 / BP / AP)
+  部署:10.8 IIS 各端口主站点
+  详细:docs/ops/cicd-iis-server-setup.md
+
+  关键决策(违反 = code-reviewer HIGH):
+  1. SPA Fallback rule 必须 exclude 后端 API 路径(/api / /swagger / /hangfire / /JYCoreSysWebApi 等)
+     防止子 application(后端 WebApi 部署在 SPA 根下 /JYCoreSysWebApi)请求被 SPA index.html 拦截
+  2. 子 VDir(wujie 子应用 /MDM/)如部署在本根下,**子 VDir 必须有自己的 web.config**
+     (本模板的 SPA Fallback 配 inheritInChildApplications="false" 防穿透)
+  3. .json / .webmanifest mime 显式声明(antd 5 + i18next + manifest 加载需要)
+
+  替换占位:
+    {{API_EXCLUDE_PATTERN}} = 后端 API 路径 regex(如 ^/(api|swagger|hangfire|JYCoreSysWebApi))
+-->
+<configuration>
+  <location path="." inheritInChildApplications="false">
+    <system.webServer>
+      <rewrite>
+        <rules>
+          <rule name="SPA Fallback" stopProcessing="true">
+            <match url="(.*)" />
+            <conditions logicalGrouping="MatchAll">
+              <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+              <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+              <add input="{REQUEST_URI}" pattern="{{API_EXCLUDE_PATTERN}}" negate="true" />
+            </conditions>
+            <action type="Rewrite" url="/index.html" />
+          </rule>
+        </rules>
+      </rewrite>
+      <staticContent>
+        <remove fileExtension=".json" />
+        <mimeMap fileExtension=".json" mimeType="application/json" />
+        <remove fileExtension=".webmanifest" />
+        <mimeMap fileExtension=".webmanifest" mimeType="application/manifest+json" />
+      </staticContent>
+    </system.webServer>
+  </location>
+</configuration>

@@ -1,0 +1,99 @@
+# ADO Pipeline pre-check 标准 YAML 片段
+#
+# 适用:SYSV2 所有 React 前端 pipeline 的 Stage 1 Build 第 1 步
+# 用途:静态校验 .env.production / vite.config.ts / web.config / hostMap 等部署关键文件
+# 标准源:ADR-023 前端统一 4 标准 + docs/ops/deployment-ip-map.md
+#
+# 关键约束(违反 = pipeline 立刻 fail 阻塞):
+# 1. PowerShell -match 必带 (?m) 多行模式开关(锚 ^ 才能匹配每行首)
+#    踩坑:无 (?m) → -match 只看整个文件作单行,$null 误判通过
+# 2. continueOnError: false(pre-check 失败立即阻塞,不让后续 build/test 浪费 Agent VM 时间)
+# 3. 校验项要列具体:不要写 "build OK"宽泛文案,要回报哪个文件第几行违反哪条标准
+#
+# 替换占位:
+#   {{PROJECT_NAME}} = 项目名(SYS3/BP/AP/MDM)
+#   {{EXPECTED_API_HOST}} = .env.production 内 VITE_APIHOST 期望值(如 172.21.10.8:8001)
+#   {{EXPECTED_VITE_BASE}} = vite base 期望值(主应用 / 或子应用 /SubApp/)
+
+- task: PowerShell@2
+  displayName: 'Pre-check: 前端部署关键配置静态校验(ADR-023 + IP map)'
+  inputs:
+    targetType: 'inline'
+    pwsh: true
+    script: |
+      $ErrorActionPreference = 'Stop'
+      $errors = @()
+
+      # 1. .env.production 必有 + VITE_APIHOST 必含 10.8
+      $envFile = '.env.production'
+      if (-not (Test-Path $envFile)) {
+          $errors += '.env.production 缺失(违反 ADR-023 — 模板 engineering-standards/templates/frontend-env-production.template)'
+      } else {
+          $envContent = Get-Content $envFile -Raw
+          if ($envContent -notmatch '(?m)^VITE_APIHOST=172\.21\.10\.8') {
+              $errors += 'VITE_APIHOST 必须指向 172.21.10.8(production IIS,详 docs/ops/deployment-ip-map.md)'
+          }
+          # 2. .env.production 严禁 dev/退役 IP 残留
+          $bannedPatterns = @{
+              'localhost' = 'localhost'
+              '127.0.0.1' = '127\.0\.0\.1'
+              '10.18 退役 IP' = '172\.21\.10\.18'
+              '10.22 Consul' = '172\.21\.10\.22'
+          }
+          foreach ($name in $bannedPatterns.Keys) {
+              if ($envContent -match "(?m)^[^#].*$($bannedPatterns[$name])") {
+                  $errors += ".env.production 含违规 IP/Host: $name"
+              }
+          }
+      }
+
+      # 3. web.config 若存在 + 含 SPA Fallback rule,必须 exclude 后端 API 路径
+      $webConfig = if (Test-Path 'public/web.config') { 'public/web.config' }
+                  elseif (Test-Path 'dist/web.config') { 'dist/web.config' }
+                  else { $null }
+      if ($webConfig) {
+          $cfg = Get-Content $webConfig -Raw
+          if ($cfg -match 'SPA Fallback|SubApp SPA Fallback') {
+              if ($cfg -notmatch 'pattern="\^/\(api' -and $cfg -notmatch 'pattern="\^/[A-Z][A-Za-z]+/(mdmapi|srmapi|mesapi)') {
+                  $errors += "$webConfig SPA Fallback 未 exclude /api 等后端路径(踩坑:子 application 请求被 SPA index.html 拦截 → 403.18 / 500.52)"
+              }
+          }
+      }
+
+      # 4. vite.config.ts BASE_URL 校验(若有子应用 publicPath 期望)
+      if (Test-Path 'vite.config.ts') {
+          $viteCfg = Get-Content 'vite.config.ts' -Raw
+          # 检查 base 配置是否硬编码 dev 路径
+          if ($viteCfg -match 'base:\s*[''""]/?(dev|test|local)') {
+              $errors += "vite.config.ts base 含 dev/test/local 硬编码字样(production build 部署后路径错配)"
+          }
+      }
+
+      # 5. hostMap 配置(若文件存在)production host 必 10.8
+      $hostMapFiles = @('src/utils/hostMap.js', 'src/utils/hostMap.ts', 'src/config/hostMap.js', 'src/config/hostMap.ts')
+      foreach ($hmFile in $hostMapFiles) {
+          if (Test-Path $hmFile) {
+              $hmContent = Get-Content $hmFile -Raw
+              # 检查 production block 是否含 10.8;若仅含 dev IP 报错
+              if ($hmContent -match '172\.21\.10\.(18|22)\b') {
+                  $errors += "$hmFile 含退役/非业务 IP(10.18 / 10.22),production 部署会断"
+              }
+          }
+      }
+
+      # 6. 汇总
+      if ($errors.Count -gt 0) {
+          Write-Host "##[error]Pre-check 失败,违反 $($errors.Count) 项:"
+          foreach ($e in $errors) {
+              Write-Host "##vso[task.logissue type=error]$e"
+          }
+          Write-Host ""
+          Write-Host "参考:"
+          Write-Host "  - ADR-023: engineering-standards/decisions/ADR-023-frontend-unified-4-standards.md"
+          Write-Host "  - IP 表: docs/ops/deployment-ip-map.md"
+          Write-Host "  - 模板: engineering-standards/templates/"
+          exit 1
+      }
+
+      Write-Host "Pre-check 通过(.env.production / web.config / vite.config / hostMap 均符合 ADR-023)"
+  continueOnError: false

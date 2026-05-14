@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IIS web.config 标准模板 — wujie 子应用(部署在父应用子 VDir 下)
+
+  适用:MDM 前端(部署在 BP /MDM/ 下)+ 后续 SRM/MES/WMS 等 wujie 子应用
+  部署:10.8 IIS /<父应用>/<子应用>/
+
+  关键决策(违反 = code-reviewer HIGH):
+  1. 子应用 MUST 有自己的 web.config — 否则父应用 SPA Fallback 会拦子应用所有路径,
+     导致 wujie 子应用 bundle 请求返父应用 index.html(MIME 错配 500.52)
+  2. 本配置 SPA Fallback action 改为本子应用 index.html(/SubApp/index.html),不是 /index.html
+  3. msdeploy 部署 MUST 加 -skip:Directory='\\web\\.config$' 防 Re-run 旧 artifact 覆盖
+
+  替换占位:
+    {{SUBAPP_PATH}} = 子应用部署路径(如 /MDM)
+    {{API_EXCLUDE_PATTERN}} = 子应用后端 API regex(如 ^/MDM/mdmapi)
+-->
+<configuration>
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <rule name="SubApp SPA Fallback" stopProcessing="true">
+          <match url="(.*)" />
+          <conditions logicalGrouping="MatchAll">
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+            <add input="{REQUEST_URI}" pattern="{{API_EXCLUDE_PATTERN}}" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="{{SUBAPP_PATH}}/index.html" />
+        </rule>
+      </rules>
+    </rewrite>
+    <staticContent>
+      <remove fileExtension=".json" />
+      <mimeMap fileExtension=".json" mimeType="application/json" />
+      <remove fileExtension=".webmanifest" />
+      <mimeMap fileExtension=".webmanifest" mimeType="application/manifest+json" />
+    </staticContent>
+  </system.webServer>
+</configuration>

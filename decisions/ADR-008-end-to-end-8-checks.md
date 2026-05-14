@@ -5,6 +5,8 @@
 - **Decider**: 涛哥
 - **Scope**: 跨项目(全局规则)
 
+> **执行阶段策略细化**(2026-05-14):8 项清单本身不变,但**分阶段执行** — Plan 落盘按 [ADR-024](ADR-024-plan-e2e-tiered-cicd-handover.md) 6 项硬冒烟,完整 8 项 + 跨浏览器 + 性能 + 跨页面回归由 CI/CD 接管。迁移轨(ADR-014)Plan E2E 双层保留。
+
 ---
 
 ## Context

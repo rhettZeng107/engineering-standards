@@ -87,6 +87,8 @@ Deprecated   → 废弃但未被取代
 | [ADR-020](ADR-020-frontend-i18n-scope-boundary.md) | 前端中英 i18n 范围边界(用户输入不双语,平台 UI 必双语) | Accepted | 2026-05-10 | 跨项目 | 本仓 |
 | [ADR-021](ADR-021-harness-mechanization-lint-eval.md) | Harness 机制化 — Lint + Eval 双引擎 | Accepted | 2026-05-11 | 跨项目 | 本仓 |
 | [ADR-022](ADR-022-cicd-monitor-feedback.md) | CI/CD Monitor & Feedback 策略(主动 + 被动双轨) | Accepted | 2026-05-14 | 跨项目 | 本仓 |
+| [ADR-023](ADR-023-frontend-unified-4-standards.md) | 前端统一 4 标准 | Accepted | 2026-05-14 | 跨项目 | 本仓 |
+| [ADR-024](ADR-024-plan-e2e-tiered-cicd-handover.md) | Plan 落盘 E2E 分级 + CI/CD 接管全量回归 | Accepted | 2026-05-14 | 跨项目 | 本仓 |
 
 ---
 
