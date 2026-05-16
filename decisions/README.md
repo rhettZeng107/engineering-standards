@@ -77,7 +77,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-010](../../SYSV2/docs/decisions/ADR-010-platform-spec-overrides-mdm-no-touch-app-center.md) | Platform spec 不动应用中心(MDM 路径切换 /srm/ → /MDM/) | Accepted | 2026-05-06 | 项目级(SYSV2) | SYSV2 |
 | [ADR-011](ADR-011-bp-business-portal-boundary.md) | BP 业务门户边界 | Accepted | 2026-05-07 | 跨项目 | 本仓 |
 | [ADR-012](ADR-012-subapp-onboarding-sop-enforcement.md) | SubApp Onboarding SOP 强制执行 | Accepted | 2026-05-07 | 跨项目 | 本仓 |
-| [ADR-013](ADR-013-codebase-profile-maintenance.md) | Codebase 画像维护(自动化历史扫描) | Accepted | 2026-05-09 | 跨项目 | 本仓 |
+| [ADR-013](ADR-013-codebase-profile-maintenance.md) | Codebase 画像维护(自动化历史扫描) | Superseded by ADR-025 | 2026-05-09 | 跨项目 | 本仓 |
 | [ADR-014](ADR-014-migration-refactor-workflow.md) | 迁移改造工作流(Front-load + Back-automate) | Accepted | 2026-05-09 | 跨项目 | 本仓 |
 | [ADR-015](ADR-015-fact-driven-no-speculation.md) | 事实驱动禁臆测 4 步硬规则 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
 | [ADR-016](ADR-016-spec-start-grep-history-first.md) | Spec/Plan 启动前必扫历史目录 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
@@ -89,6 +89,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-022](ADR-022-cicd-monitor-feedback.md) | CI/CD Monitor & Feedback 策略(主动 + 被动双轨) | Accepted | 2026-05-14 | 跨项目 | 本仓 |
 | [ADR-023](ADR-023-frontend-unified-4-standards.md) | 前端统一 4 标准 | Accepted | 2026-05-14 | 跨项目 | 本仓 |
 | [ADR-024](ADR-024-plan-e2e-tiered-cicd-handover.md) | Plan 落盘 E2E 分级 + CI/CD 接管全量回归 | Accepted | 2026-05-14 | 跨项目 | 本仓 |
+| [ADR-025](ADR-025-project-map-adaptive-maintenance.md) | 项目地图自适应维护(Supersedes ADR-013) | Accepted | 2026-05-16 | 跨项目 | 本仓 |
 
 ---
 

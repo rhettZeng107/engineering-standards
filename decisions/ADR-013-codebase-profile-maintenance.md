@@ -1,6 +1,6 @@
 # ADR-013: codebase 画像作前置事实基础 + 触发式增量维护
 
-- **Status**: Accepted
+- **Status**: Superseded by ADR-025
 - **Date**: 2026-05-09
 - **Decider**: 涛哥
 - **Scope**: 跨项目(所有 GSD `.planning/codebase/` 用户)
@@ -157,3 +157,4 @@ Spec / Plan / 重大调研启动前必扫 6 类(顺序优先级):
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-09 | Proposed → Accepted | 涛哥拍板;BP 切换组织 spec 4 次反转触发;方案 C 触发式 + 月度兜底 + 启动必扫;沉淀 memory + ADR + 全局 CLAUDE.md cheatsheet |
+| 2026-05-16 | Accepted → Superseded by ADR-025 | 月度兜底不灵活;改「自适应触发为主 + 启动软兜底」+ 术语更名「项目地图」;详见 [ADR-025](./ADR-025-project-map-adaptive-maintenance.md) |
