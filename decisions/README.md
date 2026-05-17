@@ -90,6 +90,8 @@ Deprecated   → 废弃但未被取代
 | [ADR-023](ADR-023-frontend-unified-4-standards.md) | 前端统一 4 标准 | Accepted | 2026-05-14 | 跨项目 | 本仓 |
 | [ADR-024](ADR-024-plan-e2e-tiered-cicd-handover.md) | Plan 落盘 E2E 分级 + CI/CD 接管全量回归 | Accepted | 2026-05-14 | 跨项目 | 本仓 |
 | [ADR-025](ADR-025-project-map-adaptive-maintenance.md) | 项目地图自适应维护(Supersedes ADR-013) | Accepted | 2026-05-16 | 跨项目 | 本仓 |
+| [ADR-026](ADR-026-project-map-mechanisms-and-visible-prelude.md) | 项目地图新增 MECHANISMS 维度 + discuss 读图可见化 | Accepted | 2026-05-17 | 跨项目 | 本仓 |
+| [ADR-027](ADR-027-postmortem-layered-distillation.md) | 踩坑复盘 → 分层沉淀闭环机制 | Accepted | 2026-05-17 | 跨项目 | 本仓 |
 
 ---
 
