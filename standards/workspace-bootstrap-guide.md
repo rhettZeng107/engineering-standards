@@ -1,5 +1,7 @@
 # 新工作区 Bootstrap 指南(Workspace Bootstrap Guide)
 
+> ⚠️ **已降级归档**(2026-05-18):本指南内容已转为 skill `workspace-bootstrap`(`~/.claude/skills/workspace-bootstrap/SKILL.md`),由 skill 作真理源自包含维护。本文件冻结为只读历史快照,**不再更新** —— 新工作区 bootstrap 直接用 skill(关键词自动触发或手动 `/workspace-bootstrap`)。决策依据 ADR-029 与配套模板/脚本不变。
+>
 > 决策依据:[ADR-029](../decisions/ADR-029-workspace-governance-bootstrap.md)(工作区治理三层模型)。
 > 适用:新建任何工作区(SRMV2 及未来 MES / WMS / EAM / TPM 等)。
 > 配套模板:[templates/workspace-CLAUDE.md.template](../templates/workspace-CLAUDE.md.template)。
