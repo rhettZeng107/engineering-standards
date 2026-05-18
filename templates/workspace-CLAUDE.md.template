@@ -71,6 +71,16 @@ cd <项目目录> && git push origin master && git push <第二远程> master
 
 ---
 
+## CI/CD 与监控 / CI-CD & Monitoring
+
+> 监控双轨见 `engineering-standards` ADR-022;全局 post-push 监控提醒 hook 自动生效(推送后提示起 build 监控)。
+
+- **流水线**:`<各 nested 仓的 CI/CD 平台 + 流水线>`
+- **build 监控**(主动):`docs/ops/<监控脚本>` —— 双推后起后台监控,绿静默推进 / 红汇报并启自治修复
+- **自治修复 SOP**:`docs/ops/cicd-self-heal-sop.md`(三层分流)
+
+---
+
 ## 架构 / Architecture
 
 - **<后端>**:<分层 / 关键路径>
