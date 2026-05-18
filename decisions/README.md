@@ -94,6 +94,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-027](ADR-027-postmortem-layered-distillation.md) | 踩坑复盘 → 分层沉淀闭环机制 | Accepted | 2026-05-17 | 跨项目 | 本仓 |
 | [ADR-028](ADR-028-legacy-migration-baseline-two-step.md) | 老项目迁移基线与两步走(三层等价 DoD + STEP1/STEP2 解耦) | Accepted | 2026-05-18 | 跨项目 | 本仓 |
 | [ADR-029](ADR-029-workspace-governance-bootstrap.md) | 工作区治理三层模型与新工作区 bootstrap 模板 | Accepted | 2026-05-18 | 跨项目 | 本仓 |
+| [ADR-030](ADR-030-gsd-capability-fusion.md) | 选择性融合 GSD 能力到工作流(A 档 4 + B 档 4) | Accepted | 2026-05-18 | 跨项目 | 本仓 |
 
 ---
 
