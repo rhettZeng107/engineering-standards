@@ -23,6 +23,7 @@ SYSV2 / MDM / 应用中心 / SubApp / 菜单 等概念都是 Claude 配合涛哥
 |---|---|
 | **1. Glob 历史** | 跨项目 `~/Projects/engineering-standards/decisions/ADR-*.md`(优先) + 项目特化 `<project>/docs/decisions/ADR-*.md` + `<project>/docs/superpowers/specs/**/*<keyword>*` + `plans/**/*<keyword>*` |
 | **2. Grep 实体** | `<EntityName>\|<TableName>\|<ServiceName>` 在历史 + ADR + 项目 memory |
+| **2b. Grep 同模块工作页**(2026-05-18 ADR-028 增补) | grep「同模块已实现的工作页 / 组件 / 接口」作对齐标杆 —— 防新功能不复用现有骨架而另起炉灶造新(MDM 供应商页踩坑) |
 | **3. Read 关键段** | ADR 优先(不可改写真理源)→ schema/状态机/契约段 → spec 顶部"前置实证"段 `参见 ADR-NNN / file:line` |
 
 **强制规则**:涉及"已存在 / 已改造 / 已上线 / 老系统"概念时,**禁** mssql `LIKE '%xxx%'` 取一张表就用 → 必须先看 EF `ToTable(...)` 映射或代码引用确认真理源。

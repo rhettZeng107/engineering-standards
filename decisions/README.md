@@ -92,6 +92,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-025](ADR-025-project-map-adaptive-maintenance.md) | 项目地图自适应维护(Supersedes ADR-013) | Accepted | 2026-05-16 | 跨项目 | 本仓 |
 | [ADR-026](ADR-026-project-map-mechanisms-and-visible-prelude.md) | 项目地图新增 MECHANISMS 维度 + discuss 读图可见化 | Accepted | 2026-05-17 | 跨项目 | 本仓 |
 | [ADR-027](ADR-027-postmortem-layered-distillation.md) | 踩坑复盘 → 分层沉淀闭环机制 | Accepted | 2026-05-17 | 跨项目 | 本仓 |
+| [ADR-028](ADR-028-legacy-migration-baseline-two-step.md) | 老项目迁移基线与两步走(三层等价 DoD + STEP1/STEP2 解耦) | Accepted | 2026-05-18 | 跨项目 | 本仓 |
 
 ---
 
