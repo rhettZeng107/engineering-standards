@@ -23,11 +23,15 @@
 
 ## 2. 基线(Baseline)定义
 
-| 层 | 标准 |
-|---|---|
-| 后端 | .NET Core 8(三层 / 单层 WebApi 按项目既有架构) |
-| 前端工具链 | Vite + pnpm + antd 5 + pro-components |
-| 前端工程标准 | 前端统一 4 标准(ADR-023):ListPage 四段式 / AutoHeightProTable / 工具栏三图标 / 字段大小写双兼容 / react-i18next |
+基线由迁移项目**启动时在 spec 声明**,不写死技术栈。声明三项:
+
+| 层 | 声明内容 | SYSV2 系列实例 |
+|---|---|---|
+| 后端运行时 | 目标 .NET / JVM / Node 等 | .NET Core 8(三层 / 单层 WebApi 按既有架构) |
+| 前端工具链 | 目标构建工具(Vite / Rspack / Next.js / Webpack…) | Vite + pnpm |
+| 前端工程标准 | 项目前端工程标准 | antd 5 + pro-components + 前端统一 4 标准(ADR-023):ListPage 四段式 / AutoHeightProTable / 工具栏三图标 / 字段大小写双兼容 / react-i18next |
+
+> 其他项目(如 HC)按自身技术栈声明基线,本手册方法不挑栈。
 
 ---
 
@@ -50,8 +54,8 @@
 
 迁移一个模块,三层全过才算「迁移完成」:
 
-- [ ] **① 工具链等价**:CRA→Vite 完成 / 旧 .NET→.NET 8 完成,`build` 0 error。
-- [ ] **② UI 工程标准等价**:前端统一 4 标准套用(ADR-023);列表页 ListPage 四段式;新前端不引私有库 `@jy/jy-antd-components`。
+- [ ] **① 工具链等价**:迁到项目声明的目标构建栈 / 运行时完成(SYSV2 系列 = CRA→Vite / 旧 .NET→.NET 8),`build` 0 error。
+- [ ] **② UI 工程标准等价**:套用项目声明的前端工程标准(SYSV2 系列 = 前端统一 4 标准 ADR-023;列表页 ListPage 四段式;新前端不引私有库 `@jy/jy-antd-components`)。
 - [ ] **③ 功能骨架等价**:源页面的功能 / 字段 / 交互在新页面 1:1 可用;半成品源页已补完或欠债已登记。**以等价回归测试(老↔新行为比对)为强制证据**,不靠「应该能用」的假设;已上线系统并行运行 + 等价验证后切换。
 
 ### 3.3 半成品 / 坏工件处置
