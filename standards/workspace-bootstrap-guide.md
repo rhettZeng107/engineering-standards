@@ -45,6 +45,8 @@ memory 不在工作区内,在 `~/.claude/projects/<工作区路径转义>/memory
 
 ## 3. Bootstrap 步骤
 
+> **一键搭骨架**:`templates/bootstrap-workspace.sh <工作区绝对路径>` 自动完成机械部分 —— 建容器仓 + git init + 实例化 CLAUDE.md 模板 + 文档骨架 + `.gitignore` + 拷 CI/CD 监控脚本(下方步骤 1-3、5 的目录/文件部分)。之后人工:填 CLAUDE.md 占位、clone nested 仓、跑 `/gsd-map-codebase`。
+
 1. **建容器仓**:`mkdir <workspace> && cd <workspace> && git init`;workspace 容器仓只追踪 `docs/` `scripts/` 根 `*.md`,nested 项目仓写进 `.gitignore`。
 2. **实例化 CLAUDE.md**:复制 `templates/workspace-CLAUDE.md.template` → `<workspace>/CLAUDE.md`,逐个填 `<占位符>`(见 §4)。
 3. **建文档骨架**:`docs/superpowers/{specs,plans,backlog}/` + `docs/decisions/` + `docs/ops/`。
