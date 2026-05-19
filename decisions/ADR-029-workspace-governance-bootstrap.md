@@ -57,6 +57,10 @@
 ### 影响范围
 - 新建 `standards/workspace-bootstrap-guide.md` + `templates/workspace-CLAUDE.md.template`。
 - 后续新工作区(SRMV2 起)一律按本模型 bootstrap。
+- **2026-05-20 增量**(SRMV2 P3/P4 实证踩坑驱动):
+  - 新增 `templates/workspace-QWEN.md.template` —— qwen CLI 项目上下文,与 CLAUDE.md 配套;**不实例化 = 派 qwen 时项目盲跑,前端编码会被 team-lead 自己 Edit/Write 接管(P3/P4 实测 0 处 qwen 调用)**。
+  - 新增 `templates/docs-ops-baseline/` 5 件套(SYSV2 沉淀升标准):`cicd-self-heal-sop.md` / `credential-injection.md` / `cicd-ado-monitor.md` / `cicd-ado-failure-notification.md` / `deployment-ip-map.md`。bootstrap 脚本自动落进新工作区 `docs/ops/`,免重复手工复用。
+  - `bootstrap-workspace.sh` 同步更新:实例化 QWEN.md + 落 docs-ops-baseline。
 
 ---
 

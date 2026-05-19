@@ -5,6 +5,8 @@
 > **跨项目工程标准 / ADR / 迁移手册** 见 `engineering-standards` 仓(decisions / standards);本文件只放 **<工作区名> 项目特化** 与**项目级覆盖全局规则**。
 >
 > 本文件由 `engineering-standards/templates/workspace-CLAUDE.md.template` 实例化(ADR-029)。
+>
+> **配套 `QWEN.md`**:同目录 `QWEN.md`(qwen CLI 项目上下文)由 `workspace-QWEN.md.template` 实例化;qwen 接前端 task 前会自动读取它。**CLAUDE.md 与 QWEN.md 必须保持项目定位/技术栈/双推/测试环境的描述一致**。
 
 ---
 

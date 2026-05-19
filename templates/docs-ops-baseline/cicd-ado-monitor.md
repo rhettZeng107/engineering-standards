@@ -1,0 +1,87 @@
+# SYSV2 ADO Build Monitor 用法
+
+> 创建:2026-05-14(Phase 1.3 — ADO Pipeline 状态自动监听)
+> 2026-05-16 改造:PowerShell → Node.js(Mac 零依赖,node 内置模块,跨平台)
+> 配套脚本:`cicd-ado-monitor.js`
+> 关联 ADR:ADR-022(CI/CD Monitor & Feedback 策略)
+
+## 使用场景
+
+所有命令在 SYSV2 根目录下跑:
+
+| 场景 | 命令 |
+|---|---|
+| 看某 repo 最近 5 次 build 状态 | `node docs/ops/cicd-ado-monitor.js status AI.REACT.MDM.1` |
+| 看当前在跑/排队的 build | `node docs/ops/cicd-ado-monitor.js status AI.REACT.MDM.1 --state inProgress` |
+| 看某 build 失败的 task | `node docs/ops/cicd-ado-monitor.js logs AI.REACT.MDM.1 130 --failed` |
+| 连续 push 后留最新一个,cancel 前面冗余 | `node docs/ops/cicd-ado-monitor.js cancel-old AI.REACT.MDM.1` |
+| 等某 build 跑完(已知 buildId) | `node docs/ops/cicd-ado-monitor.js wait AI.REACT.MDM.1 130` |
+| 双推后盯最新 build 直到完成(无需 buildId) | `node docs/ops/cicd-ado-monitor.js watch AI.REACT.MDM.1` |
+
+## 运行环境
+
+只需 `node`,无需安装任何 npm 包(纯内置模块 `http` / `fs` / `path` / `os`)。Mac / Windows / Linux 通用。
+
+## 凭据
+
+PAT 文件 `~/.claude/sysv2-ado-pat`(脚本用 `os.homedir()` 自动定位,跨平台),内容为 ADO Personal Access Token(单行,无引号)。
+权限:Build (Read & Execute) — 用于查询 + cancel。
+轮换:每 90 天涛哥更新一次(参见 `cicd-agent-vm-setup.md`)。
+
+## Repo 名速查
+
+| Repo 名(命令参数) | 实际项目 |
+|---|---|
+| `AI.Extend.SYS` | SYS 后端 |
+| `AI.REACT.SYS.3` | SYS.3 控制台前端 |
+| `AI.REACT.SYS.BusinessPortal` | BP 业务门户前端 |
+| `AI.REACT.SYS.AuditPortal` | AuditPortal 审计门户前端 |
+| `AI.Extend.MDM.1` | MDM 后端 |
+| `AI.REACT.MDM.1` | MDM 前端 |
+
+## 子命令速查
+
+| 子命令 | 参数 | 说明 |
+|---|---|---|
+| `status` | `<repo> [--top N] [--state all\|inProgress\|completed\|notStarted]` | 列 build 状态,默认最近 5 个 |
+| `logs` | `<repo> <buildId> [--failed]` | 列 task 日志链接,`--failed` 只看失败的 |
+| `cancel-old` | `<repo>` | 留最新一个排队 build,cancel 其余 |
+| `wait` | `<repo> <buildId> [--timeout 1800]` | 轮询已知 build 到完成;succeeded → exit 0,否则 exit 1 |
+| `watch` | `<repo> [--timeout 1800]` | 轮询最新 build 到完成;输出 `FINAL: succeeded/failed`,exit 0/1 |
+
+## 典型工作流
+
+### 1. 高频 push 时清队列
+
+涛哥连续 push 3 个 commit,ADO 触发 3 个 build 排队:
+
+```bash
+node docs/ops/cicd-ado-monitor.js cancel-old AI.REACT.MDM.1
+# 输出:保留最新:#132 (...) / 已取消:#130 (...) #131 (...)
+```
+
+### 2. Claude 自主监听 build 结果
+
+双推后(post-push hook 会自动提示此命令,需 `run_in_background`):
+
+```bash
+node docs/ops/cicd-ado-monitor.js watch AI.REACT.MDM.1
+# 逐行输出 [Ns] #id status/result,直到 FINAL: succeeded/failed
+# exit 0 = 绿,exit 1 = 红
+```
+
+### 3. 涛哥手动查 build 失败原因
+
+```bash
+node docs/ops/cicd-ado-monitor.js status AI.REACT.MDM.1 --top 3
+# 看到 #130 result=failed
+node docs/ops/cicd-ado-monitor.js logs AI.REACT.MDM.1 130 --failed
+# 输出:[failed] Run Critical Paths E2E + logUrl
+# 浏览器打开 logUrl 看详细日志
+```
+
+## 关联文档
+
+- `dev-pre-merge-validation.md` § 高频 push 时的 build 队列管理 — 引用本脚本
+- `cicd-agent-vm-setup.md` — Agent VM + PAT 凭据存放位置
+- `cicd-ado-failure-notification.md` — 邮件失败通知配置(被动接收侧,本脚本是主动查询侧)

@@ -1,0 +1,79 @@
+# QWEN.md — <工作区名> 项目上下文(给 qwen CLI)
+
+> 本文件被 `qwen -y -p` 启动时自动读取,等同 CLAUDE.md 对 Claude 的作用。qwen 接前端 task 前必先读此文件理解项目结构、路由、约束。
+> 通用工作流以 `~/.claude/CLAUDE.md` + `engineering-standards` 为准,本文件只放 **<工作区名> 项目特化**。
+> 本文件由 `engineering-standards/templates/workspace-QWEN.md.template` 实例化(ADR-029)。
+
+## 项目概述
+
+<一句话定位:本工作区交付什么业务 + 三/N 域结构>
+
+| 交付线 | 目录 | 技术栈 | dev 端口 |
+|---|---|---|---|
+| <前端 1> | `<dir>/` | React 18 + Vite + AntD 5 | `<port>` |
+| <前端 2> | `<dir>/` | React 18 + Vite + AntD 5 | `<port>` |
+| <后端 N> | `<dir>/` | .NET 8 + EF Core | `<port>` |
+
+## qwen 职责定位
+
+**仅前端编码任务的默认落盘方** —— `.tsx` / `.jsx` / `.ts` / `.less` / `.css` / 前端配置(vite/i18n 等业务)。其他(`.cs` / SQL / `.csproj` / 配置 / 文档 / E2E)走 Claude 本体或 dba/dotnet-developer。
+
+### 派单规模上限(SYSV2 实战)
+
+| 任务类型 | 单批上限 |
+|---|---|
+| 常规改动 | ≤ 3 文件 / ≤ 500 行 |
+| 大文件单文件(>500 行) | 1 文件单独派 + 重试 1 次 |
+| 批量 i18n 翻译(>200 处) | **不派 qwen**,Claude 本体 + 字典 |
+| 跨多模块 i18n(>5 文件) | 拆 ≤4 文件 batch |
+
+### 卡死兜底
+
+1. **5 分钟无输出** → 视为卡死,kill 进程
+2. **API connection error** → 重试 1 次 → 仍失败拆批次或 Claude 本体接管
+3. **2 次连续失败** → Claude 本体或 general-purpose agent 接管
+
+## 严格边界(qwen 落盘 prompt 必含)
+
+```
+- 只动 prompt 指定文件,**其他 0 改动**(防 src/components 等模块误触动)
+- 禁动 `.cs` / SQL / `.csproj` / `*.spec.ts` 断言 / 后端配置
+- 禁动 `vite.config.js` 安全字段(CORS / proxy 鉴权)— 涛哥未明确批准前
+- 禁 `test.skip` / 禁删已通过测试
+- zh-CN.json value 必中文,en-US.json value 必英文,**绝对禁止反**
+- 落盘后自查:grep 确认 value 中英文比例正确
+- 落盘后必跑 `pnpm tsc --noEmit` 或 `vite build` 验证
+- 注释必中文(业务约束 / 跨子应用同步点 / schema 依赖)
+- 失败 1 行错误,完成不多说
+```
+
+## 数据库 / API 真理源
+
+- 测试库:`<host>` / `<database>`(`<user>` / `<password>`)— 不入代码,见 `.env.development`
+- 后端 API 契约见 `docs/superpowers/specs/<topic>/contract-lock*.md` / `plans/<topic>/contract-lock*.md`
+- 前端 axios baseURL 由 `VITE_Url*` env var 注入,**禁拼接重复前缀**(`/api/api/X` 类错配)
+
+## 迁移轨硬规则(若本工作区是迁移改造)
+
+1. **只增强现有页,不造新页**(ADR-028)—— 新建 `.jsx`/`.tsx` 文件 = 卡点,必须实证现有骨架无可承载页 + 涛哥拍板。
+2. **等价不漏**(ADR-014)—— 迁移源页面形态(Form / List / Wizard / Settings)必复刻;禁拆 form 为 list+modal、禁拆步骤、禁合并字段、禁改 API 命名。
+3. **列表迁移真理源**(ADR-027 反例)—— `dataIndex` 必用 PascalCase 实体字段(从 dba `describe_table` 拿),禁凭"列中文名联想"猜英文字段名。
+
+## Git 双推
+
+各前端仓独立 nested git,双推:
+- **origin** = 内网 ADO `<内网 URL>`(PAT 走 `~/.gitconfig` 的 `http.extraHeader` 抢先 Basic 认证)
+- **github** = `git@github.com:<account>/<repo>.git`(SSH)
+
+```bash
+cd <前端仓> && git push origin main && git push github main
+```
+
+## Qwen Added Memories
+
+- <工作区名> = <一句话项目定位>
+- 前端工具链 = React 18 + **Vite** + AntD 5
+- 测试库 = `<host>/<db>`(`<user>` / `<password>`),禁访生产库 IP
+- 鉴权:Bearer JWT 双 interceptor(axios `request.js` + `http.js`),`PermissionRoute` 三重守卫
+- env var 前缀 = `VITE_*`
+- 默认分支 `<main/master>`,禁推 `feature/*` 等非主干
