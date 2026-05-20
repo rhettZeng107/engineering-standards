@@ -80,7 +80,11 @@ Claude 在**新 turn 启动时**(SessionStart 后 / `claude --continue` 后 / �
 - **批次全部完成时**:status 切 `done` + last_updated(**保留 progress.md 作历史归档**,不删)
 - **写 progress.md 用 Write 工具**(不能用 Edit 逐行改,容易漂移;每次整文件覆盖)
 
-### D4. 硬自动恢复(可选启用,不强制)
+### D4. 硬自动恢复(**强烈推荐启用,2026-05-20 涛哥强化**)
+
+涛哥 2026-05-20 明确:**「Claude 出现 API error 不要等我『继续』指令,自动接续」**。已落 `~/.claude/bin/claude-watchdog.sh`(chmod +x),涛哥**用 `claude-watchdog.sh` 代替 `claude` 命令启动**即可。
+
+
 
 如需「socket 断 → 自动重启 claude process」,加 shell wrapper:
 
