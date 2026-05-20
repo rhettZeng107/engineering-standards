@@ -4,7 +4,7 @@
 > 引用源:全局 `~/.claude/CLAUDE.md` + 跨项目 `engineering-standards/decisions/ADR-*.md` + 本工作区 `docs/decisions/ADR-*.md`。
 > **删除原则**:已锚点 ADR-NNN 的条目从 disk 删除(decisions 仓即真理源);同语义合并为集合文件。
 > **保留原则**:本工作区特化反模式 / 实证案例锚点 / 外部资源 / 本工作区踩坑沉淀。
-> **维护规范**:见 `engineering-standards/standards/memory-maintenance-standard.md`(跨项目工程标准)。
+> **维护规范**:见 `engineering-standards/standards/memory-maintenance-standard.md`(跨项目工程标准,中性表述,不绑定具体工作区)。
 
 ---
 

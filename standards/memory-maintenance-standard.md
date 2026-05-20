@@ -1,7 +1,7 @@
 # Memory 维护标准(跨项目工程标准)
 
 - **生效日期**:2026-05-20
-- **范围**:所有工作区(SRMV2 / SYSV2 / HC / MES / WMS / EAM / TPM / 未来新建)的 `~/.claude/projects/<workspace>/memory/` 治理
+- **范围**:所有 `~/.claude/projects/<workspace>/memory/` 治理(跨工作区通用,不绑定具体项目名)
 - **关联 ADR**:ADR-009(CLAUDE.md cheatsheet 化哲学扩展)/ ADR-015(事实驱动)/ ADR-030 A3(Claim 来源)
 - **关联 template**:`templates/MEMORY.md.template`
 
