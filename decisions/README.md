@@ -81,7 +81,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-014](ADR-014-migration-refactor-workflow.md) | 迁移改造工作流(Front-load + Back-automate) | Accepted | 2026-05-09 | 跨项目 | 本仓 |
 | [ADR-015](ADR-015-fact-driven-no-speculation.md) | 事实驱动禁臆测 4 步硬规则 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
 | [ADR-016](ADR-016-spec-start-grep-history-first.md) | Spec/Plan 启动前必扫历史目录 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
-| [ADR-017](ADR-017-batch-contract-extended.md) | 批次合同扩大版 — Y 一次跑完不打断 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
+| [ADR-017](ADR-017-batch-contract-extended.md) | 批次任务扩大版 — Y 一次跑完不打断 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
 | [ADR-018](ADR-018-decision-authorization-tiers-and-boundary-matrix.md) | 决策授权三档 + 边界判定显式矩阵 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
 | [ADR-019](ADR-019-solve-problem-first-rules-negotiable.md) | 解决问题第一 + 规则可推翻 + 敢于说不 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
 | [ADR-020](ADR-020-frontend-i18n-scope-boundary.md) | 前端中英 i18n 范围边界(用户输入不双语,平台 UI 必双语) | Accepted | 2026-05-10 | 跨项目 | 本仓 |

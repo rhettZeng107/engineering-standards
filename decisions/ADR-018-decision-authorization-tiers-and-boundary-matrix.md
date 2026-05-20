@@ -69,7 +69,7 @@
 - memory:`feedback_boundary_decision_matrix.md`
 - memory:`feedback_skip_spec_plan_simple_tasks.md`
 - memory:`feedback_standard_workflow_reduces_rework.md`
-- 配套 ADR-017(批次合同扩大版 — 决定何时停下报告)
+- 配套 ADR-017(批次任务扩大版 — 决定何时停下报告)
 
 ## Alternatives Considered
 
@@ -87,7 +87,7 @@
 
 ## Related
 
-- ADR-017:批次合同扩大版(决定何时不打断)
+- ADR-017:批次任务扩大版(决定何时不打断)
 - ADR-015:事实驱动禁臆测(上位规则)
 - memory:`feedback_delegate_low_risk_reversible.md`
 - memory:`feedback_boundary_decision_matrix.md`

@@ -13,7 +13,7 @@
 
 涛哥 2026-05-09 战略性反馈:**AI Coding 价值 = 前期讨论加深 + 后期高自动化**。当前 SYSV2 工作流:
 - spec discuss 阶段拍板足够,但 E2E 双层风险识别不够前置(执行阶段才暴露,涛哥反复打断)
-- plan 阶段中断频次高(单 phase 内 5-10 task 都汇报,即使「批次合同扩大版」memory 已缩窄)
+- plan 阶段中断频次高(单 phase 内 5-10 task 都汇报,即使「批次任务扩大版」memory 已缩窄)
 - code review 触发分散(每 task 后派,而非 plan 完结统一)
 
 ### 当前状态实证
@@ -86,7 +86,7 @@ Spec 创建时 Claude 自主套用 [`feedback_e2e_double_layer_risk_checklist.md
 | **Spec 范围溢出**(发现漏写功能 / 边界扩大) | — | ✅ 必报 |
 | **超 spec 已识别 CRITICAL 安全/数据** | — | ✅ 必报 |
 
-Phase 间 / Phase 内 / Plan 全程**全部不汇报**(批次合同进一步扩大,只 3 类中断)。
+Phase 间 / Phase 内 / Plan 全程**全部不汇报**(批次任务进一步扩大,只 3 类中断)。
 
 ### 3. Plan 完结 — 自动 Code Review + 自治修复
 
@@ -183,7 +183,7 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 - 配套 memory:
   - `feedback_e2e_double_layer_risk_checklist.md`(E2E 双层 checklist)
   - `feedback_skeleton_equivalent_migration.md`(功能骨架等价)
-  - `feedback_batch_contract_extended.md`(批次合同扩大版,迁移改造路径中断白名单 3 类)
+  - `feedback_batch_contract_extended.md`(批次任务扩大版,迁移改造路径中断白名单 3 类)
   - `feedback_code_reviewer_trigger_matrix.md`(plan 完结自动触发 + 自治修复)
 - 全局 CLAUDE.md「三轨工作流」段(2026-05-09 最终落定:标准 / 简单 / 迁移改造)
 - 试点:SYSV2 BP 切换组织 spec(2026-05-09 落地)

@@ -9,7 +9,7 @@
 
 ## Context(背景 / 为什么需要决策)
 
-- 涛哥工作流已成熟:四层文档(ADR/spec/plan/tasks)、三轨工作流、迁移 playbook、E2E 8 项核对、批次合同、决策授权三档。
+- 涛哥工作流已成熟:四层文档(ADR/spec/plan/tasks)、三轨工作流、迁移 playbook、E2E 8 项核对、批次任务、决策授权三档。
 - GSD(Get Shit Done)是成熟的 spec-driven + context-engineering 系统,共 121 个功能。
 - 全局评估 GSD:大部分与涛哥工作流重叠(phase / 验证 / 文档),但若干 GSD 能力填补**真实缺口** —— 这些缺口在 MDM 迁移踩坑中已暴露(审计大小写判反、E2E 冒烟漏检列空、批次改坏前序页)。
 - 不做的代价:缺口不补,踩坑复发;或反向照搬整套 GSD,重复造轮子、推翻自有成熟工作流。

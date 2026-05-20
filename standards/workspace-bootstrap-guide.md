@@ -12,7 +12,7 @@
 
 | 层 | 载体 | 谁负责 | 放什么 |
 |---|---|---|---|
-| 全局层 | `~/.claude/`(CLAUDE.md / rules / hooks / agents) | 本机自动 | 跨项目通用工作流、编码路由、批次合同、鉴权刚性 |
+| 全局层 | `~/.claude/`(CLAUDE.md / rules / hooks / agents) | 本机自动 | 跨项目通用工作流、编码路由、批次任务、鉴权刚性 |
 | 跨项目标准层 | `engineering-standards` 仓 | 引用 | ADR、工程标准、迁移手册、本模板 |
 | 工作区层 | `<workspace>/` 内的 CLAUDE.md + docs + 地图 + memory | bootstrap | **仅项目特化 + 项目级覆盖** |
 

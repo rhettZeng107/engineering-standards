@@ -13,7 +13,7 @@ SYSV2 CI/CD Phase 1 闭环过程中(SYS / SYS.3 / BP / AuditPortal / MDM 前后�
 
 - **被动盯 ADO UI**:Pipeline 跑挂没人知道,涛哥要主动开 ADO 网页才能看 — 失败修复延迟数小时
 - **高频 push 队列堆积**:连续 push 3-5 个 commit,Self-hosted Agent 单 worker 排队,旧 build 跑出来已被新 commit 覆盖,浪费 5-15 分钟 Agent 时间
-- **Claude 无法自主等 build 结果**:Claude 派 helper 改完代码 push 后,无法等 build 结果决策下一步(只能 AskUserQuestion 让涛哥手回报)— 阻塞批次合同
+- **Claude 无法自主等 build 结果**:Claude 派 helper 改完代码 push 后,无法等 build 结果决策下一步(只能 AskUserQuestion 让涛哥手回报)— 阻塞批次任务
 - **失败原因诊断成本高**:涛哥需登 ADO → 找到 build → 找到 failed task → 看 log,链路 4 步;Claude 无 PowerShell helper 同样链路要走
 
 实证锚点:
@@ -56,7 +56,7 @@ SYSV2 CI/CD Phase 1 闭环过程中(SYS / SYS.3 / BP / AuditPortal / MDM 前后�
 
 ### Claude 自主行为约定
 
-Claude 在批次合同(ADR-017)内,push 后默认走 `Wait-AdoBuildComplete` 等结果;如失败拉 `Get-AdoBuildLogs -OnlyFailed`,在 Claude 本体可修范围内自主修复 + 重 push;只有以下情况打断涛哥:
+Claude 在批次任务(ADR-017)内,push 后默认走 `Wait-AdoBuildComplete` 等结果;如失败拉 `Get-AdoBuildLogs -OnlyFailed`,在 Claude 本体可修范围内自主修复 + 重 push;只有以下情况打断涛哥:
 
 - 修复 2 轮不收敛(超 ADR-017 CR/HIGH 2 轮上限)
 - 实证反转(本来应过的 spec 失败,根因不在最近 commit)
@@ -68,7 +68,7 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 
 ### 正向
 
-- **批次合同执行不打断**:Claude 等 build 结果决策下一步,无需 AskUserQuestion 让涛哥手回报
+- **批次任务执行不打断**:Claude 等 build 结果决策下一步,无需 AskUserQuestion 让涛哥手回报
 - **涛哥被动通知**:邮件第一时间到,不必盯 ADO UI
 - **Agent 时间节省**:Cancel 冗余 build 平均节省 30%+ Agent 时间(实证 2026-05-14 单日 11 build 中 5 次冗余)
 - **诊断链路缩短**:4 步 → 1 命令(`Get-AdoBuildLogs -OnlyFailed`)
@@ -95,8 +95,8 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 ### A. 只配邮件订阅,不写 PowerShell helper
 
 - 优点:零代码维护,纯 ADO Server 内置
-- 缺点:Claude 无法主动查 build 状态 → 批次合同被打断,涛哥手回报继续 in_progress
-- 不选原因:Claude 批次合同(ADR-017)依赖主动查询,邮件是单向通知不可编程
+- 缺点:Claude 无法主动查 build 状态 → 批次任务被打断,涛哥手回报继续 in_progress
+- 不选原因:Claude 批次任务(ADR-017)依赖主动查询,邮件是单向通知不可编程
 
 ### B. 只写 PowerShell helper,不配邮件
 
@@ -118,7 +118,7 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 
 ## Related
 
-- ADR-017:批次合同扩大版 — Claude 自主 wait/cancel 是本 ADR 的批次合同执行依赖
+- ADR-017:批次任务扩大版 — Claude 自主 wait/cancel 是本 ADR 的批次任务执行依赖
 - ADR-018:决策授权三档 — `Cancel-AdoOldBuilds` 是 Tier 1 自主(可逆 + 队列管理)
 - spec:`docs/superpowers/specs/2026-05-13-offline-deployment-strategy/spec.md`(关联 — 离线包 Pipeline 也走本策略)
 - doc:`docs/ops/cicd-ado-monitor.md`(用法手册)

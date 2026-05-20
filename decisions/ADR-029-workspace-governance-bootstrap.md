@@ -28,7 +28,7 @@
 
 | 层 | 载体 | 复用方式 | 放什么 |
 |---|---|---|---|
-| **全局层** | `~/.claude/`(CLAUDE.md / rules / hooks / agents) | 自动套到本机所有工作区 | 跨项目通用工作流、编码路由、批次合同、鉴权刚性等 |
+| **全局层** | `~/.claude/`(CLAUDE.md / rules / hooks / agents) | 自动套到本机所有工作区 | 跨项目通用工作流、编码路由、批次任务、鉴权刚性等 |
 | **跨项目标准层** | `engineering-standards` 仓(decisions / standards / templates) | 任何工作区引用,单一真理源,可 git 分发给团队 | ADR、工程标准、迁移手册、本模板 |
 | **工作区层** | `<workspace>/CLAUDE.md` + `docs/superpowers/` + 项目地图 + memory | 用 bootstrap 模板实例化 | **仅项目特化 + 项目级覆盖全局规则** |
 
