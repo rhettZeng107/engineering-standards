@@ -1,0 +1,55 @@
+---
+context: <spec-id / plan-id / task-name>
+phase: <phase-name>
+task: <current-task-index>
+total_tasks: <N>
+status: in_progress
+last_updated: <ISO 8601 e.g. 2026-05-20T10:30:00+08:00>
+---
+
+# Continue Here
+
+> 由 Claude 在长批次任务执行时维护,socket 异常 / session 中断后通过本文件自动接续。
+> 规则见 `engineering-standards/decisions/ADR-031-workflow-auto-resume.md`。
+
+## Required Reading(新 turn 接续必读)
+
+1. `<spec / plan 路径>`
+2. `<关键 ADR / memory 路径>`
+3. `<受影响代码 / schema 路径>`
+
+## BLOCKING CONSTRAINTS — Read Before Anything Else
+
+> 列出当前阻塞约束(若无可写「当前无已知阻塞」)
+
+| Pattern | Description | Severity |
+|---|---|---|
+| | | |
+
+## 批次计划 / Batch Plan
+
+1. ✅ <已完成 task 1>
+2. ✅ <已完成 task 2>
+3. 🔄 <当前 task> ← **在做**
+4. ⬜ <待办 task 4>
+5. ⬜ <待办 task 5>
+
+## 当前上下文 / Current Context
+
+- 涛哥拍板 1:<拍板内容>
+- 实证事实 1:<file:line / 表名 / 端点>
+- 实证事实 2:<...>
+- 关键约束 1:<...>
+
+## 阻塞 / 待决 / Blockers
+
+> 若 status=blocked / paused,写阻塞原因 + 涛哥需要拍板的问题
+
+- (当前无阻塞,继续执行)
+
+## 下一步 / Next
+
+- **动作**:<明确动作,如「写 spike-api-endpoints.md」>
+- **输入**:<前置文件 / 数据>
+- **输出**:<目标文件路径 + 验收点>
+- **代理**:<Claude 本体 / qwen / team-lead / dba / 其他>
