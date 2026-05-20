@@ -1,0 +1,70 @@
+# {{WORKSPACE_NAME}} Memory Index
+
+> {{WORKSPACE_NAME}} 工作区独立 memory(SessionStart 由 `core-fact-driven-prelude.js` 注入事实驱动自检卡片)。
+> 引用源:全局 `~/.claude/CLAUDE.md` + 跨项目 `engineering-standards/decisions/ADR-*.md` + 本工作区 `docs/decisions/ADR-*.md`。
+> **删除原则**:已锚点 ADR-NNN 的条目从 disk 删除(decisions 仓即真理源);同语义合并为集合文件。
+> **保留原则**:本工作区特化反模式 / 实证案例锚点 / 外部资源 / 本工作区踩坑沉淀。
+> **维护规范**:见 `engineering-standards/standards/memory-maintenance-standard.md`(跨项目工程标准)。
+
+---
+
+## 🔝 置顶 — 事实驱动 / Claim 来源(永久置顶,SessionStart 强提醒)
+
+> 长会话 / 评估 / 批判 / 给方案 场景必读。SessionStart hook `core-fact-driven-prelude.js` 也会注入同等内容到 system reminder。
+
+- **ADR-015** — 事实驱动 4 步硬规则:实证 → 基于事实 → 拍板 → 严执行
+- **ADR-030 A3** — Claim 来源标注机制:任何 claim 标 `file:line` / API / Bash / DB;假设与实证分区
+- **ADR-018** — 决策授权三档:Tier 1 自主 / Tier 2 简洁拍板 / Tier 3 多选项 + 落 ADR
+
+**触线即自报**:答复中违反 ADR-015 / ADR-030 A3 → 第一句标明,不藏不绕。
+
+---
+
+## 工作区特化沉淀
+
+<!-- 列本工作区独有的反模式 / 实证案例锚点。已锚 ADR 的条目从这里删除,改为 ADR 引用。 -->
+
+(空 — 本工作区启动后逐步沉淀)
+
+## 工作流 / 协作偏好 / 边界决策
+
+<!-- 协作风格 / Tier 边界微调 / 沟通节奏等。 -->
+
+(空)
+
+## Spec / Plan / 评审 / Review
+
+<!-- spec 启动 / plan 拆分 / 评审节奏的工作区特化偏好。 -->
+
+(空)
+
+## 事实驱动 / 实证 / Debug
+
+<!-- 工作区内具体技术域的实证规则(消费端 vs 被消费端、平台机制实证等)。 -->
+
+(空)
+
+## E2E / 集成验证
+
+(空)
+
+## 编码路由 / Teams / Qwen
+
+(空)
+
+## DB / SQL / 安全
+
+(空)
+
+## CI/CD / 监控 / Dev Server
+
+(空)
+
+---
+
+## 使用说明(给 Claude)
+
+1. 涛哥纠正或确认非显然偏好时,在对应分类下加 1 行索引 + 写独立 memory 文件
+2. 本索引文件总行数硬上限 **200 行**(超过则触发精简,按 `memory-maintenance-standard.md` 处理)
+3. 工作区 memory 数超过 **50 个** 时,主动按维护规范精简(合并 / 删除已锚 ADR 的条目)
+4. **不写 user_role.md / 通用工作流(已在全局 CLAUDE.md)/ 已锚 ADR 的规则**

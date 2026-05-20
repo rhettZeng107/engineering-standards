@@ -55,6 +55,15 @@ EOF
 # 5. git init(workspace 容器仓)
 ( cd "$WS" && git init -q )
 
+# 6. memory 索引初始化 ─ 从 MEMORY.md.template 实例化(D2,2026-05-20)
+WS_NAME="$(basename "$WS")"
+MEM_DIR="$HOME/.claude/projects/-Users-rhett-Projects-${WS_NAME}/memory"
+mkdir -p "$MEM_DIR"
+if [ ! -f "$MEM_DIR/MEMORY.md" ]; then
+  sed "s/{{WORKSPACE_NAME}}/$WS_NAME/g" "$TEMPLATES_DIR/MEMORY.md.template" > "$MEM_DIR/MEMORY.md"
+  echo "  - memory/MEMORY.md(从模板实例化,$WS_NAME)"
+fi
+
 echo "✓ 工作区骨架已建: $WS"
 echo "  - CLAUDE.md / QWEN.md(待填占位)"
 echo "  - docs/ops/{cicd-ado-monitor.js,cicd-self-heal-sop.md,credential-injection.md,cicd-ado-monitor.md,cicd-ado-failure-notification.md,deployment-ip-map.md}"
@@ -65,3 +74,4 @@ echo "  2. clone nested 项目仓到工作区,并写进 .gitignore"
 echo "  3. 跑 /gsd-map-codebase 生成 .planning/codebase/ 项目地图(A1/B4 hook 的数据源)"
 echo "  4. 配 CI/CD 流水线 + 接监控(docs/ops/cicd-ado-monitor.js + 自治修复 SOP 已在;ADO_BASE/PAT 按需调)"
 echo "  5. 老项目迁移工作区:按 legacy-migration-playbook 声明基线 + 产源工件清单"
+echo "  6. 后续 memory 沉淀按 standards/memory-maintenance-standard.md 规范"
