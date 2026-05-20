@@ -48,6 +48,47 @@
 - 公共资源(LOGO / 公开图片):`[AllowAnonymous]` + 不带敏感字段
 - 其他例外必须显式 spec / ADR 拍板,不允许默默 `[AllowAnonymous]`
 
+## 修订(2026-05-20)— 工厂隔离 X-Plant-Code 第 5 条刚性
+
+SRMV2 合同 spec(`2026-05-20-srm-contract-migration`)plan T0.2 Tier 3 拍板触发(对应 SYSV2 MDM 已有实证):**跨工厂(plant)隔离的业务模块**(SRM 合同 / 采购 / 供应商 / MDM 主数据等)需在鉴权 4 条之上**叠加第 5 条刚性**:
+
+### 第 5 条:X-Plant-Code header 工厂隔离
+
+**规则**:涉及工厂级数据隔离的业务模块,所有 axios 请求必须携带 `X-Plant-Code` header,后端 middleware 验证当前用户对该工厂的权限。
+
+**实施**:
+
+| 层 | 落地 |
+|---|---|
+| **前端 axios** | `axios.interceptors.request.use(config => { config.headers['X-Plant-Code'] = getCurrentPlantCode(); return config; })` |
+| **后端 middleware** | `app.UseMiddleware<PlantCodeAuthorizationMiddleware>()`(验证 token 中 user 对 header plantCode 的权限,403 if mismatch)|
+| **跨子应用 plant 上下文** | BP 宿主通过 SSO token claims 注入 plantCode → Wujie props / URL hash 透传到子应用(同 token 透传链)|
+| **跨端调用** | Contract.2 React 跨端调 Supplier.2 后端时,**同一 plantCode 透传**(避免工厂隔离穿透)|
+
+**适用范围**:
+
+- SRM 合同(Contract.2)/ 采购(Buyer.2)/ 供应商(Supplier.2)
+- MDM 主数据(已实证 SYSV2 模式)
+- MES / WMS / EAM / TPM(后续工作区,涉及工厂场景全适用)
+
+**不适用范围**:
+
+- 跨工厂报表 / 集团级聚合视图(显式 spec 标 `[NoPlantIsolation]`)
+- 系统管理 / 配置类模块(不涉及工厂业务数据)
+
+**Why**(涛哥 2026-05-20 Tier 3 拍板):
+
+- 企业多工厂场景下,合同 / 采购 / 供应商主数据按工厂隔离是业务底线,鉴权 4 条不够
+- SYSV2 MDM 已实证此模式可行 + 跨子应用 plantCode 透传 + 后端 middleware 校验
+- 升级到鉴权刚性第 5 条 = 跨项目统一标准,避免每个 spec 重新拍板
+
+**ADR 化策略**:本次按涛哥 2026-05-20「描述不当 / 范围微调直接 Edit 原 ADR」流程,**不新建 ADR**,作为本 ADR-007 修订段补入。后续工作区(MES / WMS 等)启动时,本规则自动适用。
+
+**参考**:
+
+- `~/Projects/SRMV2/docs/superpowers/specs/2026-05-20-srm-contract-migration/plan.md` T0.2 + spike-microfrontend-host-contract.md §3
+- SYSV2 MDM `X-Plant-Code` 实证模式(参见 SYSV2 memory)
+
 ### 范围
 
 - 默认范围:鉴权功能链路 4 条刚性(本 ADR)
