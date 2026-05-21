@@ -1,60 +1,81 @@
-# 治理减法审计(2026-05-21)
+# 治理减法审计(2026-05-21,深度实证版)
 
-> 依据 ADR-033 金字塔 + 准入三闸。盘点全局 `CLAUDE.md`(231 行常驻)+ SRMV2 memory(56 条)+ rules(78 文件)。
-> 目标:把已 ADR 化 + 已 Hook 化的内容从常驻 context 砍成"一行指针",治理变强、载体变轻。
+> 依据 ADR-033 金字塔 + 准入三闸。三方并行实证(hooks / rules / memory)+ 全局 CLAUDE.md 逐段。
+> **认知校准(最重要)**:**行数 ≠ context 成本**。区分两类——
+> - **常驻**(每会话注入、稀释注意力):全局 CLAUDE.md 231 + 工作区 156 + rules `common`534 + `web`534 + memory 索引 93 ≈ **1548 行**
+> - **非常驻**(按需/磁盘/维护债):rules 语言层 path-scoped、ADR、未接线 hook
+> **减法优先级 = 先砍常驻、含金量(误导>重复>冗余)优先,不是先砍行数最大的。**
 
 ---
 
-## 一、全局 CLAUDE.md(231 行,常驻)逐段归类
+## 一、Hook 层(35 文件 / 27 接线)— 底层主力,但有死接线 + SRMV2 缺口
 
-图例:🔒已Hook强制 / 📄已ADR化 / ✋须AI自觉(保留) / ✂️可精简成指针
+### 1a. 可清理(死代码 / 空转)
+| 项 | 状态 | 处置 |
+|---|---|---|
+| `gsd-update-banner.js` | 真孤儿(settings 无引用) | 删 |
+| `gsd-validate-commit.sh` | opt-in 未开 = no-op,且与 `sysv2-commit-message-style-guard` 重叠 | 摘接线 |
+| `gsd-session-state.sh` / `gsd-phase-boundary.sh` / `gsd-workflow-guard.js` | opt-in `community/workflow_guard` 未开 = 3 个 no-op | 不用 GSD planning 可摘 |
 
-| 段 | 已固化到哪 | 归类 | 减法建议 |
+### 1b. ⚠ SRMV2 底层防护缺口(反向发现 —— 该「补」不该「删」)
+4 个 hook **硬编码 SYSV2**,在 SRMV2 cwd 下空转,6 仓尚无等价机器防护:
+| Hook | SYSV2 专属点 | SRMV2 缺的防护 |
+|---|---|---|
+| `sysv2-multi-repo-push-guard.js` | 仓表只 SYS/MDM | 6 仓 push 白名单 |
+| `sysv2-frontend-deploy-config-guard.js` | IP/ADR-023 写死 | .env.production/web.config 错配拦截 |
+| `sysv2-migration-new-page-guard.js` | 仓正则只 MDM/SYS | 迁移仓新建页守门 |
+| `sysv2-memory-staleness-check.js` | 路径写死 SYSV2 | SRMV2 memory 失效检测 |
+> 治理金字塔的意义就是底层机器兜底;这 4 个对 SRMV2 没铺 = 同类坑在 SRM 仍可能复发。建议泛化成 `core-*`(参考已泛化的 `core-fact-driven` / `core-git-log-limit`)。**SRMV2 进代码组装前补。**
+
+---
+
+## 二、全局 CLAUDE.md(231 行常驻)— 已 Hook 强制的段砍成指针
+
+| 段 | 已强制它的 Hook | 砍程度 |
+|---|---|---|
+| 事实驱动 / 禁臆测 | `core-fact-driven-prelude.js`(每会话全文注入) | **强**:留 1 行指针 |
+| 项目地图作前置事实 | `project-map-staleness-check` + `project-map-session-digest` | **强**:留指针 |
+| SQL 操作(生产红线) | `sysv2-prod-sql-guard` + `sysv2-destructive-bash-guard` | **强**:留指针 |
+| 鉴权 4 条(第 1/2 条) | `sysv2-authorize-attribute-guard` + `sysv2-policy-registration-check` | 中:留 4 条标题(3/4 无 hook) |
+| 编码路由(纯前端→qwen +-y) | `qwen-default-frontend-guard` + `sysv2-qwen-yolo-flag-guard` | 中:留路由表(后端行无 hook) |
+| 进度文件全局段 | `core-progress-global-section-guard` | 中:留写入骨架 |
+| commit 风格/secret | `sysv2-commit-message-style-guard` + `sysv2-secret-scan-commit-guard` | 中:留双推节奏 |
+> + 已 ADR 化未 Hook 段(四层文档/E2E 8项/三轨/批次/PM)精简留表+指针。预估 231 → ~140 行,核心 cheatsheet 表全留。
+
+---
+
+## 三、rules(78 文件 / 5390 行)
+
+| 动作 | 目标 | 省行 | 类型 | 风险 |
+|---|---|---|---|---|
+| **A 删死语言层** | dart/rust/java/kotlin/perl/golang/swift/php/cpp(9 层 45 文件) | **3473** | 非常驻(磁盘/维护债) | 极低(6 仓实证 0 对应文件;`install.sh` 可复装) |
+| **B common/agents.md** | 与 ADR-003 Teams 角色**名称冲突**(planner/tdd-guide vs team-lead/dotnet-developer/qwen) | ~50 | **常驻** | 中(**误导>冗余,含金量最高,优先**) |
+| **C common 重复/错层** | code-review.md(严重度表重复 CLAUDE.md)、performance.md(模型选型错层) | ~120 | **常驻** | 中 |
+| D python 层 | 168 行,仅 ops 偶用 | 168 | 非常驻 | 低 |
+| E 语言层↔skill 去重 | csharp/typescript 与同名 skill 双轨,留速查删样例 | ~150 | 按需 | 中 |
+> 健康引用**不动**:`csharp/security.md→credential-injection.md`、`secret-scan hook→common/security.md`(金字塔底层引用)。
+
+---
+
+## 四、SRMV2 memory(55 实质条目)
+
+| 类 | 条数 | 处置 |
+|---|---|---|
+| a 已 ADR 化 | 13 | 删正文,MEMORY.md 留指针 |
+| b 已 Hook 化 | 6 | 删(`git_log_full_history`/`local_dev_db_must_26`/`progress_global_section`/`migration_no_new_pages`/`qwen_dispatch`/`commit_and_push`) |
+| c 可合并 | 28→9 集合 | E2E(8→1)/coding-routing(5→1)/fact-driven(5→1)/sql-db(3→1)/communication(3→1)/dev-lifecycle(2→1)/cross-workspace(2→1) |
+| d 特化保留 | 8 | 留(六仓架构/测试环境/code_comments/react-race/wakeup-first/check-upstream/cicd-self-heal/边界案例) |
+> **55 → ~17 文件(-70%)**,索引 93 → ~18 行 + 删条转一行指针。
+
+---
+
+## 执行批次(按含金量 × 风险排序,非行数)
+
+| 批 | 内容 | 风险 | 价值(常驻注意力) |
 |---|---|---|---|
-| 用户画像 + 沟通 | — | ✋保留 | 高频 + 无法机械化,留 |
-| 事实驱动 / 禁臆测 | 📄ADR-015/030 + 🔒`core-fact-driven-prelude.js`(SessionStart 已注入同等内容) | ✂️**重砍** | hook 每会话已注入完整 4 步卡片 → CLAUDE.md 留 1 行指针即可 |
-| Context 管理 / 协作反模式 | — | ✋保留(精简) | 表格留,散文删 |
-| Spec discuss 先 grep 历史 | 📄ADR-016 + 🔒`sysv2-spec-history-guard.js` | ✂️精简 | 留 1 行 + 指针 |
-| PM 视角 + 业务场景化 | 📄ADR-004 | ✂️精简 | 留启动校验 1 行 + 指针 |
-| 四层文档 ADR/Spec/Plan/Tasks | 📄ADR-002 | ✂️精简 | 留落点表,删 ADR 治理硬规则详述(已在 ADR-002) |
-| 评审 | — | ✋保留 | 已很短 |
-| E2E 8 项核对 | 📄ADR-008/024 | ✂️精简 | 留 6 项硬冒烟 1 行 + 指针,删全表(在 ADR) |
-| 鉴权 4 条 | 📄ADR-007 + 🔒`sysv2-policy-registration-check.js`(第2条) | ✂️精简 | 留 4 条标题 + 指针 |
-| 三轨工作流 | 📄ADR-014 | ✂️精简 | 留触发→路径 1 行表 + 指针 |
-| 编码路由 | 📄ADR-003 | ✋保留表 | 路由表高频,留;删兜底详述 |
-| 决策授权三档 | 📄ADR-018 | ✋保留表 | Tier 表高频,留 |
-| 客户部署 | 📄ADR-005(已转 skill) | ✋保留 | 已是触发桩,留 |
-| 批次提交节奏 | 📄ADR-017 | ✂️精简 | 留中断白名单 4 类 + 双推 1 行,删案例详述 |
-| 进度文件自动接续 | 📄ADR-031 + 🔒`claude-watchdog.sh` | ✂️精简 | 留接续触发 1 行 + 指针 |
-| 通用产品设计 / SQL / Agent 默认 | 部分 ADR | ✋保留 | 高频操作,留精简 |
-
-**预估**:重砍/精简段(事实驱动、spec历史、PM、四层、E2E、鉴权、三轨、批次、progress)≈ 砍 80–100 行,CLAUDE.md 从 231 → ~140 行,核心 cheatsheet 表全留。
-
----
-
-## 二、SRMV2 memory(56 条,索引常驻)
-
-- MEMORY.md 已有删除原则:"已锚点 ADR-NNN 的从 disk 删"。但 56 条仍偏多,部分可合并同语义集合。
-- 减法:盘 56 条 → 标"已 ADR 化可删 / 同语义可合并 / 工作区特化保留";目标降到 ~35-40 条。
-- 优先级:中(索引 93 行,常驻但单行)。
-
----
-
-## 三、rules(78 文件 5390 行)
-
-- 多为语言特化(web/typescript/csharp/python/golang/swift/php),**按需注入**(非全程常驻),优先级低。
-- common/ 层可查是否与 CLAUDE.md / ADR 重复。
-- 减法:低优先,治理体检第二轮。
-
----
-
-## 减法执行批次(建议)
-
-| 批 | 内容 | 风险 | 价值 |
-|---|---|---|---|
-| **批 1** | 全局 CLAUDE.md:已 Hook 化段(事实驱动/spec历史/鉴权policy/progress)砍成指针 | 低(hook 已强制,删文字不丢能力) | 高(省最多 + 最安全) |
-| **批 2** | 全局 CLAUDE.md:已 ADR 化段(四层/E2E/三轨/批次/PM)精简留表+指针 | 中(须确认表格保留够用) | 高 |
-| **批 3** | SRMV2 memory 去重合并(已 ADR 化删) | 低 | 中 |
-| **批 4** | rules 体检(common 重复 / 语言特化精简) | 低 | 中 |
-
-> 每批改全局 CLAUDE.md 前给涛哥过 diff 拍板(全局规则跨所有项目共用,谨慎)。
+| **B1** | common/agents.md 冲突修正 + code-review/performance 重复错层 | 中 | **最高**(误导消除 + 常驻瘦身) |
+| **B2** | 全局 CLAUDE.md 已 Hook 段砍指针(事实驱动等) | 低 | 高(常驻 -90 行) |
+| **B3** | memory 55→17(删 a/b + 合并 c) | 低 | 中(索引瘦身 + 维护债清) |
+| **B4** | 删 9 死语言层(-3473) | 极低 | 磁盘/维护债(非常驻) |
+| **B5(补强)** | 4 个 SYSV2 hook 泛化 `core-*` 覆盖 SRMV2 6 仓 | 中 | **缺口补强(防复发)** |
+> 改全局 CLAUDE.md / common(跨所有项目)前给涛哥过 diff。
