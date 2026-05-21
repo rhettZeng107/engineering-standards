@@ -1045,6 +1045,8 @@ function PreloadHost() {
 - [ ] **manifest API + IP allowlist 中间件**(步骤 2)
 - [ ] **验收在真实 BP iframe + production-like 环境逐菜单跑**(禁 dev proxy / 单应用直访假通过,见步骤 10 强约束)
 
+> **机械自检工具(已 Hook 化)**:`node ~/.claude/hooks/subapp-frontend-guard.js --check <子应用前端仓>`(① service baseURL ② postMessage 路由 ③ 嵌入 chrome ④ E2E production;FAIL 退出码 2)。PostToolUse hook 已接线,编辑 `src/service/*` 或 `src/App.jsx` 时自动 warn。完整对照表 + 端到端链路清单见 `templates/subapp-migration-checklist.md`。
+
 ---
 
 ## 3. 历史与变更

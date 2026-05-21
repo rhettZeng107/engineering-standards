@@ -51,6 +51,16 @@ done
 cp "$TEMPLATES_DIR/iis-web.config-spa-root.template.xml"   "$WS/docs/ops/iis-web.config-spa-root.template.xml"
 cp "$TEMPLATES_DIR/iis-web.config-spa-subapp.template.xml" "$WS/docs/ops/iis-web.config-spa-subapp.template.xml"
 
+# 3c. 子应用迁移/接入前置自检(ADR-012 SOP,SRMV2 Contract 踩坑沉淀:每菜单同页/网络异常/假 E2E)
+#     checklist 复制到工作区;guard hook 确保装在全局 ~/.claude/hooks(所有工作区共享,机械拦 baseURL/postMessage 漏)
+cp "$TEMPLATES_DIR/subapp-migration-checklist.md" "$WS/docs/ops/subapp-migration-checklist.md"
+GUARD_DST="$HOME/.claude/hooks/subapp-frontend-guard.js"
+if [ ! -f "$GUARD_DST" ]; then
+  mkdir -p "$HOME/.claude/hooks"
+  cp "$TEMPLATES_DIR/hooks/subapp-frontend-guard.js" "$GUARD_DST"
+  echo "  ⚠ 已装 subapp-frontend-guard.js → ~/.claude/hooks/;请在 ~/.claude/settings.json 的 PostToolUse 接线(matcher Edit|Write|MultiEdit → node ~/.claude/hooks/subapp-frontend-guard.js)"
+fi
+
 # 4. .gitignore(容器仓:排除 .mcp.json + nested 项目仓)
 cat > "$WS/.gitignore" <<'EOF'
 # MCP 配置含密码,永不入库
@@ -77,6 +87,7 @@ echo "  - CLAUDE.md / QWEN.md(待填占位)"
 echo "  - docs/ops/ 监控+凭据+IP表:{cicd-ado-monitor.js,cicd-self-heal-sop.md,credential-injection.md,cicd-ado-monitor.md,cicd-ado-failure-notification.md,deployment-ip-map.md}"
 echo "  - docs/ops/ 部署手册:{cicd-iis-server-setup.md,cicd-agent-vm-setup.md,cicd-sys-pipeline-draft.md}"
 echo "  - docs/ops/ web.config 模板:{iis-web.config-spa-root(external),iis-web.config-spa-subapp(shared_iis)}"
+echo "  - docs/ops/subapp-migration-checklist.md(子应用迁移前置自检)+ subapp-frontend-guard.js(全局 hook,机械拦 baseURL/postMessage 漏)"
 echo ""
 echo "后续手动(bootstrap 指南 §3):"
 echo "  1. 填 $WS/CLAUDE.md 与 $WS/QWEN.md 的 <占位符>(交付线 / 双推 / 构建 / CI-CD / 测试环境 / qwen 边界)"
