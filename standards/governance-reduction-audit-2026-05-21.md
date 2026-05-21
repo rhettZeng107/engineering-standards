@@ -79,3 +79,21 @@
 | **B4** | 删 9 死语言层(-3473) | 极低 | 磁盘/维护债(非常驻) |
 | **B5(补强)** | 4 个 SYSV2 hook 泛化 `core-*` 覆盖 SRMV2 6 仓 | 中 | **缺口补强(防复发)** |
 > 改全局 CLAUDE.md / common(跨所有项目)前给涛哥过 diff。
+
+---
+
+## 执行结果(2026-05-21,涛哥拍板全做 A 安全网 + B1/B2/B3/B5,B4 跳过)
+
+**前置安全网(实证反转后补)**:`~/.claude` 原非 git + rules 无复装源 → 任何减法不可逆。先 `git init ~/.claude` + 白名单 `.gitignore`(排除会话/凭据/`.mcp.json`)+ 基线 commit `3d7501a` → private 仓 **`github.com/rhettZeng107/claude-governance`**(GitHub only,**不进 ADO**)。memory 含测试凭据 → 不入 git,走 `backups/memory-backup-20260521.tgz`(272K)。
+
+| 批 | 结果 | commit |
+|---|---|---|
+| B1 | 删 `common/agents.md`(ADR-003 冲突)+ perf 删模型选型/thinking 错层 + code-review 删 agent 表 | `23f2d61` |
+| B2 | 全局 CLAUDE.md **231 → 202**(事实驱动/四层/spec历史/PM/三轨/编码路由/进度 砍指针;核心 cheatsheet 表全留) | `3b8e210` |
+| B3 | SRMV2 memory **55 → 17**(删 18 已 Hook/ADR 覆盖 + 合并 27→7 集合 + 留 10 特化);MEMORY.md 索引重写。memory 不入 git(tar 备份) | (本地) |
+| B4 | **跳过**(实证:死语言层 path-scoped 不占 context = 假杠杆 + 无复装源不可逆) | — |
+| B5 | 3 hook 泛化覆盖 SRM 6 仓:push-guard(+6 仓)/ migration-new-page(+3 前端)/ memory-staleness(路径按 cwd 动态);frontend-deploy-config 待 SRMV2 .env 约定稳定 | `8d9f93a` |
+
+**附带**:`~/.claude/AGENTS.md`(ECC 插件文档,非 Claude 官方配置,与 CLAUDE.md/ADR-003 冲突)→ 存档 `backups/`,不再用。
+
+**实证反转记录**:① 盘点 agent 的「rules 可 install 复装」失实(无 install.sh);② 「死语言层 3473 行最大杠杆」是假杠杆(不占 context);③ `~/.claude` 全程无版本控制(减法前必补)。
