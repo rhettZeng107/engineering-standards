@@ -38,10 +38,18 @@ cp "$TEMPLATES_DIR/workspace-CLAUDE.md.template" "$WS/CLAUDE.md"
 cp "$TEMPLATES_DIR/workspace-QWEN.md.template" "$WS/QWEN.md"
 
 # 3. CI/CD 监控脚本 + 跨项目运维基线(SYSV2 沉淀,新工作区开箱即有)
+#    含:监控(monitor/self-heal/failure-notify)+ 凭据外部化 + IP 中心表
+#      + 部署手册(IIS 建站 / Agent VM / pipeline 模板)— 新工作区适配自身 IP/站点名后即可照搬部署
 cp "$TEMPLATES_DIR/cicd-ado-monitor.js" "$WS/docs/ops/cicd-ado-monitor.js"
-for f in cicd-self-heal-sop.md credential-injection.md cicd-ado-monitor.md cicd-ado-failure-notification.md deployment-ip-map.md; do
+for f in cicd-self-heal-sop.md credential-injection.md cicd-ado-monitor.md cicd-ado-failure-notification.md deployment-ip-map.md \
+         cicd-iis-server-setup.md cicd-agent-vm-setup.md cicd-sys-pipeline-draft.md; do
   cp "$TEMPLATES_DIR/docs-ops-baseline/$f" "$WS/docs/ops/$f"
 done
+
+# 3b. IIS web.config 模板(子应用部署两种模式)
+#     spa-root  = external 独立站点(base='/',如 SRM Contract);spa-subapp = shared_iis 子 VDir(base='/<app>/',如 MDM)
+cp "$TEMPLATES_DIR/iis-web.config-spa-root.template.xml"   "$WS/docs/ops/iis-web.config-spa-root.template.xml"
+cp "$TEMPLATES_DIR/iis-web.config-spa-subapp.template.xml" "$WS/docs/ops/iis-web.config-spa-subapp.template.xml"
 
 # 4. .gitignore(容器仓:排除 .mcp.json + nested 项目仓)
 cat > "$WS/.gitignore" <<'EOF'
@@ -66,7 +74,9 @@ fi
 
 echo "✓ 工作区骨架已建: $WS"
 echo "  - CLAUDE.md / QWEN.md(待填占位)"
-echo "  - docs/ops/{cicd-ado-monitor.js,cicd-self-heal-sop.md,credential-injection.md,cicd-ado-monitor.md,cicd-ado-failure-notification.md,deployment-ip-map.md}"
+echo "  - docs/ops/ 监控+凭据+IP表:{cicd-ado-monitor.js,cicd-self-heal-sop.md,credential-injection.md,cicd-ado-monitor.md,cicd-ado-failure-notification.md,deployment-ip-map.md}"
+echo "  - docs/ops/ 部署手册:{cicd-iis-server-setup.md,cicd-agent-vm-setup.md,cicd-sys-pipeline-draft.md}"
+echo "  - docs/ops/ web.config 模板:{iis-web.config-spa-root(external),iis-web.config-spa-subapp(shared_iis)}"
 echo ""
 echo "后续手动(bootstrap 指南 §3):"
 echo "  1. 填 $WS/CLAUDE.md 与 $WS/QWEN.md 的 <占位符>(交付线 / 双推 / 构建 / CI-CD / 测试环境 / qwen 边界)"
