@@ -103,6 +103,7 @@
 | 4 | spec discuss 全局观不够宽(grep 只 grep 概念) | grep 历史加「同模块已实现工作页作对齐标杆」(ADR-016) |
 | 5 | 审计靠读 EF 实体推断后端 JSON 大小写(判成 PascalCase,实为全局 camelCase),据此把正确页面 `dataIndex` 改坏 | 字段契约 curl 实测接口真实响应,禁读代码推断序列化 |
 | 6 | E2E 冒烟只验「渲染通过」,列 `-` 占位(dataIndex 不匹配致整列空)漏检 | 列表页冒烟必断言关键列首行非 `-` 占位 |
+| 7 | 微前端子应用迁移到 BP:漏 G 方案 postMessage 路由同步监听(点每菜单同一页)+ 多个 service 漏 `baseURL`(production iframe 网络异常);本机 dev E2E「9/9」假通过(vite proxy 兜底 baseURL + 单应用直访掩盖路由同步缺失) | 迁移子应用必**逐条对照参考实现(MDM)**的 G 方案契约;E2E 必在真实 BP iframe + production-like 环境**逐菜单**跑(套 `subapp-onboarding-guide.md` v1.2 子应用侧自检 + ADR-012 修订段)|
 
 ---
 
@@ -116,3 +117,4 @@
 4. [ ] E2E 验证功能骨架等价(列表页必查无 `-` 占位 = 关键列有真实数据;字段大小写以 curl 实测接口为准)
 5. [ ] 模块级 STEP 1 验收(套 §3.5 验收质量闸:目标导向 / 验证欠债 / 跨阶段回归 / 需求覆盖)→ 解锁 STEP 2
 6. [ ] STEP 2 功能演进:先出现有页清点表,默认增强、禁造新
+7. [ ] 若迁移的是 **BP 微前端子应用**:套 `subapp-onboarding-guide.md` 子应用侧 G 方案自检(postMessage 路由同步桥 + 全 service `baseURL` + 嵌入隐藏 chrome + manifest/IP allowlist + production iframe 逐菜单验收),禁 dev proxy 假通过

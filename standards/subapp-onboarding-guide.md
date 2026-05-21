@@ -197,23 +197,33 @@
 
 ---
 
-### 步骤 8:子应用兼容 wujie sync 路由
+### 步骤 8:子应用路由同步(⚠ G 方案 postMessage —— 强制,迁移最易漏)
 
-**操作**
+> **重要(2026-05-21 教训,SRMV2 Contract 踩坑)**:BP 实际运行的是 **G 方案(原生 iframe + postMessage 路由同步)**,**不是 wujie sync 自动同步**。`SubAppHost`(BP)对子应用 iframe **一次性加载、不重 mount**;用户在 BP 点菜单/切工厂时,BP 通过 **postMessage** 通知 iframe 内子应用 —— **子应用必须主动 `window.addEventListener('message')` 监听才能切页**。误以为"wujie sync=true 0 代码自动同步"→ 漏监听 → **点每个菜单都停在同一页**。
 
-- 子应用 React Router 用 `BrowserRouter`(默认配置)
-- wujie 主应用配置 `<WujieReact sync={true} ...>`,主子路由自动同步
-- 子应用 mount 路径与 SubApp.VirtualPath 一致(URL 拼接:`{FullUrl}{subPath}`)
-- 子应用内部路由变化 → wujie 自动写主应用 URL `location.pathname`(深度链接 + 浏览器前进后退原生支持)
+**操作(G 方案 = 当前默认,强制)**
+
+- 子应用在 React Router **内部**挂一个路由同步桥组件(无渲染,`useNavigate`;范本见 MDM `AI.REACT.MDM.1/src/App.jsx` 的 `handleMessage` / SRMV2 `SubAppRouterBridge.jsx`):
+  - `window.addEventListener('message', handler)`,cleanup 时 remove
+  - 校验 `event.origin` 白名单(`window.location.origin` + BP 生产/`localhost:8002`),非白名单直接 return
+  - `{ type: 'subapp-router-change', subPath }` → `navigate(subPath)`
+  - `{ type: 'plant-changed', plantCode }` → 更新工厂码(`localStorage['__bp_plant_code__']`,供 axios 拦截器读)
+- 路由器类型:HashRouter / BrowserRouter 均可(G 方案靠 postMessage `navigate`,不依赖 wujie sync);external 独立站点用 HashRouter + `base='/'` 即可,shared_iis 子 VDir 用 BrowserRouter + `basename` 对齐 VirtualPath
+- iframe.src 一次性(BP 拼初始 subPath);后续切换**全靠 postMessage**,不重 mount
+
+**操作(wujie sync 老方案,已停用,仅历史参考)**
+
+- ~~子应用 BrowserRouter + wujie `<WujieReact sync={true}>` 主子路由 0 代码自动同步~~ —— BP 已于 2026-05-07 切 G 方案,此路不再生效
 
 **完成标志**:
-- BP `/<appName>/<subPath>` URL 命中子应用对应页面
-- 子应用内部跳转(如 `material/list` → `material/edit/123`)→ BP URL 自动更新
-- 浏览器后退按钮回到上一页(子应用层级)
+- BP 点**每个**菜单(逐菜单,非只验首页)→ 子应用切到对应页面
+- 子应用内部跳转(如 `purchase/index` → `purchase/edit/123`)正常
+- 切工厂 → 子应用工厂码更新
 
 **失败排查**:
-- 子应用首页 404 → 检查 SubApp.VirtualPath 与子应用 React Router base 是否一致
-- 路由不同步 → 检查 wujie `sync` prop 是否 `true`(默认 false)
+- **点每个菜单都同一页** → 子应用漏 postMessage `subapp-router-change` 监听(**头号迁移坑**)
+- 子应用首页 404 → SubApp.VirtualPath 与子应用路由 base 不一致
+- 切工厂数据不变 → 漏 `plant-changed` 监听 或 axios 未读 `__bp_plant_code__`
 
 ---
 
@@ -266,6 +276,14 @@
 - 切工厂菜单不变 → 检查 BP 是否 emit `plant-changed` + 调 `refreshApps()` + `loadMenus()`
 - 深度链接 404 → 检查 BP 路由 `/:appName/*` 通配是否在白名单后注册
 
+> ⚠ **E2 验证环境强约束(2026-05-21 教训,假验收硬伤)**:E2 UI 层**必须在真实 BP iframe + production(或 production-like 部署)环境**跑,**禁用本机 dev 直访 / vite proxy 作为验收依据**。原因:
+> 1. **dev vite proxy 会兜底子应用 service 漏的 `baseURL`** → production iframe(无 proxy)才暴露「网络异常:无法连接服务器」
+> 2. **单应用直接访问(非 iframe)时,HashRouter 直接改 URL 能切页** → 掩盖 postMessage 路由同步缺失(BP iframe 里点菜单才暴露「每个菜单同一页」)
+>
+> **必做两条硬验证**:
+> - **逐菜单点击**:BP 里点**每一个**子应用菜单 → 确认切到对应页面(不是抽验首页/列表)
+> - **每页 API 真实调通**:每页进去后看该页业务请求是否 200 出真实数据(不是 toast 网络异常 / 空表默认态),且请求 URL 指向正确后端端口
+
 ---
 
 ## 2. 高级附录
@@ -287,6 +305,19 @@
 | 路由 sync | 双向自动 | — | wujie `sync=true` 主子路由自动同步,0 代码 |
 
 **bus 命名约定**:全 kebab-case;允许 `<scope>-<noun>-<verb>` 三段式(子应用主动通知,需带来源 scope,如 `subapp-auth-expired`)或 `<noun>-<state/verb>` 二段式(主应用全局广播,如 `plant-changed`)。范本:子→主用 `subapp-<noun>-<verb>` 标识来源;主→子用 `<noun>-<state>` 状态广播;子应用内部路由通知用 `<appName>-router-change` 区分应用。
+
+#### A.1 G 方案 postMessage 契约(当前默认 —— native iframe,子应用强制实现)
+
+> 上表是 wujie 历史方案。BP 自 2026-05-07 切 **G 方案(原生 iframe + URL hash token + postMessage)**,以下是**实际生效**的主↔子通信契约。子应用必须实现监听端(步骤 8),否则路由/工厂切换全部失效。
+
+| 通道 | 方向 | payload | 用途 | 子应用必做 |
+|---|---|---|---|---|
+| URL hash `#sso_token=&plant=` | 主 → 子 | string | iframe 初始 token + 工厂注入(子应用入口解析后清 hash) | 入口 `bootstrapAuthContext` 解析 |
+| `postMessage subapp-router-change` | 主 → 子 | `{ type, subPath }` | BP 点菜单 → 子应用 `navigate(subPath)`(iframe 不重 mount) | **监听 + navigate(头号易漏)** |
+| `postMessage plant-changed` | 主 → 子 | `{ type, plantCode }` | 切工厂 → 子应用更新 `__bp_plant_code__` | 监听 + 更新工厂码 |
+| `postMessage cross-subapp-navigate` | 子 → 主 | `{ type, target, subPath }` | 跨子应用跳转(子应用发 `window.parent.postMessage`) | 需要跨应用跳时实现发送端 |
+
+**校验**:子应用监听端必须校验 `event.origin`(白名单 BP origin + `localhost:8002`),拒绝非白名单消息。
 
 ---
 
@@ -996,12 +1027,23 @@ function PreloadHost() {
 3. **配 Playwright 全自动复现**(headless,跑出完整 console 时间线)
 4. **看缺失的 render 日志** — 第二次 render 缺某子组件 = 该子组件被 unmount 的硬证据
 
-#### 自检清单(新子应用接入前)
+#### 自检清单 —— BP 容器层(新子应用接入前)
 
 - [ ] BpLayout / TabsContext / 任何 Provider 的 useEffect deps 不含 `[navigate]` `[location]` 等不稳定引用
 - [ ] main.jsx 没用 `<React.StrictMode>` 包裹 BP 容器(子应用本体不限)
 - [ ] SubAppHostPool 任何 Fragment 子节点数量在所有 state 下保持稳定(用占位 div + 内部条件渲染)
 - [ ] 容器层未使用 React 18 `useTransition` / `useDeferredValue` 包业务 Tab 切换(可能引入新一轮 unmount/remount)
+
+#### 自检清单 —— 子应用侧 G 方案(接入/迁移前必扫,2026-05-21 SRMV2 Contract 教训)
+
+- [ ] **postMessage 路由同步桥已实装**:React Router 内挂监听 `subapp-router-change` → `navigate`(否则点每个菜单都同一页 —— 头号坑)
+- [ ] **postMessage `plant-changed` 监听**:切工厂更新 `__bp_plant_code__`
+- [ ] **入口 hash token 解析**:`bootstrapAuthContext` 解析 `#sso_token=&plant=` 注入 + 清 hash
+- [ ] **全部 service baseURL 显式指向后端**:`grep -L "baseURL\|VITE_" src/service/*` 必为空;dev vite proxy 会兜底掩盖缺失,**production iframe 无 proxy 必网络异常**(对照已知正确的 service 逐文件核)
+- [ ] **嵌入模式隐藏自带 chrome**:iframe/wujie 嵌入时不渲染子应用自己的 Header/Sider/Footer(避免双层外框)
+- [ ] **menu-manifest 的 Path 与 React Router path 逐条匹配**
+- [ ] **manifest API + IP allowlist 中间件**(步骤 2)
+- [ ] **验收在真实 BP iframe + production-like 环境逐菜单跑**(禁 dev proxy / 单应用直访假通过,见步骤 10 强约束)
 
 ---
 
@@ -1011,6 +1053,7 @@ function PreloadHost() {
 |---|---|---|
 | 2026-05-07 | 1.0 | 首版落地(Platform spec P-C 同步);MDM 作首个参考实现 |
 | 2026-05-08 | 1.1 | 加附录 K — BP 容器层 React 陷阱清单(BP 菜单 2 天踩坑教训沉淀);后续 SRM/WMS/MES 接入前必扫 K.5 自检清单 |
+| 2026-05-21 | 1.2 | **手册口径校正 + 防迁移再踩坑**(SRMV2 Contract):步骤 8 改为 G 方案 postMessage 路由同步强制(原"wujie sync 0 代码"已停用,误导致漏监听 → 每菜单同页);附录 A.1 加 G 方案 postMessage 契约表;步骤 10 加 E2 production-like + 逐菜单 + service baseURL 强约束;新增子应用侧 G 方案自检清单 |
 
 ---
 

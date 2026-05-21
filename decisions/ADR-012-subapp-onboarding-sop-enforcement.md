@@ -137,3 +137,23 @@
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-07 | Proposed → Accepted | 涛哥拍板;MDM 作参考实现先改造,SOP 8 项强约束 |
+| 2026-05-21 | Accepted（修订） | SRMV2 Contract 迁移踩坑 → 补 G 方案 postMessage 路由同步 + service baseURL 两项强约束(见下修订段) |
+
+---
+
+## 修订 / Revision(2026-05-21)
+
+**触发**:SRMV2 Contract 子应用迁移到 BP,production iframe 暴露**两个迁移漏掉的 SOP 契约** —— ① 漏 postMessage 路由同步监听 → BP 点每个菜单都停在同一页;② 多个 service 漏 `baseURL` → 执行/付款/模板页报「网络异常:无法连接服务器」。本机 dev E2E「9/9 通过」是**假通过**(dev vite proxy 兜底 baseURL 缺失 + 单应用直访掩盖路由同步缺失)。
+
+**根因**:本 ADR 原 SOP 第 1/4 项基于 **wujie sync=true 自动同步**,但 BP 实际已于 2026-05-07 切 **G 方案(原生 iframe + URL hash token + postMessage 路由同步,见 BP `SubAppHost.jsx`)**,SOP 与接入手册未同步反映 G 方案契约 → 按"wujie sync 0 代码自动同步"理解必漏监听。
+
+**SOP 清单补充(G 方案,external/native iframe 子应用强制)**:
+
+| # | 约束(修订/新增) | 强制性 | 检测手段 |
+|---|---|---|---|
+| 1（校正） | 路由器 HashRouter / BrowserRouter 均可(G 方案靠 postMessage `navigate`,不强依赖 BrowserRouter+wujie sync);external 独立站点 HashRouter + `base='/'` 可接受 | 强制 | 接入评审 |
+| **9（新增）** | 子应用必装 **postMessage 路由同步桥**:`subapp-router-change` → `navigate(subPath)`;`plant-changed` → 更新工厂码。范本 `SubAppRouterBridge.jsx` / MDM `App.jsx` handleMessage | **强制** | grep 子应用有 `addEventListener('message'` 路由同步监听 |
+| **10（新增）** | 全部 service 显式 `baseURL` 指向正确后端(dev proxy 掩盖缺失,production iframe 暴露) | **强制** | `grep -L "baseURL\|VITE_" src/service/*` 必为空 |
+| 7（校正 E2E） | E2 UI 必须真实 BP iframe + production-like 环境**逐菜单**跑 + 每页 API 真实调通,**禁 dev proxy / 单应用直访作验收依据** | **强制** | 验收前逐菜单点击截图 |
+
+**落地**:`standards/subapp-onboarding-guide.md` v1.2(步骤 8 / 附录 A.1 / 步骤 10 / 子应用侧自检清单)+ `standards/legacy-migration-playbook.md`(迁移轨子应用 SOP 对照)。
