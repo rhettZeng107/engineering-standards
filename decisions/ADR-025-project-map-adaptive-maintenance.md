@@ -135,6 +135,7 @@ YAGNI:机制未验证先固化成 skill 有 over-engineer 风险;跑 2-3 个迁�
 ### 影响
 
 - 配套 SYSV2 memory:`feedback_plan_complete_map_refresh.md`(新建)+ `feedback_spec_archive_after_completion.md`(回链补缺)
+- 配套 SRMV2 memory:`feedback_plan_complete_map_refresh_multirepo.md`(新建,6 nested repo dogfood 验证 + 第 4 失配点 merge-aware spawn 解法)
 - 不影响 gsd 工具链代码
 
 ## History(变更轨迹)
