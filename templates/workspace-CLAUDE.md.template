@@ -137,6 +137,16 @@ cd <项目目录> && git push origin master && git push <第二远程> master
 
 ---
 
+## 项目地图 / Project Map
+
+> 完整机制见 `engineering-standards` ADR-025(自适应维护 + multi-repo 适配)+ ADR-026(8 维 + MECHANISMS)。
+
+- `.planning/codebase/` **8 维图**:gsd `/gsd-map-codebase` 产 7 原生图(STACK/ARCHITECTURE/STRUCTURE/CONVENTIONS/TESTING/INTEGRATIONS/CONCERNS)+ **MECHANISMS 第 8 维由 Claude 本体补**;新会话由全局 hook 自动注入摘要。
+- **plan 完结即增量刷**(不等 archive):`/gsd-map-codebase --paths <改动的 nested 仓>` + 补 MECHANISMS,作批次自治动作,不打断涛哥。
+- **multi-repo 4 适配点**(ADR-025 修订):① MECHANISMS 必补(gsd 只产 7 图)② `last_mapped_commit` 记 nested 仓各自 HEAD(非 workspace 根,否则漂移检测失明)③ plan 完结即刷 ④ **merge-aware spawn** —— 派 mapper 带现有图作 `required_reading` + 显式「保留未 scope 域」(防 mapper `Write` 整篇覆盖冲他域致数据丢失)。
+
+---
+
 ## 测试环境 / Test Environment
 
 - **测试账号**:`<账号>` / `<密码>`,`<登录地址>`
