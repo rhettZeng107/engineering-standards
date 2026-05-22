@@ -111,17 +111,18 @@ ADR-013(2026-05-09)确立 codebase 画像作前置事实基础,维护机制为�
 
 ### 触发
 
-涛哥评估「复用 `/gsd-map-codebase` 做技能增强、迁移轨 plan 完结自动刷对应域」时,实证 gsd 原生机制对 SYSV2 这类 **multi-repo 工作区** 有 3 个失配点(`map-codebase.md` / `codebase-drift-gate.md` / `bin/lib/drift.cjs` 实证):
+涛哥评估「复用 `/gsd-map-codebase` 做技能增强、迁移轨 plan 完结自动刷对应域」时,实证 gsd 原生机制对 **multi-repo 工作区** 的失配点(`map-codebase.md` / `codebase-drift-gate.md` / `bin/lib/drift.cjs` 实证;前 3 点 SYSV2 实证 + 第 4 点 SRMV2 2026-05-22 dogfood 验证暴露):
 
 | 失配点 | 实证 | 后果 |
 |---|---|---|
 | ① MECHANISMS 非 gsd 原生 | `map-codebase.md:117-124` 只产 **7** 图;MECHANISMS 是 ADR-026 加的第 8 维(只在 `gsd-doc-writer.md`) | 跑 gsd-map-codebase **漏刷 MECHANISMS** —— 最防迁移踩坑的「AI 最易臆测错处」图 |
 | ② multi-repo 漂移失明 | drift 基于 `last_mapped_commit..HEAD` 数 **workspace 仓** commit;但代码在 N 个 nested repo,workspace `.gitignore` 排除它们 → workspace HEAD 与 nested 代码脱钩 | nested repo 改 50 文件,workspace HEAD 可能不动,漂移检测对 nested 代码改动**失明** |
 | ③ 触发点用不上 | gsd drift gate 挂 `/gsd:execute-phase`;SYSV2 不走 GSD execute(走自有 spec/plan/tasks + qwen/dotnet 落盘) | 现成自动触发钩子 SYSV2 一次没用上 |
+| ④ mapper 整篇重写冲他域 | `gsd-codebase-mapper.md:181` 强制 `Write` 整篇覆盖;聚合图(STACK/ARCHITECTURE/CONVENTIONS/INTEGRATIONS 按关注点交织、非按 repo 分节)裸跑 `--paths` 时 mapper 只看 scope 内文件 → **静默冲掉未 scope 域的事实(数据丢失)** | SRMV2 dogfood 发现 |
 
 ### 决策(约定层适配,**不改 gsd 原生 skill**)
 
-1. **引擎零改动复用**:`/gsd-map-codebase --paths <nested-repo-目录前缀>`(`--paths` 增量真实存在,`map-codebase.md:30-66`)
+1. **引擎复用 + merge-aware spawn**:`/gsd-map-codebase --paths <nested-repo-目录前缀>`(`--paths` 真实存在,`map-codebase.md:30-66`);**派 mapper 时必须带现有图作 `required_reading` + 显式「保留未 scope 域内容」指令**(规避失配点④ —— mapper `Write` 整篇覆盖会冲他域)
 2. **MECHANISMS 必补**:增量刷 7 原生图后,Claude 本体单独补刷 MECHANISMS(跨模块语义,不适合纯 mapper agent)
 3. **触发点提前到 plan 完结**:迁移轨/标准轨 plan 全 phase 完成 + E2E pass 即刷,**不等 archive**(plan 完结未必立刻 archive);作批次自治动作,不打断涛哥
 4. **per-repo HEAD**:`last_mapped_commit` 记 nested repo **各自** HEAD,不是 workspace HEAD(后续修 `project-map-staleness-check.js` 的 multi-repo 失明,C 档)
@@ -143,3 +144,4 @@ YAGNI:机制未验证先固化成 skill 有 over-engineer 风险;跑 2-3 个迁�
 | 2026-05-16 | Proposed → Accepted | 涛哥拍板;ADR-013 月度兜底不灵活;改「自适应触发为主 + 启动软兜底」+ 术语更名「项目地图」;Supersedes ADR-013 |
 | 2026-05-18 | 补强(ADR-030 B4) | 项目地图文件 YAML frontmatter 带 `last_mapped_commit`(GSD mapper 已写入);`project-map-staleness-check.js` 增「漂移检测」—— 该 commit 之后提交数超阈值即提示重扫,与 30 天时效检测并行 |
 | 2026-05-22 | 修订(multi-repo 适配) | 实证 gsd 原生 3 失配点(MECHANISMS 非原生 / multi-repo 漂移失明 / 触发点挂 GSD execute);约定层适配 = `--paths` 增量复用 + MECHANISMS 必补 + plan 完结即刷 + per-repo HEAD;不改 gsd 原生 skill;约定层起步(YAGNI) |
+| 2026-05-22 | SRMV2 验证 + 第 4 失配点 | SRMV2(6 nested repo)dogfood 验证机制跑通(增量只扫 scope / 8 图齐含 MECHANISMS / per-repo HEAD 非根 HEAD 84935dc / 他域零丢失);新发现失配点④(mapper `Write` 整篇覆盖冲聚合图他域,数据丢失)→ 解法 merge-aware spawn(带 required_reading 现有图 + 保留他域指令) |
