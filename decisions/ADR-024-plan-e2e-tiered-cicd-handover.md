@@ -127,6 +127,21 @@
 
 ---
 
+## 修订(2026-05-24)— E2E_Verify in-pipeline 升为硬基线
+
+**触发**:SRMV2 采购+供应商部署 10.8。抄了合同域**无 E2E stage** 的 pipeline 样板 → CI 4 仓绿 + 本机 dev render OK,但 **prod build** 上供应商 10 个菜单点开即崩(共享 Table dataSource 无数组守卫 → `dataSource.map is not a function` → ErrorBoundary)。smoke(index 200)漏网。多次重申"复用 SYSV2/MDM CI(含 E2E_Verify Stage 3)"仍走偏。
+
+**决策**:本 ADR 政策(CI/CD 接管全量回归)的**落地形态固化为硬基线**:
+- 前端部署 pipeline **必含三段**:Build → DeployTest → **E2EVerify**;smoke 不替代 E2E。
+- E2E **必须打部署 prod 环境**(非 dev server);**CRASH=0** 才算过,stage `continueOnError:false`。
+- **复用资产**(一次定义、跨项目自动复用):标准 `standards/cicd-e2e-in-pipeline-standard.md` + 模板 `templates/pipeline-e2e/` + `templates/azure-pipelines-e2e-stage.snippet.yml`。
+- **自执行**:钩子 `templates/hooks/cicd-e2e-stage-guard.js`(前端 pipeline 缺 E2E_Verify stage 即警示,免逐项目重申)。
+- **配套编码标准**:Table dataSource 必数组守卫(`react-ui-guidelines.md` §4.2)。
+
+**四条根因教训**:① dev render OK ≠ prod render OK ② CI smoke ≠ 页面渲染 ③ 共享 Table 无数组守卫 → 单点崩全站 ④ POST 被 IIS 降级 / 端点 5xx。详标准文档。
+
+---
+
 ## Related
 
 - **配套全局规则**:`~/.claude/CLAUDE.md`「E2E 8 项核对」+「三轨工作流」段
@@ -141,3 +156,4 @@
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-14 | Proposed → Accepted | 涛哥 Y 分级减负方案 |
+| 2026-05-24 | 修订 | E2E_Verify in-pipeline 升硬基线 + 标准/模板/钩子固化(SRMV2 10.8 部署踩坑) |

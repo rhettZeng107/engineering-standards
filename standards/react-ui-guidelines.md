@@ -206,6 +206,18 @@
 
 ### 4.2 关键陷阱（必读）
 
+**强制** `dataSource` 数组守卫(否则单点崩全站)。Table/ProTable 的 `dataSource` 必须保证是数组:
+
+```jsx
+<Table dataSource={Array.isArray(rows) ? rows : []} />   // ✅ 守卫
+// <Table dataSource={rows} />                            // ❌ rows 为 API 错误体/undefined → dataSource.map is not a function → ErrorBoundary 崩整页
+```
+
+- ProTable `request` 回调:`return { data: Array.isArray(d) ? d : [], total, success: true }`;catch 分支 `return { data: [], success: false }`。
+- Select/ProFormSelect `request` 里对结果 `.map`:先 `const arr = Array.isArray(res) ? res : [];` 再 `arr.map(...)`。
+- **共享/dashboard 组件尤其**:它渲染在多页,崩它=崩一片(SRMV2 10.8 实证:一个共享 Table 调失败崩 10 个菜单)。
+- 兜底闸:部署后 E2E render-walk(`standards/cicd-e2e-in-pipeline-standard.md`)拦截漏网。
+
 **禁止** `toolBarRender={false}`（pro-table 3.21 实证：会把整个 `.ant-pro-table-list-toolbar` 区域不渲染，options 失效）。
 
 **正确写法** — 传**空数组**：

@@ -1,0 +1,63 @@
+# ========== Stage 3: E2E_Verify(部署后 Playwright 验证,跨项目模板)==========
+# 接到前端 pipeline 的 Build + DeployTest 之后。参 standards/cicd-e2e-in-pipeline-standard.md。
+# smoke(index 200)只验静态首页可达;本 stage 验 SPA 真渲染(打部署 prod 环境),CRASH 即阻断。
+#
+# 前置:仓内有 pipeline-e2e/(拷 templates/pipeline-e2e/ 改 spec 路由 + login)。
+# 变量:nodeVersion / IIS_TARGET_HOST(Variable Group)/ targetPort(本 pipeline 已有)。
+# 占位替换:
+#   <E2E_TARGET>   external: http://$(IIS_TARGET_HOST):$(targetPort)
+#                  shared_iis: http://$(IIS_TARGET_HOST):$(targetPort)/<vdir>(配 E2E_ROOT_PATH=/<vdir>/)
+#   <E2E_API>      后端 API 根(render-walk 登录用),如 http://$(IIS_TARGET_HOST):<apiPort>
+#   <E2E_ROUTES>   逗号分隔关键路由(曾崩溃 + 核心业务);纯壳子验证可省(留 critical-boot)
+
+- stage: E2EVerify
+  displayName: 'E2E 验证 (部署后 critical render)'
+  dependsOn: DeployTest
+  condition: succeeded()
+  jobs:
+    - job: PlaywrightCritical
+      displayName: 'Playwright Critical'
+      timeoutInMinutes: 15
+      steps:
+        - checkout: self
+          fetchDepth: 1
+
+        - task: NodeTool@0
+          displayName: 'Use Node $(nodeVersion)'
+          inputs:
+            versionSpec: '$(nodeVersion)'
+
+        - powershell: |
+            Set-Location "$(Build.SourcesDirectory)/pipeline-e2e"
+            npm install --no-audit --no-fund
+            if ($LASTEXITCODE -ne 0) { throw "npm install failed $LASTEXITCODE" }
+            npx playwright install chromium --with-deps
+            if ($LASTEXITCODE -ne 0) { throw "playwright install failed $LASTEXITCODE" }
+          displayName: 'Setup Playwright (npm + chromium)'
+
+        - powershell: |
+            Set-Location "$(Build.SourcesDirectory)/pipeline-e2e"
+            $env:E2E_TARGET = "<E2E_TARGET>"
+            $env:E2E_API = "<E2E_API>"
+            $env:E2E_ROUTES = "<E2E_ROUTES>"
+            $env:CI = "true"
+            Write-Host "--- E2E target: $env:E2E_TARGET ---"
+            npx playwright test --reporter=line
+            if ($LASTEXITCODE -ne 0) { throw "E2E failed $LASTEXITCODE" }
+          displayName: 'Run Critical E2E'
+
+        - task: PublishTestResults@2
+          condition: always()
+          displayName: 'Publish JUnit Results'
+          inputs:
+            testResultsFormat: 'JUnit'
+            testResultsFiles: 'pipeline-e2e/test-results/junit.xml'
+            failTaskOnFailedTests: false
+
+        - task: PublishBuildArtifacts@1
+          condition: always()
+          displayName: 'Upload E2E artifacts'
+          inputs:
+            PathtoPublish: '$(Build.SourcesDirectory)/pipeline-e2e/test-results'
+            ArtifactName: 'e2e-artifacts-$(Build.BuildId)'
+            publishLocation: 'Container'
