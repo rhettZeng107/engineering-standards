@@ -16,7 +16,7 @@
  * 检查项:
  *   ① service baseURL 全覆盖(request.js 无默认 baseURL 时,每个 service 必须显式 baseURL/VITE_)
  *   ② postMessage 路由同步监听(addEventListener('message') + 'subapp-router-change')
- *   ③ 嵌入模式隐藏 chrome(__POWERED_BY_WUJIE__ / window.self!==window.top / isEmbedded)
+ *   ③ 嵌入模式隐藏 chrome(层级感知:渲染外壳的 layout 必须同文件按 isEmbedded 门控,presence-only 不算)
  *   ④ E2E production-like(存在打 BP 8002 / 业务门户的验收脚本,非纯 localhost)
  */
 'use strict';
@@ -36,6 +36,7 @@ function findRepoRoot(startDir) {
   return null;
 }
 
+// menu-manifest 子应用(向 BP 发布菜单清单,如合同域)— ①②④ 契约检查的范围
 function isSubAppRepo(repoRoot) {
   if (!repoRoot) return false;
   const pubDir = path.join(repoRoot, 'public');
@@ -43,6 +44,18 @@ function isSubAppRepo(repoRoot) {
   try {
     return fs.readdirSync(pubDir).some((f) => /^menu-manifest.*\.json$/i.test(f));
   } catch (_) { return false; }
+}
+
+// Wujie 子应用(src 入口处理 __POWERED_BY_WUJIE__ / window.$wujie)— ③ 嵌入外壳门控的范围。
+// 采购域是 Wujie 子应用但不发布 menu-manifest,只靠 isSubAppRepo 会整体漏检(踩坑点)。
+function isWujieSubApp(repoRoot) {
+  if (!repoRoot) return false;
+  if (isSubAppRepo(repoRoot)) return true;
+  for (const p of ['src/index.jsx', 'src/index.js', 'src/index.tsx', 'src/main.jsx', 'src/main.js', 'src/main.tsx']) {
+    const c = read(path.join(repoRoot, p));
+    if (/__POWERED_BY_WUJIE__|window\.\$wujie/.test(c)) return true;
+  }
+  return false;
 }
 
 function listFiles(dir, exts, acc = [], depth = 0) {
@@ -99,12 +112,42 @@ function checkPostMessageRouter(repoRoot) {
   });
 }
 
-function checkEmbedChrome(repoRoot) {
+// 文件是否渲染应用自带外壳(antd Header+Sider 或 退出登录组件)
+function rendersChrome(content) {
+  const hasHeaderSider = /<Header[\s>]/.test(content) && /<Sider[\s>]/.test(content);
+  const hasLogout = /<Logout[\s/>]|退出登录|退出登陆/.test(content);
+  return hasHeaderSider || hasLogout;
+}
+
+// 文件内是否有嵌入判断门控(__POWERED_BY_WUJIE__ / self!==top / isEmbedded)
+function hasEmbeddedGate(content) {
+  return /__POWERED_BY_WUJIE__|window\.self\s*!==\s*window\.top|isEmbedded/.test(content);
+}
+
+// 找 layout 文件(按路径/文件名含 layout 收敛,避免误伤业务卡片里的小 Header)
+function findLayoutFiles(repoRoot) {
   const files = listFiles(path.join(repoRoot, 'src'), ['.js', '.jsx', '.ts', '.tsx']);
-  return files.some((f) => {
-    const c = read(f);
-    return /__POWERED_BY_WUJIE__|window\.self\s*!==\s*window\.top|isEmbedded/.test(c);
+  return files.filter((f) => {
+    const norm = f.replace(/\\/g, '/');
+    return /\/layout[/.]/i.test(norm) || /layout/i.test(path.basename(f));
   });
+}
+
+// 检查 ③(层级感知):layout 层渲染了外壳(Header/Sider/退出登录),则该层必须有 embedded 门控。
+// 判定到「层」而非「单文件」—— 父子拆分(index 门控 + HeaderContent/Sider 渲染)是常态,逐文件要求自带门控会误报。
+// presence-only(token 仅在 index 入口出现)不算 —— 采购踩坑:index.jsx 有 token 但整个 layout 层无门控,误判通过。
+// 例外:加注释 // embedded-gated-by-parent 视为已门控。
+function checkEmbedChrome(repoRoot) {
+  const chromeFiles = [];
+  let layerGated = false;
+  for (const f of findLayoutFiles(repoRoot)) {
+    const c = read(f);
+    if (/embedded-gated-by-parent/.test(c) || hasEmbeddedGate(c)) layerGated = true;
+    if (rendersChrome(c)) chromeFiles.push(path.relative(repoRoot, f));
+  }
+  // 外壳存在但 layout 层无任何门控 → 漏
+  const ok = chromeFiles.length === 0 || layerGated;
+  return { ok, offenders: ok ? [] : chromeFiles };
 }
 
 function checkE2EProd(repoRoot) {
@@ -121,26 +164,34 @@ function checkE2EProd(repoRoot) {
 // ---------- CLI 全仓检查 ----------
 function runFullCheck(repoDir) {
   const repoRoot = findRepoRoot(repoDir);
-  if (!isSubAppRepo(repoRoot)) {
-    console.log('[subapp-guard] 非 BP 子应用前端仓(无 public/menu-manifest*.json),跳过。');
+  const menuSubApp = isSubAppRepo(repoRoot);
+  const wujieSubApp = isWujieSubApp(repoRoot);
+  if (!menuSubApp && !wujieSubApp) {
+    console.log('[subapp-guard] 非 BP / 非 Wujie 子应用前端仓,跳过。');
     process.exit(0);
   }
   const fails = [];
   const warns = [];
 
-  const svc = checkServices(repoRoot);
-  if (!svc.skip && svc.missing.length) {
-    fails.push(`① service 漏 baseURL(request.js 无默认 baseURL,以下 service 未显式指向后端):\n   - ${svc.missing.join('\n   - ')}`);
+  // ③ 嵌入外壳门控 —— 任何 Wujie 子应用都查(采购无 menu-manifest 但仍是 Wujie 子应用)
+  const embed = checkEmbedChrome(repoRoot);
+  if (!embed.ok) {
+    fails.push('③ layout 渲染了自带外壳(Header/Sider/退出登录)却缺 embedded 门控 — BP 嵌入时双层外框 + 空 Sider 留白 + 多余退出登录:\n   - ' + embed.offenders.join('\n   - ') + '\n   修:照 AI.REACT.SRM.Contract.2/src/layout/index.jsx 的 isEmbedded 模式,嵌入时不渲染 Header/Sider/Logout');
   }
-  if (!checkPostMessageRouter(repoRoot)) {
-    fails.push("② 缺 postMessage 路由同步监听(addEventListener('message') + 'subapp-router-change')— BP 点菜单将停在同一页");
+
+  // ①②④ service/router/E2E 契约 —— menu-manifest 子应用才查
+  if (menuSubApp) {
+    const svc = checkServices(repoRoot);
+    if (!svc.skip && svc.missing.length) {
+      fails.push(`① service 漏 baseURL(request.js 无默认 baseURL,以下 service 未显式指向后端):\n   - ${svc.missing.join('\n   - ')}`);
+    }
+    if (!checkPostMessageRouter(repoRoot)) {
+      fails.push("② 缺 postMessage 路由同步监听(addEventListener('message') + 'subapp-router-change')— BP 点菜单将停在同一页");
+    }
+    const e2e = checkE2EProd(repoRoot);
+    if (!e2e.hasBpE2E) warns.push('④ 无 BP 验收 E2E 脚本(应有真实 BP iframe 逐菜单验收)');
+    else if (!e2e.prodOk) warns.push('④ BP 验收 E2E 只打 localhost(应 production-like,禁 dev proxy 假通过)');
   }
-  if (!checkEmbedChrome(repoRoot)) {
-    warns.push('③ 未检出嵌入模式隐藏 chrome(__POWERED_BY_WUJIE__ / window.self!==window.top / isEmbedded)— 确认无双层外框');
-  }
-  const e2e = checkE2EProd(repoRoot);
-  if (!e2e.hasBpE2E) warns.push('④ 无 BP 验收 E2E 脚本(应有真实 BP iframe 逐菜单验收)');
-  else if (!e2e.prodOk) warns.push('④ BP 验收 E2E 只打 localhost(应 production-like,禁 dev proxy 假通过)');
 
   console.log(`\n=== Subapp Frontend Guard: ${path.basename(repoRoot)} ===`);
   if (fails.length === 0 && warns.length === 0) { console.log('✅ 全部通过(① service baseURL ② postMessage 路由 ③ 嵌入 chrome ④ E2E production)'); process.exit(0); }
@@ -163,21 +214,29 @@ function runHook() {
     if (/_template|_archive/.test(norm)) process.exit(0);
 
     const repoRoot = findRepoRoot(path.dirname(filePath));
-    if (!isSubAppRepo(repoRoot)) process.exit(0);
+    const menuSubApp = isSubAppRepo(repoRoot);
+    if (!menuSubApp && !isWujieSubApp(repoRoot)) process.exit(0);
 
     const msgs = [];
-    // 编辑 service 文件 → 即时查该文件 baseURL
-    if (/\/src\/service\/[^/]+\.(js|ts)$/.test(norm) && !hasDefaultBaseURL(repoRoot)) {
+    // ①② service/router 即时检查 —— menu-manifest 子应用才查
+    if (menuSubApp && /\/src\/service\/[^/]+\.(js|ts)$/.test(norm) && !hasDefaultBaseURL(repoRoot)) {
       if (serviceMissingBaseURL(read(filePath))) {
         msgs.push(`service ${path.basename(filePath)} 的 request 调用疑似漏 baseURL(request.js 无默认 baseURL)。`);
         msgs.push('  dev proxy 会兜底掩盖,production iframe 必报「网络异常」。补 baseURL: import.meta.env.VITE_Url(参考 purchase.js)。');
       }
     }
-    // 编辑 App/index/路由入口 → 查全仓 postMessage 监听
-    if (/\/src\/(App|index|main)\.(jsx?|tsx?)$/.test(norm) || /react-router/.test(norm)) {
+    if (menuSubApp && (/\/src\/(App|index|main)\.(jsx?|tsx?)$/.test(norm) || /react-router/.test(norm))) {
       if (!checkPostMessageRouter(repoRoot)) {
         msgs.push("子应用缺 postMessage 路由同步监听('subapp-router-change')— BP 点菜单会停在同一页。");
         msgs.push('  在 React Router 内挂监听桥(参考 MDM App.jsx / SubAppRouterBridge.jsx)。');
+      }
+    }
+    // 编辑 layout 文件 → 查是否渲染外壳却缺 embedded 门控
+    if (/\/layout[/.]/i.test(norm) || /layout[^/]*\.(jsx?|tsx?)$/i.test(path.basename(filePath))) {
+      const c = read(filePath);
+      if (!/embedded-gated-by-parent/.test(c) && rendersChrome(c) && !hasEmbeddedGate(c)) {
+        msgs.push('layout 渲染了自带外壳(Header/Sider/退出登录)却缺 embedded 门控 — BP 嵌入会双层外框 + 留白 + 多余退出登录。');
+        msgs.push('  照 AI.REACT.SRM.Contract.2/src/layout/index.jsx 的 isEmbedded 模式:嵌入时不渲染 Header/Sider/Logout。');
       }
     }
     if (msgs.length) {
@@ -195,4 +254,4 @@ if (process.argv.includes('--check')) {
   runHook();
 }
 
-module.exports = { hasDefaultBaseURL, serviceMissingBaseURL, checkPostMessageRouter, isSubAppRepo };
+module.exports = { hasDefaultBaseURL, serviceMissingBaseURL, checkPostMessageRouter, checkEmbedChrome, rendersChrome, hasEmbeddedGate, isSubAppRepo };

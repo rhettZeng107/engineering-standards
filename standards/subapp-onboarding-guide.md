@@ -1040,7 +1040,7 @@ function PreloadHost() {
 - [ ] **postMessage `plant-changed` 监听**:切工厂更新 `__bp_plant_code__`
 - [ ] **入口 hash token 解析**:`bootstrapAuthContext` 解析 `#sso_token=&plant=` 注入 + 清 hash
 - [ ] **全部 service baseURL 显式指向后端**:`grep -L "baseURL\|VITE_" src/service/*` 必为空;dev vite proxy 会兜底掩盖缺失,**production iframe 无 proxy 必网络异常**(对照已知正确的 service 逐文件核)
-- [ ] **嵌入模式隐藏自带 chrome**:iframe/wujie 嵌入时不渲染子应用自己的 Header/Sider/Footer(避免双层外框)
+- [ ] **嵌入模式隐藏自带 chrome**:iframe/wujie 嵌入时**在 layout 层**按 `isEmbedded`(`__POWERED_BY_WUJIE__` / `window.self!==window.top`)门控,不渲染子应用自己的 Header/Sider/Footer/退出登录(避免双层外框 + 空 Sider 留白 + 多余退出登录)。范本 `AI.REACT.SRM.Contract.2/src/layout/index.jsx`。⚠️ token 仅出现在 `index.jsx` 入口不算 —— 必须是 layout 真隐藏外壳(钩子 2026-05-24 已层级化,见 ADR-012 修订)
 - [ ] **menu-manifest 的 Path 与 React Router path 逐条匹配**
 - [ ] **manifest API + IP allowlist 中间件**(步骤 2)
 - [ ] **验收在真实 BP iframe + production-like 环境逐菜单跑**(禁 dev proxy / 单应用直访假通过,见步骤 10 强约束)

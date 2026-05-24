@@ -157,3 +157,20 @@
 | 7（校正 E2E） | E2 UI 必须真实 BP iframe + production-like 环境**逐菜单**跑 + 每页 API 真实调通,**禁 dev proxy / 单应用直访作验收依据** | **强制** | 验收前逐菜单点击截图 |
 
 **落地**:`standards/subapp-onboarding-guide.md` v1.2(步骤 8 / 附录 A.1 / 步骤 10 / 子应用侧自检清单)+ `standards/legacy-migration-playbook.md`(迁移轨子应用 SOP 对照)。
+
+---
+
+## 修订 / Revision(2026-05-24)— 检查 ③ 嵌入 chrome 钩子两层漏网修正
+
+**触发**:SRMV2 采购子应用部署 BP,涛哥反馈页面多一层外框 + 左菜单与内容大段留白 + 右上角多余「退出登录」。根因 `AI.REACT.SRM.Buyer.2/src/layout/index.jsx` 无条件渲染自带 `Header(含 Logout)+ Sider(空 240px)+ 外框`,迁移时漏套嵌入门控。问题是:**本 ADR 检查 ③(嵌入隐藏 chrome)早已存在,钩子却没拦住**。
+
+**两层漏网根因**:
+1. **判定太窄** — `isSubAppRepo` 仅认 `public/menu-manifest*.json`(合同域特性)。采购是 Wujie 子应用但不发布 menu-manifest → 钩子对采购**整仓跳过**,四项检查一项没跑。
+2. **检查太浅** — 检查 ③ 原实现是 `presence-only`:只要 `__POWERED_BY_WUJIE__`/`isEmbedded` token 在 src **任意文件**出现就算过。采购 `src/index.jsx` 有该 token(Wujie 生命周期取 props 用)→ **误判通过**,而真正的 layout 层根本没用它隐藏外壳。
+
+**修正(`templates/hooks/subapp-frontend-guard.js`)**:
+- 新增 `isWujieSubApp`(menu-manifest **或** src 入口含 `__POWERED_BY_WUJIE__`/`window.$wujie`)。检查 ③ 用它收范围(Wujie 子应用都查);①②④ 契约仍限 menu-manifest 子应用(避免对采购误报 router/service)。
+- 检查 ③ 改**层级感知**:layout 层(`layout/` 下或文件名含 layout)有任一文件渲染外壳(`<Header>+<Sider>` 或 `<Logout>`/退出登录),则该层必须有 embedded 门控;**判定到「层」不是「单文件」**(父子拆分 `index 门控 + HeaderContent/Sider 渲染` 是常态,逐文件要求自带门控会误报合同 `HeaderContent.jsx`)。token 仅在入口出现不算过。升为 **FAIL**(原为 warn)。例外注释 `// embedded-gated-by-parent`。
+- 实测:采购修复前 ❌ 抓到(`src/layout/index.jsx`)、采购修复后 ✅、合同标杆 ✅(不再误报 `HeaderContent.jsx`)、供应商 external 站点跳过。
+
+**教训**:**「规则存在」≠「规则生效」**。机械自检的判定范围(谁进检查)+ 检查深度(presence vs 真实层级语义)任一偷工,规则就形同虚设、踩坑照旧。新增/强化机械自检必须配「修复前能抓到 + 修复后能放行 + 标杆不误报」三向实测。
