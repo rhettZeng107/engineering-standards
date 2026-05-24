@@ -153,3 +153,62 @@ done
 - `~/Projects/SRMV2/docs/superpowers/specs/2026-05-20-srm-contract-migration/spec.md`(本会话触发本 ADR 的合同 spec)
 - ADR-017 / ADR-022 / ADR-029
 - Anthropic Claude Code docs: hooks / SessionStart / Stop hook
+
+---
+
+## 修订(2026-05-24)— 区分两类失败模式 + 卡死喂键(D6,涛哥拍板)
+
+### 触发 / Context
+
+涛哥反馈实际最常遇到的**不是**「进程崩溃退出」,而是:**API ERROR / socket 异常后 claude 进程没死、卡在 idle 等输入,要手动敲「继续 / go」才推进**(典型:夜间无人值守,早上才发现卡了一夜)。
+
+实证(2026-05-24):
+
+- 当时裸跑 `claude --dangerously-skip-permissions`(PID 12705 实测存活),未套 watchdog。
+- **关键发现:D4 的 `claude-watchdog.sh` 结构性救不了这个场景** —— 它 `while` 循环阻塞在 `claude "$@"` 等进程退出;进程不退出则循环永不进下一圈。**D4 只覆盖「进程退出」**。
+
+### 两类失败模式(本 ADR 须显式区分)
+
+| 模式 | 进程状态 | 归谁 |
+|---|---|---|
+| **A 进程崩溃退出**(返回 exit code) | 死 | D4 `claude-watchdog.sh`(等退出 → 重启 `--continue`) |
+| **B 进程活着卡 idle**(报错后停在输入提示) | 活 | **D6(新增)tmux + feeder 喂键** |
+
+### D6. 卡死喂键(模式 B,保守档)
+
+在 **tmux 会话内**跑 claude,后台看门人 `claude-feeder.sh` 每 ~90s `capture-pane` 读屏,三态判定:
+
+- 底部有 `esc to interrupt`(在跑)→ 不动
+- 尾部出现报错文案 + 连续 2 次同态(去抖)→ `send-keys go`(ASCII,非中文,防 `stuff` 多字节乱码)
+- 其它 idle(正常完结 / 等指令 / **等拍板**)→ 不喂,留人工
+
+**保守核心 = 白名单式喂键**:只有明确匹配报错文案才喂;拍板点屏幕无报错文案 → 天然不会被误喂(**不替人做决定**)。
+
+A+B 互补,均跑在 tmux 内:
+`Ghostty → claude-tmux.sh →(tmux pane:claude-watchdog.sh = 模式 A)+(后台:claude-feeder.sh = 模式 B)`
+
+### Ghostty 自动装载
+
+`~/.config/ghostty/config` 加 `command = ~/.claude/bin/claude-tmux.sh` → 开 Ghostty 自动进 claude,无需手敲;`claude-tmux.sh` 老会话 attach / 无则新建 + 自愈 feeder。
+
+### D4 顺修
+
+`claude-watchdog.sh` 重启时原 `set -- "--continue" "继续"` 会**丢原始参数**(如 `--dangerously-skip-permissions`)→ 改 `set -- "${ORIG[@]}" "--continue" "继续"` 保留。
+
+### 实证 vs 假设(诚实标注,ADR-015)
+
+- **[实证]** `capture-pane` 读屏 / `send-keys` 注入(cat 回显 `go` 验证)/ 三态判定 / 脚本 `bash -n` / tmux brew 安装 —— 全过。
+- **[假设]** feeder 报错正则 `ERR_RE` 匹配真实 Claude Code 卡死屏 —— **无法在运行中自证**(Claude 看不到自己 TUI),第一版用常见报错词;每次喂键存现场快照 `~/.claude/logs/feeder-snaps/`,据真实文案迭代校准。**漏喂 = 退回手敲(安全方向),不会误喂拍板**。
+
+### 文件清单
+
+- `~/.claude/bin/claude-tmux.sh`(新,Ghostty 入口)
+- `~/.claude/bin/claude-feeder.sh`(新,模式 B 看门人)
+- `~/.claude/bin/claude-watchdog.sh`(改,模式 A + 参数保留)
+- `~/.config/ghostty/config`(改,自动装载)
+
+### 代价 / 残留风险
+
+1. feeder 靠抓屏文案判定,启发式非 100%;极端情况(报错后又有输出冲掉报错行)可能漏喂 —— 但保守档保证不误喂拍板点。
+2. tmux 接管滚屏(`Ctrl-b [`),用户习惯小变。
+3. 报错正则需据真实快照校准,第一晚算试运行。
