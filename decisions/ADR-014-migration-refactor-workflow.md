@@ -112,7 +112,7 @@ CRITICAL / HIGH 自治修复 2 轮内,MEDIUM / LOW 列报告等涛哥决定。
 
 Plan 完结后 Claude 自动跑:
 - E1 API: curl / Postman / 单元测试(自动)
-- E2 UI: Playwright headless(自动)
+- E2 UI: Playwright headless(自动)—— **必验 ADR-008 ⑤ 入口可达性全链**(路由 → 菜单种子 → 权限码 → 登录看到 → 点进渲染),**不是只 render-walk 渲染路由组件**;**必打部署/集成环境(非 dev server)**,参 ADR-024 修订(dev render OK ≠ prod render OK / CI smoke ≠ 页面渲染);**菜单种子 + 权限码缺失 = E2 不通过**(回链 ADR-007 鉴权 4 条第 3 条)
 - 失败先重试 2-3 次再 clarify(已有 memory `feedback_e2e_test_fail_clarify_first.md`)
 
 ### 5. 完结报告(一次性产出)
@@ -193,3 +193,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-09 | Proposed → Accepted | 涛哥拍板;触发场景 = AI Coding 价值最大化(Front-load + Back-automate);适用 5 个未来迁移改造项目 |
+| 2026-05-24 | 修订 | §4 E2 UI 钉死「必验 ADR-008 ⑤ 入口可达性全链(菜单可见可点)+ 必打部署/集成环境(非 dev server)」。踩坑:SRM 采购端 MVC→React 缺口补全,把 dev 端 render-walk(直渲路由组件)当 E2 验收,漏菜单种子+权限码,操作用户在菜单里看不到模块 → 标准早在 ADR-008 ⑤,问题是迁移轨 E2 被降级,本次回链钉死 |
