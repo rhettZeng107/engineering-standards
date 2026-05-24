@@ -174,3 +174,20 @@
 - 实测:采购修复前 ❌ 抓到(`src/layout/index.jsx`)、采购修复后 ✅、合同标杆 ✅(不再误报 `HeaderContent.jsx`)、供应商 external 站点跳过。
 
 **教训**:**「规则存在」≠「规则生效」**。机械自检的判定范围(谁进检查)+ 检查深度(presence vs 真实层级语义)任一偷工,规则就形同虚设、踩坑照旧。新增/强化机械自检必须配「修复前能抓到 + 修复后能放行 + 标杆不误报」三向实测。
+
+---
+
+## 修订 / Revision(2026-05-24)— 菜单发布走 manifest(禁手工 DB)+ console 泄漏 404
+
+**触发**:SRMV2 采购迁移自 HC srmctest(老 React,无 manifest 机制)→ 采购菜单一直靠**手工 INSERT/UPDATE SYS_AuthInfo** 维护(phaseA 种子 + 248 对齐),绕过 ADR-012 manifest 铁律。另:BP 门户散落老菜单点击 404。
+
+**两条根因**:
+1. **手工 DB 维护菜单 = 反模式**:采购缺 manifest 三件套(routes.config + generate-manifest + 后端 MenuController),菜单无版本化真理源、易漂移、与 ScanMenus 冲突。
+2. **console 菜单泄漏 BP**:`AI.Extend.SYS` `AuthInfoQueryService.BuildBpMenuAsync` 仅按 `AppName + BShow` 过滤,**漏 `PortalScope`** → 老 console 域 SRM 菜单(BShow=true)成孤儿顶层显示、点击 404(指向老路由,SRMV2 前端无此页)。
+
+**决策**:
+- 菜单发布**强制走 manifest + 应用中心 ScanMenus**,真理源 = 前端 `routes.config.mjs`;**禁手工 DB 维护菜单**(跨应用复用叶例外,按目标 AppName 单独种子)。复用配方见新标准 `standards/subapp-menu-manifest-publish.md`(MDM 三件套蓝本)。
+- **迁移轨衔接**:老项目(MVC/老 React)迁 BP 子应用,菜单必须随代码建 manifest 三件套,不只搬页面。
+- BP 菜单查询应按 `PortalScope='bp'` 隔离;老 console 菜单 BShow=false 下线(防 404 泄漏)。
+
+**关联**:`standards/subapp-menu-manifest-publish.md`(配方)/ ADR-028(老项目迁移)/ ADR-006-007(manifest IP 白名单跨进程鉴权)。
