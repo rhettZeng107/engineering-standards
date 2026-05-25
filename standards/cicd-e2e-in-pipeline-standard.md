@@ -15,7 +15,7 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 - **smoke(index.html 200 + `<div id=root>`)不是 E2E**,只验静态首页可达,**不验 SPA mount + 数据渲染**,不能替代 Stage 3。
 - Stage 3 `continueOnError: false`,**E2E 失败 = 部署失败**。
 
-## 2. 四条根因教训(本标准要堵的坑)
+## 2. 五条根因教训(本标准要堵的坑)
 
 | # | 坑 | 规则 |
 |---|---|---|
@@ -23,13 +23,15 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 | 2 | **CI smoke ≠ 页面渲染** | smoke 之外必须有页面级 render 断言(boot 壳子 + render-walk 逐页)。 |
 | 3 | **共享 Table dataSource 无数组守卫 → 单点崩全站** | 前端编码标准:Table/列表 dataSource 必 `Array.isArray(x)?x:[]`(见 `react-ui-guidelines.md`);E2E render-walk 兜底拦截。 |
 | 4 | **POST 被 IIS 降级 / 端点 5xx** | 部署后验关键 POST verb 不被重定向降级;E2E 捕获业务 5xx。 |
+| 5 | **render-walk `goto` 路由 + 注入 token 绕过菜单 ≠ 入口可达** | 验收方(涛哥)只在部署环境以**操作用户视角**验收(登录门户 → 点菜单 → 进页面)。CI E2E 必**全检 ADR-008 #5 入口可达性全链**(路由→菜单种子→权限码→登录看到→渲染)**并确保绿**:有菜单的应用必加 **critical-menu-walk**(从门户菜单树**点进**目标页断言可达),**禁只** `goto` 路由 + 注入 token(漏菜单种子 / 权限码 —— SRM 外协单元1-3 代码迁完、render-walk 22/22 绿,却因菜单种子整组漏种门户点不进,即此漏)。 |
 
 ## 3. 验证 SOP(E2E_Verify stage 内)
 
 1. **critical-boot**(每仓必跑):部署壳子健康 — bundle 加载 / `#root` 挂载 / 无资源 5xx / 无 .js·.css 返 text/html(IIS hash 残留 MIME 错配)/ 无 ErrorBoundary。
 2. **critical-render-walk**(有业务页必跑):登录 + 逐路由(**曾崩溃 + 核心业务**)断言 — 无致命 JS 错(`is not a function`/读 undefined)/ 无 ErrorBoundary / `#root` 有子节点 / body 非白屏。
-3. **失败诊断**:`helpers/diag.ts` 在 CI log 直出 pageError/console/network/DOM(不用下 trace)。
-4. **CRASH > 0 = 阻塞**,根因到 file:line 再修;修后重跑(CI 自愈 SOP `cicd-self-heal-sop.md`)。
+3. **critical-menu-walk**(有菜单的门户子应用必跑,ADR-008 #5 入口可达性):**以操作用户视角**登录门户 → 渲染菜单树 → **逐目标菜单点进**(`click` 菜单项,非 `goto` 路由)→ 断言落到目标页且渲染健康。验**菜单种子 + 权限码 + 路由**全链,堵「代码迁完但菜单点不进」。**禁**用注入 token + `goto` 路由绕过菜单(那只验渲染层)。
+4. **失败诊断**:`helpers/diag.ts` 在 CI log 直出 pageError/console/network/DOM(不用下 trace)。
+5. **CRASH > 0 或菜单不可达 = 阻塞**,根因到 file:line 再修;修后重跑(CI 自愈 SOP `cicd-self-heal-sop.md`)。
 
 ## 4. 部署模式对照(E2E_TARGET / E2E_ROOT_PATH)
 
@@ -49,5 +51,6 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 - [ ] E2EVerify 打**部署 prod URL**(非 dev),`continueOnError: false`
 - [ ] critical-boot 通过(壳子 + MIME + #root)
 - [ ] 有业务页:critical-render-walk 覆盖曾崩溃 + 核心路由,**CRASH = 0**
+- [ ] **有菜单门户子应用:critical-menu-walk 从门户菜单点进每目标页,菜单全可达(#5 入口可达性,操作员视角)**
 - [ ] Table dataSource 数组守卫(编码标准)
 - [ ] 钩子 `cicd-e2e-stage-guard` 未报缺 stage
