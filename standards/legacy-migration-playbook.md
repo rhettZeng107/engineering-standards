@@ -126,6 +126,7 @@
 | 7 | 微前端子应用迁移到 BP:漏 G 方案 postMessage 路由同步监听(点每菜单同一页)+ 多个 service 漏 `baseURL`(production iframe 网络异常);本机 dev E2E「9/9」假通过(vite proxy 兜底 baseURL + 单应用直访掩盖路由同步缺失) | 迁移子应用必**逐条对照参考实现(MDM)**的 G 方案契约;E2E 必在真实 BP iframe + production-like 环境**逐菜单**跑(套 `subapp-onboarding-guide.md` v1.2 子应用侧自检 + ADR-012 修订段)|
 | 8 | 迁移单元代码完结 + E2E render-walk(`goto` 路由 + 注入 token)绿,但**菜单种子整组漏种**致门户点不进(SRM 外协单元1-3:外协订单本体 / 工序外协 10 叶 / 热处理 7 叶 在 `SYS_AuthInfo` 整组缺,只单元4 种了;render-walk 22/22 绿仍漏检) | 入口可达性是 DoD 一层(§3.2 ④):每单元必**扩种子 SQL + 查菜单库实证** authCode 齐全 + 权限码挂角色;**render-walk goto 路由绕过菜单,不算入口验证** —— CI E2E #5 必模拟操作员从门户菜单点进(涛哥只在 10.8 以操作用户视角验收) |
 | 9 | 菜单两套机制并存且认错生效方:实际靠**直接 SQL 种** `AppName='SRM'`,而 `generate-manifest.mjs` 生成的 `AppName='SRMBuyer'` 走 ScanMenus 的路径**从没跑通**(`SYS_AuthInfo` 0 条 SRMBuyer),易误以为 ScanMenus 在更新菜单 | 认准实际生效的种子机制;manifest 的 `AppName` 必与门户注册子应用 `AppName` 一致,否则 ScanMenus 静默不更新 —— 迁移前先实证「菜单到底怎么进门户」 |
+| 10 | 评估迁移/收编功能「现状」只看当前代码,把**历史退化产物**当设计意图(MDM 期初导入:原 5 类 MES 导入被历史演变退化成 1 卡"物料分类导入",只跟当前页差点迁错/删错;涛哥两次纠正)| 评估「现在是什么」前**必核原始版本**:`git log --all -- <path>` + `git show <first-commit>:<path>` 对照原始设计,或核内网老仓(§3.1 产源工件清单时即做);trust-but-verify 涛哥「都整合了/现在只是/已经替换了」这类断言,当前代码可能是退化产物非设计意图 |
 
 ---
 
