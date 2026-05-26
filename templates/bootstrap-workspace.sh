@@ -75,7 +75,8 @@ EOF
 
 # 6. memory 索引初始化 ─ 从 MEMORY.md.template 实例化(D2,2026-05-20)
 WS_NAME="$(basename "$WS")"
-MEM_DIR="$HOME/.claude/projects/-Users-rhett-Projects-${WS_NAME}/memory"
+WS_USER="$(id -un | sed 's/[^a-zA-Z0-9]/_/g')"
+MEM_DIR="$HOME/.claude/projects/-Users-${WS_USER}-Projects-${WS_NAME}/memory"
 mkdir -p "$MEM_DIR"
 if [ ! -f "$MEM_DIR/MEMORY.md" ]; then
   sed "s/{{WORKSPACE_NAME}}/$WS_NAME/g" "$TEMPLATES_DIR/MEMORY.md.template" > "$MEM_DIR/MEMORY.md"
