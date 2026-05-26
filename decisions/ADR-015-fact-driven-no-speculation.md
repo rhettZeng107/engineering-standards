@@ -22,6 +22,7 @@
 2. **基于事实给方案** — 列实证依据 file:line,不允许"先给个大概"
 3. **沟通涛哥拍板** — 简洁 + 推荐 + 不主动拍板
 4. **严按方案执行** — 实证反转即停升档报涛哥
+5. **改前实证目标对象现状**(2026-05-26 修订,SRMV2 R7+R8 反例驱动) — 任何 INSERT/UPDATE/Edit/改 controller 字段引用前,**前置必跑全字段/全子代/全列模板** SELECT/grep,**禁** 凭"自己已列的清单 = 已知的全部"假设
 
 **例外**(允许凭经验):通用语法 / 标准库 API / CLAUDE.md 明文事实 / 涛哥对话直接告知。
 
@@ -69,3 +70,4 @@
 | 2026-04-22 | Proposed → Accepted | 涛哥首次拍板,memory 落地 |
 | 2026-05-02 | Updated | 4 步硬规则升级,语境黑名单完善 |
 | 2026-05-09 | 回溯落 ADR | Tier 2 候选回溯 |
+| 2026-05-26 | Updated | **追加第 5 步「改前实证目标对象现状」**(SRMV2 spec `2026-05-26-srm-buyer-srmbasic-backfill-and-legacy-cleanup` R7+R8 反例驱动:R7 改 controller 加 entity 字段前没 grep entity 真实字段 → CI build CS1061;R8 改 6 项 TagFather 前没 SELECT 目标父节点现有子代 → 同名 404 散落)。详 post-mortem `SRMV2/docs/postmortems/2026-05-26-srmbasic-cleanup-r1-to-r8.md` |
