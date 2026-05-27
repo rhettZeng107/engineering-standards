@@ -55,9 +55,12 @@
 
 ```bash
 cd <项目根>/<子项目目录> && claude -p --model claude-haiku-4-5 \
+  --exclude-dynamic-system-prompt-sections \
   "用 LSP <op> <file:line:col>,返 <格式> JSON 数组" \
   --output-format json
 ```
+
+- **`--exclude-dynamic-system-prompt-sections`**(2026-05-27 修订追加):移 per-machine 段(cwd / env info / memory paths / git status)从 system prompt 到首个 user message。改善 cross-session prompt-cache reuse,多次派遣同 / 类似任务时第 2 次开始 cache 大幅命中。零风险(官方 flag,不影响 LSP / hook / plugin)。
 
 - **模型默认 Haiku 4.5**(成本控制,2026-05-27 spike $0.15/call vs Opus 4.7 $1.02/call 6.8x 差)
 - **复杂场景升级 Sonnet 4.6**(sub-Claude 内部需要多 op 组合 / 综合分析时)
@@ -171,8 +174,18 @@ SYSV2 装机 SOP 见配套 spec(若需重做):`docs/superpowers/specs/2026-05-27
   - SRMV2 / HC `CLAUDE.md`:不动(全局已含)
 - **实证 spike**:2026-05-27 早 7:18 + 8:30(本 ADR 写作时已完成,无独立 spec 落档)
 
+## 修订(2026-05-27)
+
+### 派遣命令加 `--exclude-dynamic-system-prompt-sections`
+
+- **触发**:涛哥关心启动开销 / cache 复用,实证 SessionStart 注入大头是 `project-map-session-digest.js`(项目地图 STACK + ARCH + MECHANISMS 摘要)+ 全局 + 项目 CLAUDE.md + memory 索引,合计 ~50-150k tokens
+- **改动**:派遣模板加 `--exclude-dynamic-system-prompt-sections`(官方 flag,移 per-machine 段到 user message 改善 cache reuse)
+- **预期降本**:多次派遣同/类似任务时 cache_read 命中率提升,平均成本降 30-50%
+- **未做**(策略 B 暂缓):hook env-aware skip 逻辑(`CLAUDE_SUB_TASK=1`)— 涛哥选 A 先观察 1-2 周再评估是否升级到 B
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-27 | Proposed → Accepted | 涛哥拍板;基于 Haiku 4.5 spike 实证 $0.15 / 12.7s / 10 refs |
+| 2026-05-27 | 修订(派遣模板加 `--exclude-dynamic-system-prompt-sections`)| 启动开销实证后加官方 cache reuse flag |
