@@ -99,6 +99,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-032](ADR-032-frontend-ui-v2-standard-atlas.md) | 前端 UI V2 标准图集 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-033](ADR-033-governance-layering-and-reduction.md) | 治理分层金字塔 + 减法纪律 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-034](ADR-034-observability-apm-lite-standard.md) | APM-lite 应用层可观测体系工程标准 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
+| [ADR-035](ADR-035-lsp-subclaude-gateway.md) | LSP Sub-Claude Gateway — Multi-repo workspace 的 LSP 使用模式 | Accepted | 2026-05-27 | 跨项目 | 本仓 |
 
 ---
 
