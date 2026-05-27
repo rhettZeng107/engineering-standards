@@ -38,18 +38,31 @@
 
 ### 1. 触发判定(任务类型 → 是否派 sub-Claude)
 
+**核心边界**:**Symbol 查找一律 LSP / 非 Symbol 走 grep · Read · ps · git · dba**。
+
 | 任务类型 | 派 sub-Claude? | 理由 |
 |---|---|---|
+| **任何 symbol 查找**(class / interface / method / property 定义 / 引用 / 类型 / 调用链) | ✅ **默认派** | LSP 一致精准,grep 偶错风险 > LSP 启动开销;**`run_in_background=true` 吸收等待** |
 | `findReferences` 跨文件 | ✅ | grep 命中噪声 100x,LSP 精准 |
-| `goToDefinition` | ✅ | grep 不分类 / 接口实现,LSP 精准 |
+| `goToDefinition` / 简单单点 "class X" 找 file:line | ✅ | 一致性优先;grep 偶错(命中注释/字符串/同名不同类)→ 返工成本 > LSP $0.05-0.15 单次 |
 | 精确 `rename` 跨文件 | ✅ | grep + sed 不安全(注释/字符串误改) |
 | `prepareCallHierarchy` / `incomingCalls` / `outgoingCalls` | ✅ | grep 难以拼调用链 |
-| `hover`(看类型 signature) | ✅(中) | grep 拿不到类型推断 |
-| `workspaceSymbol` 模糊搜索 | ✅(中) | grep 也能但 LSP 限定符号语义 |
-| 简单 `grep "ClassName"` 找 file:line | ❌ | grep 已足够,启动 sub-Claude 开销不值 |
-| 看文件 outline / 列 method | ❌ | `read` 直接读 |
-| DBSet / Entity 字段清单 | ❌ | `read` 实体类 |
-| 跨前后端契约 / 跨 SQL / git / 工作区文档 | ❌ | 根 session 业务,LSP 无关 |
+| `hover`(看类型 signature) | ✅ | grep 拿不到类型推断 |
+| `workspaceSymbol` 模糊搜索 | ✅ | LSP 限定符号语义 |
+| `goToImplementation`(接口实现 / 子类) | ✅ | grep 没有"实现"语义,LSP 直接给 |
+| **非 symbol 查找** — 看文件 outline | ❌ | `Read` 直接读 |
+| 找文件(file 名 / 路径)| ❌ | `find / ls / Glob` |
+| grep 文本(配置 / 文档 / 注释) | ❌ | `grep / Read` |
+| 进程 / 装机状态 | ❌ | `ps / ls / which` |
+| git 状态 / commit / blame | ❌ | `git status / log / blame` |
+| DB schema / DBSet 字段 | ❌ | `dba` subagent / mssql MCP |
+| 跨前后端契约 / 工作区文档 / SQL / 配置 | ❌ | grep / Read,LSP 无关 |
+
+### 1.1 修订理由(2026-05-27 涛哥反馈)
+
+- **一致性 > 局部效率**:涛哥 KPI 是「一次性成功率」+「减少试错 token 浪费」;grep 偶错(命中注释 / 同名不同类 / 漏继承链)→ 基于错事实决策 → 返工成本远超 LSP 单次 $0.05-0.15
+- **启动开销吸收**:首次冷启 30s-2min → `run_in_background=true` 后台跑,涛哥根 session 期间继续其他工作;同 session 后续 cache reuse,启动 < 10s
+- **判定简化**:不再 case-by-case 判断 "grep 够不够",规则变成「**是 symbol 吗?是 → LSP / 否 → 其他**」
 
 ### 2. 派遣命令模板
 
@@ -79,9 +92,9 @@ Bash(run_in_background=true): cd AI.REACT.SYS.BusinessPortal && claude -p ...
 
 ### 4. Fallback 策略
 
-- **简单任务默认 grep + 项目地图**(`.planning/codebase/`),不滥用 sub-Claude
-- **sub-Claude 失败 / 超时 / 不可达 → fallback grep**,标注精度可能损失
-- **sub-Claude 启动 cold start 30s-2min**,涛哥根 session 用 `run_in_background=true` 等通知,期间继续其他工作
+- **非 symbol 任务**(文件 / 进程 / git / 配置 / DB schema / 文档 / 文本 grep)→ `grep` / `Read` / `ps` / `git` / `dba` 直接,LSP 无关
+- **sub-Claude 失败 / 超时 / 不可达 → fallback grep**,标注精度可能损失,后续涛哥拍板修
+- **sub-Claude 启动 cold start 30s-2min**,根 session 用 `run_in_background=true` 后台跑,期间继续其他工作
 
 ### 5. 装机要求(跨项目复用前)
 
@@ -101,7 +114,7 @@ SYSV2 装机 SOP 见配套 spec(若需重做):`docs/superpowers/specs/2026-05-27
 - **LSP 在 multi-repo workspace 可用**(突破单 workspace 限制)
 - **涛哥工作流 0 改**(根 session 启动不变)
 - **跨子项目并行**(N sub-Claude 同时跑 N 个 LSP server,各自子项目)
-- **按需精度**(简单任务不付 LSP 启动开销)
+- **一致性**:所有 symbol 查找走同一路径,不再 case-by-case 判定「grep 够不够」(避免 grep 偶错 → 返工)
 - **符合 Anthropic 文章 "Subagent isolates context windows" 哲学**(隔离 context 处理 LSP 大 cold start)
 
 ### 负向 / 代价
