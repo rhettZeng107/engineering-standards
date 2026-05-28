@@ -125,8 +125,30 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 - doc:`docs/ops/cicd-ado-failure-notification.md`(邮件配置手册)
 - doc:`docs/ops/dev-pre-merge-validation.md` § 高频 push(队列管理 inline 片段,后续可改引用本 helper)
 
+## 修订(2026-05-28)
+
+**背景**:monitor 从 PowerShell `.ps1` 迁移为跨平台 Node.js `.js`(`templates/cicd-ado-monitor.js`,各工作区 `docs/ops/cicd-ado-monitor.js`)后,PAT 路径出现文档漂移 —— ADR 正文与 `.ps1` 写 `~/.claude/sysv2-ado-pat`,而 `.js` 默认读 `~/.claude/ado-pat`,两者对不上,导致新工作区(SRMV2 等)的 JS monitor 找不到 PAT、无法开箱自查 CI(实证 2026-05-28:SRMV2 推送后未自查反向涛哥要状态/PAT)。
+
+**修订决策**:
+
+1. **PAT 规范路径统一为 `~/.claude/ado-pat`**(org 中性命名,匹配 `.js` monitor 默认)。同一 ADO org/collection 多工作区**共用一份**;历史 `~/.claude/sysv2-ado-pat` 视为别名,以 `cp`/`symlink` 对齐到 `~/.claude/ado-pat`(本会话已对齐)。90 天轮换时只维护这一份。
+
+2. **monitor 真理源 = Node.js 版**(`cicd-ado-monitor.js`,跨平台,无需 PowerShell)。原 `.ps1` 函数 → `.js` 子命令对照:
+
+   | `.ps1`(旧) | `.js`(现) |
+   |---|---|
+   | `Get-AdoBuildStatus -Repo` | `node cicd-ado-monitor.js status <repo> [--top N]` |
+   | `Get-AdoBuildLogs -OnlyFailed` | `node cicd-ado-monitor.js logs <repo> <buildId> --failed` |
+   | `Cancel-AdoOldBuilds` | `node cicd-ado-monitor.js cancel-old <repo>` |
+   | `Wait-AdoBuildComplete` | `node cicd-ado-monitor.js wait <repo> <buildId> [--timeout N]` / `watch <repo>` |
+
+3. **「build succeeded」≠ 已部署**:供应商等 pipeline = `Build & Package → Deploy to Test (10.8) → E2E`;判定上线必看 timeline 各 stage 都 succeeded(REST `/_apis/build/builds/<id>/timeline?api-version=7.0`),不能只看顶层 result。部署后按各项目 post-deploy 复验 SOP 打 prod 环境。
+
+4. **「Claude 自主行为约定」适用条件补强**:推送后**必须**自主用 monitor 查 CI(凭据已就位,见第 1 条),**不得**向涛哥要 build 状态或 PAT;红了走 [[cicd-self-heal-sop]] 三层分流。该行为是跨项目基线(本 ADR),不下沉项目级 memory。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-14 | Proposed → Accepted | 涛哥拍板,Phase 1 闭环 task #7/#8/#10 一并落地 |
+| 2026-05-28 | 修订(不改编号) | PAT 路径统一 `~/.claude/ado-pat` + monitor `.ps1→.js` 迁移对照 + build≠部署判定 + 自主查 CI 强制(涛哥拍板) |
