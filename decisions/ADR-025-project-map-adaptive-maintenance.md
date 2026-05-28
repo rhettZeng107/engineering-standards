@@ -138,6 +138,15 @@ YAGNI:机制未验证先固化成 skill 有 over-engineer 风险;跑 2-3 个迁�
 - 配套 SRMV2 memory:`feedback_plan_complete_map_refresh_multirepo.md`(新建,6 nested repo dogfood 验证 + 第 4 失配点 merge-aware spawn 解法)
 - 不影响 gsd 工具链代码
 
+### 修订(2026-05-29)— plan 完结刷地图 hook 化 + 触发面泛化(不限 GSD)
+
+涛哥 2026-05-29 明确:**「plan 完结即同步刷项目地图」是基本逻辑,不限 GSD 工作流还是标准 spec/plan 工作流 —— 只要任何 plan/spec 完结,就应同步更新 `.planning/codebase/`。** 原 2026-05-22 修订把触发点描述为「迁移轨/标准轨 plan 完结」且落「约定层(靠 Claude 自觉,失配点③ gsd drift gate 用不上)」,实测会漏(本会话 SRM APM-lite plan 完结后曾漏刷,涛哥点出)。
+
+- **触发面泛化**:任何 `progress.md` 标 `status: done`(GSD / 标准 / 迁移轨一律),即触发地图同步检查。
+- **形态升级:约定层(recall)→ hook(inject/warn)**:新增全局 hook `~/.claude/hooks/core-plan-done-codebase-sync-reminder.js`(PostToolUse Edit/Write):检测 `~/Projects/<ws>/**/progress.md` 落盘且 `status: done` → 若该工作区 `.planning/codebase/` 近 60 分钟未更新则 STDERR 提醒按本 ADR 增量刷(尤其 MECHANISMS);近期已刷或无项目地图则静默。**仅提示不强制**(沿用本 ADR 软兜底哲学;地图同步是判断题,非每次都需全量刷)。
+- 失配点③(gsd drift gate 挂 `/gsd:execute-phase` 用不上)由此 hook 补齐:不依赖 GSD execute,直接挂 progress.md 落盘事件,任何工作流通用。
+- 「约定层起步不写 wrapper skill」(YAGNI)判断保留 —— hook ≠ wrapper skill,只做**提醒**不接管刷新流程(刷新仍走本 ADR 的 merge-aware 人工/agent 步骤);固化的是「不忘触发」,非「自动执行刷新」。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -146,3 +155,4 @@ YAGNI:机制未验证先固化成 skill 有 over-engineer 风险;跑 2-3 个迁�
 | 2026-05-18 | 补强(ADR-030 B4) | 项目地图文件 YAML frontmatter 带 `last_mapped_commit`(GSD mapper 已写入);`project-map-staleness-check.js` 增「漂移检测」—— 该 commit 之后提交数超阈值即提示重扫,与 30 天时效检测并行 |
 | 2026-05-22 | 修订(multi-repo 适配) | 实证 gsd 原生 3 失配点(MECHANISMS 非原生 / multi-repo 漂移失明 / 触发点挂 GSD execute);约定层适配 = `--paths` 增量复用 + MECHANISMS 必补 + plan 完结即刷 + per-repo HEAD;不改 gsd 原生 skill;约定层起步(YAGNI) |
 | 2026-05-22 | SRMV2 验证 + 第 4 失配点 | SRMV2(6 nested repo)dogfood 验证机制跑通(增量只扫 scope / 8 图齐含 MECHANISMS / per-repo HEAD 非根 HEAD 84935dc / 他域零丢失);新发现失配点④(mapper `Write` 整篇覆盖冲聚合图他域,数据丢失)→ 解法 merge-aware spawn(带 required_reading 现有图 + 保留他域指令) |
+| 2026-05-29 | 修订(hook 化 + 泛化) | 涛哥明确「任何 plan 完结即刷地图」不限 GSD;触发面泛化到任何 `progress.md status:done`;约定层(recall)升级为 hook(inject/warn)`core-plan-done-codebase-sync-reminder.js`;补齐失配点③;hook 只提醒不接管刷新流程 |
