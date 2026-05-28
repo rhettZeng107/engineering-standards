@@ -14,7 +14,7 @@
 | 项 | 状态 | 处置 |
 |---|---|---|
 | `gsd-update-banner.js` | 真孤儿(settings 无引用) | 删 |
-| `gsd-validate-commit.sh` | opt-in 未开 = no-op,且与 `sysv2-commit-message-style-guard` 重叠 | 摘接线 |
+| `gsd-validate-commit.sh` | opt-in 未开 = no-op,且与 `core-commit-message-style-guard` 重叠 | 摘接线 |
 | `gsd-session-state.sh` / `gsd-phase-boundary.sh` / `gsd-workflow-guard.js` | opt-in `community/workflow_guard` 未开 = 3 个 no-op | 不用 GSD planning 可摘 |
 
 ### 1b. ⚠ SRMV2 底层防护缺口(反向发现 —— 该「补」不该「删」)
@@ -35,11 +35,11 @@
 |---|---|---|
 | 事实驱动 / 禁臆测 | `core-fact-driven-prelude.js`(每会话全文注入) | **强**:留 1 行指针 |
 | 项目地图作前置事实 | `project-map-staleness-check` + `project-map-session-digest` | **强**:留指针 |
-| SQL 操作(生产红线) | `sysv2-prod-sql-guard` + `sysv2-destructive-bash-guard` | **强**:留指针 |
-| 鉴权 4 条(第 1/2 条) | `sysv2-authorize-attribute-guard` + `sysv2-policy-registration-check` | 中:留 4 条标题(3/4 无 hook) |
+| SQL 操作(生产红线) | `core-prod-sql-guard` + `core-destructive-bash-guard` | **强**:留指针 |
+| 鉴权 4 条(第 1/2 条) | `core-authorize-attribute-guard` + `core-policy-registration-check` | 中:留 4 条标题(3/4 无 hook) |
 | 编码路由(纯前端→qwen +-y) | `qwen-default-frontend-guard` + `sysv2-qwen-yolo-flag-guard` | 中:留路由表(后端行无 hook) |
 | 进度文件全局段 | `core-progress-global-section-guard` | 中:留写入骨架 |
-| commit 风格/secret | `sysv2-commit-message-style-guard` + `sysv2-secret-scan-commit-guard` | 中:留双推节奏 |
+| commit 风格/secret | `core-commit-message-style-guard` + `core-secret-scan-commit-guard` | 中:留双推节奏 |
 > + 已 ADR 化未 Hook 段(四层文档/E2E 8项/三轨/批次/PM)精简留表+指针。预估 231 → ~140 行,核心 cheatsheet 表全留。
 
 ---
