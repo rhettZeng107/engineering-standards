@@ -72,6 +72,12 @@
 
 ---
 
+## 修订(2026-06-01)— ①④ 静态/动态校验以「契约锁文件」为基准
+
+①④ CR 静态比对 + E2E 断言的真理源**统一为 Claude 本体产出的契约锁文件**(动词/路由/字段名/**大小写**/必填)。跨前后端契约**禁由 subagent 锁定**(context 隔离会传话失真,实证 HC camelCase 单会话栽 2 次),必须本体锁。详 [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md)。
+
+---
+
 ## Consequences
 
 ### 正向

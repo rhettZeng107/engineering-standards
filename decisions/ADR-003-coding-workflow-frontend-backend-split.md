@@ -37,7 +37,7 @@
 | 纯前端(`.tsx`/`.ts`/`.less`/`.css`/前端配置)任意文件数 | qwen 默认 | `qwen -y -p "..."` |
 | 后端小改(单模块/不跨契约/单层/字段补漏/小重构) | Claude 本体 | Write / Edit |
 | 后端中大型/跨模块(≥2 层/新建模块/状态机/鉴权/数据迁移) | teams 模式 → `dotnet-developer` | subagent |
-| 跨前后端契约(同 task 改 DTO/接口签名) | teams 模式协调(后端先锁契约 → 前端 qwen 落盘) | subagent |
+| 跨前后端契约(同 task 改 DTO/接口签名) | **Claude 本体先锁契约 → 契约锁文件 → 派 subagent 落盘**(2026-06-01 升级,见下修订 + ADR-037) | 本体 + subagent |
 | DB / SQL / Migration / Schema | `dba` subagent | dba |
 | 配置/文档/plan/spec/memory/规则/微调 | Claude 本体 | Write / Edit |
 | E2E | Claude 本体 / `frontend-developer` / 其他合适 agent(**禁 qwen**) | Bash `npx playwright test` |
@@ -56,6 +56,14 @@
 - qwen 冒烟失败 / 落盘越界 / 自审 2 轮不收敛 / 验收 CR ≥ 3 或 1 CRITICAL / 跨契约不一致
 
 **兜底优先级**:qwen 失败 → ① Claude 本体 Edit(小改) → ② `frontend-developer`(中大型 / 复杂 UI 重构)
+
+---
+
+## 修订(2026-06-01)— 跨契约锁定责任:后端 subagent 锁 → Claude 本体锁
+
+**背景(实证)**:原路由表"跨前后端契约 → 后端 subagent 先锁契约 → 前端 qwen"实证失效——subagent 间 context 隔离(官方 `sub-agents.md:777`),后端 subagent 锁定的契约前端 subagent 看不到,靠 orchestrator 人肉转述漏一次即偏离(HC 2026-05-31 单会话 camelCase 栽 2 次 CRITICAL)。subagent 还读不到 auto-memory(`sub-agents.md:783`),契约约定写 memory 对 subagent 不可见。
+
+**决策**:跨前后端契约 task,契约由 **Claude 本体亲自锁定**(本体是唯一同时持前后端 context 的角色),产出契约锁文件(动词/路由/字段名/**大小写**/必填)→ 派 subagent 按锁文件落盘。**禁下放 subagent 锁契约**。详 [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md)。
 
 ---
 
