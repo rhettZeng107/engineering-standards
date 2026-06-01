@@ -196,9 +196,45 @@ SYSV2 装机 SOP 见配套 spec(若需重做):`docs/superpowers/specs/2026-05-27
 - **预期降本**:多次派遣同/类似任务时 cache_read 命中率提升,平均成本降 30-50%
 - **未做**(策略 B 暂缓):hook env-aware skip 逻辑(`CLAUDE_SUB_TASK=1`)— 涛哥选 A 先观察 1-2 周再评估是否升级到 B
 
+## 修订(2026-06-01)— SRMV2 复现 + 病根精确定位(原生 C# LSP 根 session 静默返空)
+
+### 实证(SRMV2 工作区,本机 csharp-ls 0.24.0)
+
+- **原生 LSP 工具对 C# 在根 session 语义操作静默返空**(行为较 2026-05-27 死锁报错更隐蔽):
+  - `documentSymbol`(语法)✅ 通 —— `SCMContext.cs` 返完整符号树
+  - `findReferences`(语义)❌ 返「No references found」—— 而 grep ground truth = **59 处真实引用**(`Program.cs:113 AddDbContext<SCMContext>`、多 Controller 注入)
+  - 诊断 ✘ `System.Object`/`System.Void` **CS0518/CS0012「未引用程序集」** —— 证明是**编译模型没加载**(非 warmup 冷启动问题)
+- **防坑硬规则**:根 session 的 C# 语义 LSP(findReferences / goToDefinition 跨文件 / goToImplementation / workspaceSymbol)**返空不可信任**;`documentSymbol` 可用。否则基于"无引用"假事实决策 = ADR-015 返工。
+
+### 病根精确定位(纠正早期"CC 协议没救"判断)
+
+web + GitHub issue 交叉印证:
+- csharp-ls **0.24.0** 作者 razzmatazz 在 [anthropics/claude-code#16360](https://github.com/anthropics/claude-code/issues/16360)(2026-04-17)称协议握手已修、不再需要 adapter —— **0.24.0 即本机装的版本**。
+- 故 multi-root 根 session 仍失败的**真因不是 Claude Code 协议 handler 缺口,而是 monorepo 根无 .sln** → csharp-ls 拿不到 solution path → CS0518。
+- 印证:#16360 unsafePtr(2026-05-26)做代理注入 `solution/open` 通知即跑通 findReferences → 缺的就是"加载哪个 solution"。
+- **结论**:本 ADR 的 sub-Claude `cd 子项目`(子项目根有单一 .sln)正是"提供 solution path"的正确解 —— web 通用建议「scope rootUri 到单 solution 目录」与本 ADR 同向,gateway 被背书。
+
+### 关联 issue tracker(待 Anthropic 修则可弃 gateway 省 token)
+
+| Issue | 内容 | 状态(2026-06-01 实证) |
+|---|---|---|
+| [anthropics/claude-code#16360](https://github.com/anthropics/claude-code/issues/16360) | csharp-ls 不工作 — CC 缺 `workspace/configuration` / `client/registerCapability` / `window/workDoneProgress/create`,拿不到 solution path | **OPEN**,`bug`+`has repro`+**`oncall`**,51 评论,2026-01-05 开 |
+| [anthropics/claude-code#38683](https://github.com/anthropics/claude-code/issues/38683) | 改进 CC 对官方 Roslyn LS(`Microsoft.CodeAnalysis.LanguageServer`)兼容;换 Roslyn 也只半通(goToImpl/workspaceSymbol 仍坏) | **OPEN**,5 评论,2026-03-25 开 |
+
+### 评估过的"更优 server"为何不选
+
+- **官方 Roslyn LS**:质量更高但非独立(需 wrapper)+ 最新 SDK + **仍需代理注入 `solution/open`** 补 CC 缺口 + multi-root rootUri 照旧 → 不解 SRMV2 根问题,性价比低。
+- **OmniSharp**:官方已 maintenance-only,不选。
+- **根级聚合 .sln**:跨 3 个 gitignored 独立仓 + 维护负担 → 高代价不彻底。
+
+### 不做(defer)
+
+- roslyn-ls + adapter 代理实测 spike(Tier 3):预期仍受 multi-root 限制,默认不做;待 #16360 修复或涛哥立项再评估。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-27 | Proposed → Accepted | 涛哥拍板;基于 Haiku 4.5 spike 实证 $0.15 / 12.7s / 10 refs |
 | 2026-05-27 | 修订(派遣模板加 `--exclude-dynamic-system-prompt-sections`)| 启动开销实证后加官方 cache reuse flag |
+| 2026-06-01 | 修订(SRMV2 复现 + 病根精确定位)| 原生 C# LSP 根 session 语义静默返空(documentSymbol 通/findReferences 空+CS0518);真因=monorepo 根无 .sln(非 CC 协议,csharp-ls 0.24.0 已修握手);关联 anthropics/claude-code#16360(oncall OPEN)#38683;gateway 被 web 背书 |
