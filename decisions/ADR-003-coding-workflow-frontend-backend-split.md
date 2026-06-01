@@ -67,6 +67,18 @@
 
 ---
 
+## 修订(2026-06-01b)— team-lead subagent 取消,orchestration 归主会话
+
+**背景(官方实证)**:原 Decision 路由表"后端中大型 → teams 模式 → team-lead 派 dotnet-developer"实证不成立——官方明确 **subagent 不能 spawn 其他 subagent**(`sub-agents.md:770`,防无限嵌套)。被主会话 spawn 的 team-lead 无法再派 worker subagent(成"光杆司令");且 .planning 实证 team-lead 从未真被 spawn 派单(10 处全是计划书纸面描述),实际 orchestrator 一直是主会话本体。
+
+**决策**:
+- **取消 `team-lead` subagent**(删 `~/.claude/agents/team-lead.md`)。
+- **orchestration / 派单 / 汇总归主会话本体**(官方"chain subagents from main conversation"):主会话接 task → 规模评估降级 → 直接派 worker(`dotnet-developer` / `qwen` / `frontend-developer` / `dba`)→ 双 reviewer 并行 → 汇总。
+- team-lead 原有价值规则(规模评估自我降级 + 双 reviewer 并行配对)**上移全局 CLAUDE.md「编码工作流路由」段**。
+- 需 worker 并行互相挑战 + 高预算 → 用已启用的原生 Agent Teams(`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`,主会话当 lead);路由表正文"teams 模式"措辞保留为历史,语义以本修订为准。
+
+---
+
 ## Consequences
 
 ### 正向
