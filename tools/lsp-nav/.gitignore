@@ -1,0 +1,4 @@
+# 依赖按机器 npm install,不入库
+node_modules/
+# 运行时状态(端口/pid/日志,per-instance),不入库
+.state/

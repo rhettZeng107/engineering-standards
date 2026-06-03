@@ -1,0 +1,20 @@
+{
+  "name": "lsp-nav",
+  "version": "2.0.0",
+  "description": "跨平台 Roslyn LSP C# 代码语义导航 CLI(供 AI agent 精确查跨项目调用关系)",
+  "main": "lsp-nav.js",
+  "bin": {
+    "lsp-nav": "lsp-nav.js"
+  },
+  "scripts": {
+    "doctor": "node lsp-nav.js doctor"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "vscode-jsonrpc": "^8.2.1"
+  }
+}
