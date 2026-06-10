@@ -1,11 +1,29 @@
 # AI Agent C# 语义导航工具技术方案
 
-> 文档版本：2.0
+> 文档版本：2.1
 > 创建日期：2026-06-02
-> 最后更新：2026-06-03
-> 作者：Rhett
-> 状态：已实现并验证通过(Windows 实测;macOS 经跨平台逻辑 + doctor 自检)
-> 工具位置：`engineering-standards/tools/lsp-nav/`(跨平台,git 同步多机复用)
+> 最后更新：2026-06-10
+> 作者：Rhett(v1/v2 Windows)+ Claude(v2.1 双后端)
+> 状态：v2.1 双后端已实现;Roslyn 路线 Windows 实测,csharp-ls 路线 macOS arm64 端到端实测(SRMV2 真 sln)
+> 工具位置：`engineering-standards/tools/lsp-nav/`(跨平台,git 同步多机复用;**用法唯一真理源 = 同目录 `SKILL.md`**)
+
+## 0.1 v2.1 双后端(2026-06-10)
+
+v2.0 Roslyn 路线硬依赖 VS Code C# 扩展(Roslyn DLL + 其 .NET 10 runtime)—— 无 VS Code 的机器(实测本 Mac 仅 Cursor,装不了微软官方 C# 扩展)跑不起来。v2.1 增加 **csharp-ls 次选后端**,`findLSPServer` 自动发现:Roslyn(优先,质量最高)→ csharp-ls(`dotnet tool install -g csharp-ls`)→ OmniSharp(Windows 兜底)。
+
+| 项 | Roslyn 路线(v2.0,Windows 实测) | csharp-ls 路线(v2.1,macOS arm64 实测) |
+|---|---|---|
+| server 来源 | VS Code C# 扩展 DLL | dotnet global tool(零 VS Code 依赖) |
+| sln 加载 | `solution/open` 通知 + `projectInitializationComplete` 信号 | `-s <sln> -l log` 启动参 + `Finished loading` 信号 |
+| 实测 | 跨类引用精确消歧 | references 63 命中/32 文件;双仓多实例(同名 SCMContext:Supplier 63 / Buyer 45)不串 |
+| 冷启加载 | 30-90s | 大 sln 3-5+ 分钟(无 solution 缓存,常态) |
+
+v2.1 行为变更(两后端通用):
+- **`start` ~5s 返回**(TCP listener 前置),sln 后台加载;`--wait` 可阻塞到加载完(CI 场景)
+- **防假阴性守卫**:未加载完成的语义空结果报错而非静默返空(`claude-code#16360` 缺的 3 类 server→client 应答由 bridge 自行实现,这正是 Claude Code 原生 LSP 在 multi-repo 根 session 静默返空的缺口,详 ADR-035 修订 2026-06-10)
+- `callers` 列校准:词边界 + LSP 起点后优先,避开返回类型同名/注释误命中
+- **与 sub-Claude gateway 分工**(ADR-035):同 sln 高频 symbol → lsp-nav(零 token);跨子项目/context 隔离 → gateway
+- defer:Windows 机 pull 后跑 Roslyn 路线回归冒烟(listener 前置改变了其启动语义,macOS 无法代验)
 
 ## 0. v2.0 重大更新(2026-06-03)
 

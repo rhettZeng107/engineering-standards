@@ -231,6 +231,36 @@ web + GitHub issue 交叉印证:
 
 - roslyn-ls + adapter 代理实测 spike(Tier 3):预期仍受 multi-root 限制,默认不做;待 #16360 修复或涛哥立项再评估。
 
+## 修订(2026-06-10)— lsp-nav v2.1 双后端落地:同仓高频 symbol 导航补位,gateway 收窄不替换
+
+### 背景
+
+评估 `references/ai-agent-lsp-navigation.md` + `tools/lsp-nav`(Rhett 2026-06-03 Windows 实现并入仓,Roslyn LS 后端,macOS 当时未实测)在 macOS 的可行性。该工具在架构上 = 本 ADR Alternatives **B(自建 LSP 代理)** 被否路线的 TCP 轻量变体 —— 自建常驻 bridge,**绕开 Claude Code 的 LSP 客户端**,自行应答 CC 缺失的 3 类 server→client 请求(`workspace/configuration` / `client/registerCapability` / `window/workDoneProgress/create`,即 #16360 缺口),并显式提供 solution path。
+
+### macOS 实证(2026-06-10,涛哥 Y 后落地)
+
+- **本机阻断**:v2.0 Roslyn 路线硬依赖 VS Code C# 扩展 DLL + 其 .NET 10 runtime —— 本机仅 Cursor(0 扩展)、无 Roslyn DLL,v2.0 跑不起来。
+- **解法 = v2.1 双后端**:bridge 增加 **csharp-ls 0.24.0 次选路线**(本机已有,零新依赖,不需 VS Code);Roslyn 仍为优先后端(Windows)。
+- **#16360 真因证实**:同一 csharp-ls(CC 根 session 下语义返空,见 2026-06-01 修订)接自建 bridge 后,SRMV2 供应商真 sln `references` 返 **63 命中/32 文件**;grep ground truth 116 行/37 文件(LSP 滤掉 ~2x 注释/字符串噪声)。瓶颈确认是 CC LSP 客户端实现,不是 server。
+- **多实例双仓实证**:Supplier(63 refs)+ Buyer(同名 `SCMContext` 45 refs)并存不串,`--file` 自动路由正确。
+- **成本/延迟**:单查 $0(零 token)、常驻后 ~2s;`start` ~5s 返回(listener 前置),sln 后台加载 **3-5+ 分钟/次冷启**(csharp-ls 无 solution 缓存,常态非调试干扰;批次内保持常驻摊薄)。
+- **防假阴性**:未加载完成的语义空结果报错而非静默返空(加载窗口 csharp-ls 实测会挂起查询到加载完再答,非空结果可信)。
+
+### 决策(涛哥 2026-06-10 拍板 A:双后端合一)
+
+**补位共存,不替换 gateway**(不推翻本 ADR,故不 Supersede):
+
+| 场景 | 走哪条 |
+|---|---|
+| **同一 sln 内高频 symbol 导航**(references / definition / hover / find / callers) | **lsp-nav bridge**(零 token + 常驻后秒级) |
+| 跨子项目并行契约 CR / 需大 context 隔离的综合分析 | **sub-Claude gateway**(本 ADR 主体) |
+| TS/JS symbol | 原生 typescript-lsp plugin(根 session 可用,见 2026-06-01 修订) |
+
+- 对 B 选项否决理由的修正:当初估「1-2 天开发 + 3.2GB 内存(8 sln 驻留)」;实际 Windows 半天落地 + macOS 半天移植,sln 按需启停。**否 B 的核心依据已部分失效,但 gateway 的 context 隔离价值仍独立成立** → 共存而非替换。
+- 代价:工具自维护(~800 行 JS);若 #16360 官方修复使原生 LSP 在 multi-repo 根可用,lsp-nav 与 gateway 同时退役。
+- 用法/装机/性能基线唯一真理源:`tools/lsp-nav/SKILL.md`(v2.1)。
+- **defer**:Windows 机 pull 后跑 Roslyn 路线回归冒烟(start 不带 --wait → 立即 callers,确认半加载窗口行为;本 macOS 无法回归 Roslyn 路线)。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -238,3 +268,4 @@ web + GitHub issue 交叉印证:
 | 2026-05-27 | Proposed → Accepted | 涛哥拍板;基于 Haiku 4.5 spike 实证 $0.15 / 12.7s / 10 refs |
 | 2026-05-27 | 修订(派遣模板加 `--exclude-dynamic-system-prompt-sections`)| 启动开销实证后加官方 cache reuse flag |
 | 2026-06-01 | 修订(SRMV2 复现 + 病根精确定位)| 原生 C# LSP 根 session 语义静默返空(documentSymbol 通/findReferences 空+CS0518);真因=monorepo 根无 .sln(非 CC 协议,csharp-ls 0.24.0 已修握手);关联 anthropics/claude-code#16360(oncall OPEN)#38683;gateway 被 web 背书 |
+| 2026-06-10 | 修订(lsp-nav v2.1 双后端落地)| macOS csharp-ls 路线实证 63 refs/$0/常驻秒级,双仓多实例不串;补位共存:同仓高频 symbol → lsp-nav,跨子项目/context 隔离 → gateway;#16360 实证仍 OPEN(oncall,last update 5/26) |

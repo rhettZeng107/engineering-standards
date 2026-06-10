@@ -21,7 +21,7 @@ const path = require('path');
 const { StreamMessageReader, StreamMessageWriter } = require('vscode-jsonrpc/node');
 
 const BRIDGE_HOST = '127.0.0.1';
-const LOAD_TIMEOUT = parseInt(process.env.LSP_LOAD_TIMEOUT || '180', 10); // 项目加载就绪最长等待(秒)
+const LOAD_TIMEOUT = parseInt(process.env.LSP_LOAD_TIMEOUT || '300', 10); // 项目加载就绪最长等待(秒;csharp-ls 大 sln 实测 180-300s)
 
 // VS Code 用户目录(globalStorage 的父级),跨平台
 function vscodeUserDir() {
@@ -34,8 +34,22 @@ function vscodeUserDir() {
     return path.join(os.homedir(), '.config', 'Code', 'User'); // linux
 }
 
-// 自动发现 Roslyn Language Server(VS Code C# 扩展)+ .NET runtime(dotnet-runtime 扩展)
-// 返回 { dotnetExe, dllPath, type:'roslyn' } 或 { path, type:'omnisharp' } 或 null
+// 发现 csharp-ls(dotnet global tool)+ 其 DOTNET_ROOT;无 VS Code 的机器(如纯 CLI Mac)的后端
+function findCsharpLs() {
+    const binName = process.platform === 'win32' ? 'csharp-ls.exe' : 'csharp-ls';
+    // dotnet tool install -g 默认装 ~/.dotnet/tools,优先查;DOTNET_ROOT 指向 SDK 安装目录时兜底
+    const roots = [path.join(os.homedir(), '.dotnet')];
+    if (process.env.DOTNET_ROOT && !roots.includes(process.env.DOTNET_ROOT)) roots.push(process.env.DOTNET_ROOT);
+    for (const dotnetRoot of roots) {
+        const bin = path.join(dotnetRoot, 'tools', binName);
+        if (fs.existsSync(bin)) return { path: bin, dotnetRoot, type: 'csharp-ls' };
+    }
+    return null;
+}
+
+// 自动发现 LSP server,优先级:env 指定 > Roslyn(VS Code C# 扩展,语义质量最高)>
+// csharp-ls(dotnet global tool)> OmniSharp(Windows 兜底)
+// 返回 { dotnetExe, dllPath, type:'roslyn' } / { path, dotnetRoot, type:'csharp-ls' } / { path, type:'omnisharp' } / null
 function findLSPServer() {
     const envPath = process.env.CSHARP_LSP_SERVER;
     if (envPath && fs.existsSync(envPath)) {
@@ -64,6 +78,10 @@ function findLSPServer() {
             }
         }
     }
+
+    // 次选:csharp-ls(无 VS Code 的机器;macOS arm64 实测通过 2026-06-10)
+    const csls = findCsharpLs();
+    if (csls) return csls;
 
     // 兜底:仅 Windows 自带 OmniSharp(对 .NET SDK 项目加载不全,不推荐)
     const bundled = path.join(__dirname, 'omnisharp', 'OmniSharp.exe');
@@ -107,6 +125,12 @@ class LSPBridge {
             env = { ...process.env, DOTNET_ROOT: path.dirname(cmd) };
             this.log(`启动 Roslyn:${cmd}`);
             this.log(`Roslyn DLL:${this.lspInfo.dllPath}`);
+        } else if (this.lspType === 'csharp-ls') {
+            cmd = this.lspInfo.path;
+            // -l log 必传:info 级别下 csharp-ls 不发加载完成信号,projectLoaded 探测全失效
+            args = ['-s', this.projectPath, '-l', 'log'];
+            env = { ...process.env, DOTNET_ROOT: this.lspInfo.dotnetRoot };
+            this.log(`启动 csharp-ls:${cmd}`);
         } else {
             cmd = this.lspInfo.path;
             args = ['-lsp', '-s', this.projectDir];
@@ -142,15 +166,32 @@ class LSPBridge {
                 this.projectLoaded = true;
                 this.log('项目加载完成(projectInitializationComplete)。');
             }
+            // csharp-ls 的加载完成信号:logMessage "Finished loading" / $/progress end。
+            // 必须限定 csharp-ls:Roslyn 的 $/progress 还报 restore/索引/单次查询进度,
+            // 任意早到 end 会误置 projectLoaded(Roslyn 只认 projectInitializationComplete)
+            if (this.lspType === 'csharp-ls') {
+                if (msg.method === 'window/logMessage' && /finished loading/i.test(msg.params?.message || '')) {
+                    this.projectLoaded = true;
+                    this.log('项目加载完成(csharp-ls Finished loading)。');
+                }
+                if (msg.method === '$/progress' && msg.params?.value?.kind === 'end') {
+                    this.projectLoaded = true;
+                }
+            }
             return;
         }
         if (msg.id !== undefined && msg.method) this._handleServerRequest(msg);
     }
 
     async _handleServerRequest(msg) {
+        // Claude Code 缺这 3 类 server→client 应答(claude-code#16360);bridge 自行应答:
+        // workspace/configuration 显式构造,client/registerCapability 与
+        // window/workDoneProgress/create 走默认 result:null
         let result = null;
         if (msg.method === 'workspace/configuration') {
-            result = (msg.params?.items || []).map(() => null);
+            // csharp-ls 期望空对象项,Roslyn 接受 null 项(Windows 实测)
+            const item = this.lspType === 'csharp-ls' ? {} : null;
+            result = (msg.params?.items || []).map(() => item);
         }
         try { await this.writer.write({ jsonrpc: '2.0', id: msg.id, result }); } catch {}
     }
@@ -199,8 +240,11 @@ class LSPBridge {
         this._notify('initialized', {});
         this.initialized = true;
 
+        // csharp-ls 由 -s 启动参加载 sln,无需 solution/open,等 Finished loading 信号即可
+        if (this.lspType === 'csharp-ls') {
+            this.log('csharp-ls 后台加载 sln 中(大 sln 实测 3-5 分钟)...');
         // 关键:显式打开 solution/project,Roslyn 才会建立语义工作区
-        if (this.lspType === 'roslyn') {
+        } else if (this.lspType === 'roslyn') {
             const uri = toUri(this.projectPath);
             if (this.projectPath.toLowerCase().endsWith('.sln')) {
                 this.log(`solution/open:${uri}`);
@@ -216,10 +260,20 @@ class LSPBridge {
             this.projectLoaded = true;
         }
 
-        this.log(`等待项目加载(最多 ${LOAD_TIMEOUT}s)...`);
+        // 不阻塞等加载:TCP 立即可用(start 秒级返回),加载后台进行;
+        // 未加载完成的语义空结果由 handleCommand 守卫报错,不会喂假阴性
+        this._monitorLoad().catch(() => {});
+        this.log('Bridge 就绪(项目加载后台进行,loaded 状态见 status)。');
+    }
+
+    async _monitorLoad() {
+        const t0 = Date.now();
         for (let i = 0; i < LOAD_TIMEOUT && !this.projectLoaded; i++) await sleep(1000);
-        if (!this.projectLoaded) this.log('警告:加载超时,放行(结果可能不全)。');
-        this.log('Bridge 就绪。');
+        if (this.projectLoaded) {
+            this.log(`项目加载完成,耗时 ${Math.round((Date.now() - t0) / 1000)}s。`);
+        } else {
+            this.log(`警告:${LOAD_TIMEOUT}s 内未收到加载完成信号(大 sln 可能仍在后台加载,首个成功查询会自动校准 loaded)。`);
+        }
     }
 
     async openDocument(filePath) {
@@ -282,7 +336,21 @@ class LSPBridge {
 
 // --- TCP 命令服务 ---
 
+const SEMANTIC_COMMANDS = new Set(['definition', 'references', 'implementation', 'workspace_symbols']);
+
 async function handleCommand(bridge, req) {
+    const result = await dispatchCommand(bridge, req);
+    // 未加载完成时的语义空结果不可信(假"0 引用"陷阱),报错而非静默返空。
+    // 不做"非空即校准 loaded":includeDeclaration 下声明自身就够非空,
+    // 会把 Roslyn 半加载窗口误判为已加载;loaded 只认各后端的强加载信号
+    if (SEMANTIC_COMMANDS.has(req.command) && Array.isArray(result)
+        && !result.length && !bridge.projectLoaded) {
+        throw new Error('项目仍在加载,空结果不可信;稍后重试或先查 status');
+    }
+    return result;
+}
+
+async function dispatchCommand(bridge, req) {
     switch (req.command) {
         case 'definition': return bridge.definition(req.file, req.line, req.col);
         case 'references': return bridge.references(req.file, req.line, req.col);

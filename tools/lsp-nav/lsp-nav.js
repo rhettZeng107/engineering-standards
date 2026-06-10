@@ -124,7 +124,7 @@ async function resolveInstance(args) {
 
 // --- bridge 生命周期 ---
 
-async function startBridge(projectPath) {
+async function startBridge(projectPath, wait) {
     if (!fs.existsSync(projectPath)) throw new Error(`项目不存在:${projectPath}`);
     if (fs.statSync(projectPath).isDirectory()) {
         const sln = fs.readdirSync(projectPath).find(f => f.toLowerCase().endsWith('.sln'));
@@ -147,7 +147,10 @@ async function startBridge(projectPath) {
     console.log(`项目:${projectPath}`);
     console.log(`日志:${path.join(dir, 'bridge.log')}`);
 
-    for (let i = 0; i < 200; i++) {
+    // bridge 的 TCP listener 秒级就绪;sln 加载后台进行(csharp-ls 大 sln 实测 3-5+ 分钟)。
+    // start 默认快速返回;--wait 时阻塞到加载完成(对齐 LSP_LOAD_TIMEOUT)
+    const pollSeconds = wait ? parseInt(process.env.LSP_LOAD_TIMEOUT || '300', 10) + 30 : 30;
+    for (let i = 0; i < pollSeconds; i++) {
         await new Promise(r => setTimeout(r, 1000));
         const port = readPort(key);
         if (port && await ping(port)) {
@@ -155,10 +158,13 @@ async function startBridge(projectPath) {
                 const st = await sendCommand(port, { command: 'status' });
                 if (st.projectLoaded) { console.log(`Bridge 就绪,端口 ${port}(项目已加载)。`); return; }
             } catch {}
-            if (i > 5) { console.log(`Bridge 就绪,端口 ${port}(项目仍在后台加载)。`); return; }
+            if (!wait && i > 3) {
+                console.log(`Bridge 就绪,端口 ${port}(项目后台加载中,约 3-5 分钟;查询会等待/被守卫保护,进度看 status)。`);
+                return;
+            }
         }
     }
-    console.log('警告:bridge 未响应,请查日志。');
+    console.log(wait ? '警告:等待加载超时,bridge 保持运行,稍后查 status。' : '警告:bridge 未响应,请查日志。');
 }
 
 function stopOne(key, project) {
@@ -219,18 +225,24 @@ function cmdDoctor() {
 
     const info = findLSPServer();
     if (!info) {
-        console.log('Roslyn LSP:✗ 未找到');
-        console.log('  → 需安装 VS Code + C# / C# Dev Kit 扩展(自动下载 Roslyn DLL + .NET 10 runtime)');
+        console.log('LSP server:✗ 未找到(双路线均缺)');
+        console.log('  → 路线1(质量优先):VS Code + C# / C# Dev Kit 扩展(自动下载 Roslyn DLL + .NET 10 runtime)');
+        console.log('  → 路线2(纯 CLI 机器):dotnet tool install -g csharp-ls(需 .NET 9+ runtime)');
         return;
     }
     if (info.type === 'roslyn') {
-        console.log('Roslyn LSP:✓ 找到');
+        console.log('LSP 后端:✓ Roslyn(语义质量最高)');
         console.log(`  dotnet runtime:${info.dotnetExe}`);
         console.log(`  Roslyn DLL    :${info.dllPath}`);
+    } else if (info.type === 'csharp-ls') {
+        console.log('LSP 后端:✓ csharp-ls(无 VS Code 机器路线,macOS arm64 实测)');
+        console.log(`  bin        :${info.path}`);
+        console.log(`  DOTNET_ROOT:${info.dotnetRoot}`);
     } else {
-        console.log(`LSP 类型:${info.type}(OmniSharp 兜底,不推荐;装 C# 扩展以用 Roslyn)`);
+        console.log(`LSP 类型:${info.type}(OmniSharp 兜底,不推荐;装 C# 扩展或 csharp-ls)`);
     }
-    console.log(`\n结论:${dep && info.type === 'roslyn' ? '✓ 环境就绪,可直接 start --project <sln>' : '⚠ 见上面缺失项'}`);
+    const ready = dep && (info.type === 'roslyn' || info.type === 'csharp-ls');
+    console.log(`\n结论:${ready ? '✓ 环境就绪,可直接 start --project <sln>' : '⚠ 见上面缺失项'}`);
 }
 
 // --- 命令发送 ---
@@ -329,9 +341,20 @@ async function cmdCallers(args) {
     for (const s of syms) {
         const file = uriToPath(s.location.uri);
         const pos = s.location.range.start;
+        // workspace/symbol 的 range 可能起于修饰符/返回类型而非标识符(csharp-ls 实测),
+        // 在声明行内重定位符号名列:词边界匹配 + 优先从 LSP 起点之后找,
+        // 避开返回类型同名(User User())/注释/同名子串的误命中
+        let col = pos.character;
+        try {
+            const lineText = fs.readFileSync(file, 'utf-8').split('\n')[pos.line] || '';
+            const re = new RegExp(`\\b${bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+            const tail = lineText.slice(pos.character).match(re);
+            if (tail) col = pos.character + tail.index;
+            else { const head = lineText.match(re); if (head) col = head.index; }
+        } catch {}
         const owner = s.containerName ? `${s.containerName}.` : '';
         console.log(`\n# ${owner}${s.name} [${KIND_NAMES[s.kind] || s.kind}] @ ${file}:${pos.line + 1}`);
-        const r = await sendCommand(inst.port, { command: 'references', file, line: pos.line, col: pos.character });
+        const r = await sendCommand(inst.port, { command: 'references', file, line: pos.line, col });
         printRefs(Array.isArray(r) ? r : [], args.json);
     }
 }
@@ -367,9 +390,9 @@ lsp-nav — Roslyn LSP C# 代码语义导航(跨平台,支持多 sln 并存)
   doctor                        环境自检(新机/Mac 首次先跑)
 
 bridge 管理:
-  start --project <sln|dir>     为某 solution 启动 bridge
-  stop [--project <sln>|--all]  停止某个/全部 bridge
-  status                        列出所有 bridge 实例
+  start --project <sln|dir> [--wait]  启动 bridge(默认 ~5s 返回后台加载;--wait 阻塞到加载完)
+  stop [--project <sln>|--all]        停止某个/全部 bridge
+  status                              列出所有 bridge 实例(含 loaded 状态)
 
 按符号名(推荐,免算行列):
   find <name> [--project <sln>]      搜索符号(支持 类名.方法名)
@@ -394,7 +417,7 @@ async function main() {
         case 'doctor': cmdDoctor(); break;
         case 'start':
             if (!args.project) { console.error('需要 --project <sln|dir>'); process.exit(1); }
-            await startBridge(path.resolve(args.project)); break;
+            await startBridge(path.resolve(args.project), !!args.wait); break;
         case 'stop': await stopBridge(args); break;
         case 'status': await bridgeStatus(); break;
         case 'definition': await cmdDefinition(args); break;
