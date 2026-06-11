@@ -261,6 +261,20 @@ web + GitHub issue 交叉印证:
 - 用法/装机/性能基线唯一真理源:`tools/lsp-nav/SKILL.md`(v2.1)。
 - **defer**:Windows 机 pull 后跑 Roslyn 路线回归冒烟(start 不带 --wait → 立即 callers,确认半加载窗口行为;本 macOS 无法回归 Roslyn 路线)。
 
+## 修订(2026-06-11)— SessionStart 自动预热 lsp-nav(免手动启动,全局标准)
+
+### 背景
+
+涛哥 HC 会话实测:每个工作区每次新会话都要人为提示才 start lsp-nav,冷启 3-5 分钟等待落在查询时刻。涛哥要求「新增会话默认加载并启动,全局标准」。
+
+### 决策(涛哥 2026-06-11 指示,Claude 自治落地)
+
+- **全局 SessionStart hook `~/.claude/hooks/core-lsp-autostart.js`**:会话启动时读工作区 `<cwd>/.claude/lsp-autostart.json`(`{"solutions": ["相对或绝对 sln 路径", ...]}`),对每个 sln 后台 detached `lsp-nav start` 预热;已运行实例幂等跳过;spawn 后立即返回不阻塞会话启动。
+- **无配置文件 = 静默不启动**:避免误预热 fork 仓 / 他人 sln / 非 C# 工作区;新工作区接入只需建一个 json(workspace-bootstrap 项目纳入模板)。
+- **HC 首个接入**:`HC/.claude/lsp-autostart.json` 列 srm / srm02 / srmc 三主力 sln(JY.SRMM03 / SRMMgt_M03 / contract 等辅助 fork 仓不预热)。
+- **实证(2026-06-11)**:hook 实测幂等正确(srm02 已运行跳过,srm/srmc 新启);预热后 `find M02Context` 返回 2 类定义精确命中,查询守卫在加载窗口正确等待不返假阴性。
+- **资源约定**:常驻 csharp-ls 每 sln 一实例;批次结束 `stop --all` 释放(hook 注入提示语已带)。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -269,3 +283,4 @@ web + GitHub issue 交叉印证:
 | 2026-05-27 | 修订(派遣模板加 `--exclude-dynamic-system-prompt-sections`)| 启动开销实证后加官方 cache reuse flag |
 | 2026-06-01 | 修订(SRMV2 复现 + 病根精确定位)| 原生 C# LSP 根 session 语义静默返空(documentSymbol 通/findReferences 空+CS0518);真因=monorepo 根无 .sln(非 CC 协议,csharp-ls 0.24.0 已修握手);关联 anthropics/claude-code#16360(oncall OPEN)#38683;gateway 被 web 背书 |
 | 2026-06-10 | 修订(lsp-nav v2.1 双后端落地)| macOS csharp-ls 路线实证 63 refs/$0/常驻秒级,双仓多实例不串;补位共存:同仓高频 symbol → lsp-nav,跨子项目/context 隔离 → gateway;#16360 实证仍 OPEN(oncall,last update 5/26) |
+| 2026-06-11 | 修订(SessionStart 自动预热)| 全局 hook core-lsp-autostart.js + 工作区 .claude/lsp-autostart.json 声明式接入;无配置静默跳过;HC 首接(srm/srm02/srmc);幂等 + find 实证通过 |
