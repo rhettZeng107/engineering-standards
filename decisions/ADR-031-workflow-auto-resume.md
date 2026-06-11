@@ -271,3 +271,28 @@ A+B 互补,均跑在 tmux 内:
 1. deploy 归类靠路径目录名;若部署进度文件不放 `deploy/` 目录(如放 spec 下)会漏判 → 缓解:部署类 progress 统一放 `<工作区>/.planning/artifacts/deploy/` 或 `release/`(已是现状惯例)。
 2. 强制确认门多一轮交互;但相比串场污染,这轮成本值得。
 3. status 维护责任加重:done 必须及时切(否则废线长期占主线候选位,可能触发不必要的强制门)。
+
+## 修订(2026-06-11)— 去 watchdog 崩溃层 + 假运行检测 + 403 通知(D8,涛哥拍板)
+
+### 背景(HC 2026-06-10 夜间实证复盘)
+
+cw 夜间模式跑 HC 批次,feeder 日志 + 屏幕快照还原出两个自动推进失效点:
+
+1. **6 小时假运行黑洞(23:02→05:39)**:API `Stream idle timeout` 后 stream 彻底挂死,但 CLI 界面仍显示 "Cogitating…(esc to interrupt)" 运行态(最终屏显 `Cogitated for 5h 57m 58s`)。feeder 旧规则「运行中一律不喂」把假运行当真运行永久 HOLD;直到 CLI 自己吐出 socket closed 报错转 ERR 态才喂 go(go 生效,恢复执行)。
+2. **403 白喂(09:58/10:01)**:OAuth 过期 `Please run /login · 403`,feeder 喂 go 两次无效——登录需浏览器交互,喂键不可自愈,需人工。
+
+另:涛哥实证 claude 进程从未崩溃过 → watchdog(失败模式 A 崩溃重启)从未触发,属冗余层。
+
+### 决策(涛哥 2026-06-11 拍板:去崩溃防护,保异常自动推进)
+
+**单看门人架构**:cw(claude-tmux.sh)tmux 内**裸跑 claude**,删除 claude-watchdog.sh;feeder 为唯一看门人,三档:
+
+| 档 | 检测 | 动作 |
+|---|---|---|
+| 报错卡死(原有) | idle + ERR_RE 文案,去抖 2 次 | 喂 go |
+| **假运行挂死(新增)** | 运行态屏幕规范化(剥数字/spinner)后连续 20 次轮询(≈30 分钟)不变 | `Escape` 打断挂死 stream + 喂 go |
+| **认证过期(新增)** | `Please run /login / 403 / oauth` 等 AUTH_RE | **不喂**(技术上限),macOS 通知人工 /login,30 分钟节流重提醒 |
+
+- 阈值取舍:30 分钟纯无变化的 thinking 极罕见(正常 turn 工具输出会滚屏),误打断代价小(Escape+go 会从 progress 接续);对照黑洞 6 小时,收益显著。
+- 失败模式 A(进程崩溃)条目作废;若未来真遇崩溃,tmux 会话留尸现场可人工查,不自动重启。
+- 判据日志:`~/.claude/logs/feeder.log` 中 `STUCK-RUN 判定` / `AUTH-STUCK` / `FEED` 三类锚点 + feeder-snaps/ 快照。
