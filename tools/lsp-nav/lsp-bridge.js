@@ -404,6 +404,7 @@ async function main() {
     if (!fs.existsSync(projectPath)) { console.error(`项目不存在:${projectPath}`); process.exit(1); }
     fs.mkdirSync(stateDir, { recursive: true });
     const PID_FILE = path.join(stateDir, 'bridge.pid');
+    const LSP_PID_FILE = path.join(stateDir, 'lsp.pid');
     const PORT_FILE = path.join(stateDir, 'bridge.port');
     const LOG_FILE = path.join(stateDir, 'bridge.log');
     const META_FILE = path.join(stateDir, 'meta.json');
@@ -418,12 +419,16 @@ async function main() {
 
     const bridge = new LSPBridge(projectPath, log);
     await bridge.start();
+    // 记录 LSP 子进程 PID,供 cleanup 清理 bridge 死后孤儿化的 LSP server
+    try { if (bridge.proc?.pid) fs.writeFileSync(LSP_PID_FILE, String(bridge.proc.pid)); } catch {}
     const server = startTCPServer(bridge, PORT_FILE, log);
 
     const cleanup = async () => {
         server.close();
         await bridge.shutdown();
-        for (const f of [PID_FILE, PORT_FILE, META_FILE]) { try { fs.unlinkSync(f); } catch {} }
+        // LSP server 可能不响应 exit 通知(csharp-ls 实测),硬杀兜底防孤儿
+        try { if (bridge.proc && !bridge.proc.killed) bridge.proc.kill('SIGTERM'); } catch {}
+        for (const f of [PID_FILE, LSP_PID_FILE, PORT_FILE, META_FILE]) { try { fs.unlinkSync(f); } catch {} }
         process.exit(0);
     };
     process.on('SIGTERM', cleanup);

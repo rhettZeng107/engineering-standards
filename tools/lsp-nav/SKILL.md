@@ -49,7 +49,20 @@ node lsp-nav.js start --project <sln> --wait   # 阻塞到加载完成才返回(
 node lsp-nav.js status                          # 列出全部实例 + loaded 状态
 node lsp-nav.js stop --project <sln>            # 停某个
 node lsp-nav.js stop --all                      # 停全部
+node lsp-nav.js cleanup [--quiet]               # 清残留:死实例目录/挂死 bridge/孤儿 LSP server(活实例不动)
 ```
+
+### 会话自动预热 + 残留自动清理(SessionStart hook)
+
+全局 hook `~/.claude/hooks/core-lsp-autostart.js` 在每次会话启动时:
+1. 跑 `cleanup --quiet` 清上次会话残留(所有工作区生效,无需配置)
+2. 读工作区 `<workspace>/.claude/lsp-autostart.json` 自动预热(无该文件则只清理不预热):
+
+```json
+{ "solutions": ["AI.Extend.SRM.Buyer.2/AL.Extend.SRM.Buyer.sln"] }
+```
+
+路径相对工作区根(绝对路径也支持);bridge 已在运行则幂等跳过。
 
 多 bridge 运行时:**位置型命令**(带 --file)按文件所属目录自动路由;
 **按名命令**(find/callers)需 `--project <sln>` 指定。

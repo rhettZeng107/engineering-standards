@@ -210,6 +210,86 @@ async function bridgeStatus() {
     }
 }
 
+function processAlive(pid) {
+    try { process.kill(pid, 0); return true; }
+    catch (e) { return e.code === 'EPERM'; }
+}
+
+// 取进程完整命令行(杀前校验防 PID 复用误杀);Windows 无廉价等价判定返回 null
+function psCommandOf(pid) {
+    if (process.platform === 'win32') return null;
+    try { return execSync(`ps -o command= -p ${pid}`, { encoding: 'utf-8' }).trim(); } catch { return null; }
+}
+
+// LSP server 进程命令行特征:csharp-ls 二进制/shim(dotnet tool)或 Roslyn LanguageServer DLL
+const LSP_PROC_RE = /[\\/]\.?csharp-ls(\.shim|\.exe)?(\s|$)|Microsoft\.CodeAnalysis\.LanguageServer/;
+
+function killPid(pid) {
+    try {
+        if (process.platform === 'win32') execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
+        else process.kill(pid, 'SIGTERM');
+        return true;
+    } catch { return false; }
+}
+
+function readPidFile(dir, name) {
+    try { return parseInt(fs.readFileSync(path.join(dir, name), 'utf-8').trim() || '0', 10) || 0; } catch { return 0; }
+}
+
+// 清理残留:死实例 state 目录 + 挂死 bridge + 孤儿 LSP server(SessionStart hook 前置调用)
+async function cmdCleanup(args) {
+    const STALE_AGE_MS = 300 * 1000; // 慢机冷启 TCP 就绪可能偏晚,窗口期内不判挂死(漏判留给下次会话)
+    const lines = [];
+    if (fs.existsSync(STATE_DIR)) {
+        for (const key of fs.readdirSync(STATE_DIR)) {
+            const dir = instanceDir(key);
+            try { if (!fs.statSync(dir).isDirectory()) continue; } catch { continue; }
+            const port = readPort(key);
+            if (port && await ping(port)) continue; // 活实例不动
+            const pid = readPidFile(dir, 'bridge.pid');
+            let pidMtime = 0;
+            try { pidMtime = fs.statSync(path.join(dir, 'bridge.pid')).mtimeMs; } catch {}
+            if (pid && processAlive(pid)) {
+                if (Date.now() - pidMtime < STALE_AGE_MS) continue; // 启动窗口期,跳过
+                // 进程活但 ping 不通且过窗口期 = 挂死;杀前校验命令行像 bridge(防 PID 复用误杀)
+                const cmd = psCommandOf(pid);
+                if (cmd !== null && !/lsp-bridge/.test(cmd)) {
+                    try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
+                    lines.push(`清理残留实例(PID 已复用,不杀进程):${readMeta(key)?.project || key}`);
+                    continue;
+                }
+                if (killPid(pid)) lines.push(`杀挂死 bridge(PID ${pid})`);
+            }
+            // 实例记录的 LSP 子进程(bridge 死后孤儿化)一并清
+            const lspPid = readPidFile(dir, 'lsp.pid');
+            if (lspPid && processAlive(lspPid)) {
+                const cmd = psCommandOf(lspPid);
+                if (cmd === null || LSP_PROC_RE.test(cmd)) {
+                    if (killPid(lspPid)) lines.push(`杀残留 LSP server(PID ${lspPid})`);
+                }
+            }
+            const meta = readMeta(key);
+            try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
+            lines.push(`清理残留实例:${meta?.project || key}`);
+        }
+    }
+    // 兜底:state 目录已删但进程残留的孤儿 LSP server(父死被 init 收养,ppid=1);Windows 无廉价判定,跳过
+    if (process.platform !== 'win32') {
+        try {
+            const out = execSync('ps -axo pid=,ppid=,command=', { encoding: 'utf-8' });
+            for (const line of out.split('\n')) {
+                const m = line.match(/^\s*(\d+)\s+(\d+)\s+(.*)$/);
+                if (!m) continue;
+                if (Number(m[2]) === 1 && LSP_PROC_RE.test(m[3])) {
+                    if (killPid(Number(m[1]))) lines.push(`杀孤儿 LSP server(PID ${m[1]})`);
+                }
+            }
+        } catch {}
+    }
+    if (!lines.length) { if (!args.quiet) console.log('无残留。'); return; }
+    lines.forEach(l => console.log(l));
+}
+
 // --- 环境自检(跨平台,新机/Mac 首次先跑) ---
 
 function cmdDoctor() {
@@ -393,6 +473,7 @@ bridge 管理:
   start --project <sln|dir> [--wait]  启动 bridge(默认 ~5s 返回后台加载;--wait 阻塞到加载完)
   stop [--project <sln>|--all]        停止某个/全部 bridge
   status                              列出所有 bridge 实例(含 loaded 状态)
+  cleanup [--quiet]                   清理残留(死实例目录/挂死 bridge/孤儿 LSP server;--quiet 无动作时静默)
 
 按符号名(推荐,免算行列):
   find <name> [--project <sln>]      搜索符号(支持 类名.方法名)
@@ -420,6 +501,7 @@ async function main() {
             await startBridge(path.resolve(args.project), !!args.wait); break;
         case 'stop': await stopBridge(args); break;
         case 'status': await bridgeStatus(); break;
+        case 'cleanup': await cmdCleanup(args); break;
         case 'definition': await cmdDefinition(args); break;
         case 'references': await cmdReferences(args); break;
         case 'hover': await cmdHover(args); break;
