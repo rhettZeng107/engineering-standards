@@ -1,0 +1,81 @@
+/* V2 设计语言 "Atlas" — CSS 变量层(移植自 SYSV2 BP src/v2/tokens.css,已删外网字体 CDN)
+   字体由 src/theme/v2-fonts.css 本地 @font-face 提供(拉丁 Sora / JetBrains Mono);中文走系统字体栈
+   主色 靛墨蓝 #1e4d8c | 画布 #f5f6f8 */
+
+:root {
+  /* 品牌色 */
+  --v2-brand: #1e4d8c;
+  --v2-brand-2: #2563eb;
+  --v2-brand-soft: #eaf1fb;
+  --v2-brand-soft-2: #e2ecfa;
+  --v2-brand-line: #cfe0f6;
+  --v2-brand-rgb: 30, 77, 140;
+
+  /* 墨色层级 */
+  --v2-ink: #14233b;
+  --v2-ink-2: #33415c;
+  --v2-muted: #6b7587;
+  --v2-faint: #9aa3b2;
+
+  /* 画布 / 纸 / 线 */
+  --v2-canvas: #f5f6f8;
+  --v2-paper: #ffffff;
+  --v2-paper-2: #fbfcfd;
+  --v2-line: #e7e9ee;
+  --v2-line-2: #eef0f4;
+
+  /* 语义色 */
+  --v2-ok: #0f9d6e;
+  --v2-ok-soft: #e6f6ef;
+  --v2-warn: #c2740c;
+  --v2-warn-soft: #fbf0dd;
+  --v2-err: #d14343;
+  --v2-err-soft: #fcecea;
+  --v2-info: #2563eb;
+  --v2-info-soft: #eaf1fb;
+
+  /* 圆角 */
+  --v2-r-s: 7px;
+  --v2-r-m: 11px;
+  --v2-r-l: 16px;
+
+  /* 阴影 */
+  --v2-sh-1: 0 1px 2px rgba(20,35,59,.05), 0 1px 3px rgba(20,35,59,.06);
+  --v2-sh-2: 0 4px 14px rgba(20,35,59,.08);
+  --v2-sh-pop: 0 12px 40px rgba(20,35,59,.16);
+  --v2-ease: cubic-bezier(.16,1,.3,1);
+
+  /* 字族(中文系统栈,不打包中文字体;拉丁 Sora/JBMono 本地 woff2) */
+  --v2-font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --v2-font-heading: "Sora", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --v2-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ====== Mockup alias (无前缀 → --v2- 映射) ====== */
+  --brand: var(--v2-brand);
+  --brand-soft: var(--v2-brand-soft);
+  --brand-2: var(--v2-brand-2);
+  --line: var(--v2-line);
+  --line-2: var(--v2-line-2);
+  --paper: var(--v2-paper);
+  --paper-2: var(--v2-paper-2);
+  --canvas: var(--v2-canvas);
+  --ink: var(--v2-ink);
+  --ink-2: var(--v2-ink-2);
+  --muted: var(--v2-muted);
+  --faint: var(--v2-faint);
+  --warn: var(--v2-warn);
+  --warn-soft: var(--v2-warn-soft);
+  --ok: var(--v2-ok);
+  --ok-soft: var(--v2-ok-soft);
+  --err: var(--v2-err);
+  --err-soft: var(--v2-err-soft);
+  --info: var(--v2-info);
+  --info-soft: var(--v2-info-soft);
+  --sh-1: var(--v2-sh-1);
+  --sh-2: var(--v2-sh-2);
+  --sh-pop: var(--v2-sh-pop);
+  --r-s: var(--v2-r-s);
+  --r-m: var(--v2-r-m);
+  --r-l: var(--v2-r-l);
+  --ease: var(--v2-ease);
+}
