@@ -96,5 +96,5 @@ V2 **不绑定 antd**;是否自研组件库 / 封装现有库 / 渐进替换,属
 ## 后续(待办)
 
 - [ ] `frontend-ui-standard.md` 顶部回链本 ADR(V1 降级备用基线)
-- [ ] 沉淀 `engineering-standards/standards/frontend-ui-v2-standard.md`(token + 组件 + 五类范式 + 两点验收)
+- [x] 沉淀 `engineering-standards/standards/frontend-ui-v2-standard.md`(token + 组件 + 五类范式 + 两点验收)— 2026-06-12 完成,HC 项目首建反哺(参考实现 `references/v2-components/` + 实战坑清单/形态判定决策树;HC 中文字体系统栈登记为内网/零体积降级备选,不覆盖 §2 Noto Sans SC 默认)
 - [ ] BP 试点落地(ADR-033 + spec `2026-05-21-bp-ui-v2`)→ 验证后推广 SRM/MES
