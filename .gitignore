@@ -1,0 +1,8 @@
+# macOS 系统垃圾
+.DS_Store
+**/.DS_Store
+
+# 依赖与运行时生成物(生成物料,非工具链源码)
+**/node_modules/
+**/.state/
+**/*.log
