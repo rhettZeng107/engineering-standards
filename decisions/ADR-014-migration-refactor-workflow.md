@@ -198,6 +198,17 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 
 锚点:SRMV2 specs/2026-06-12-srmshop-migration(修复 commit dea1af9 ShopNav);playbook §5 坑 11。
 
+## 修订(2026-06-14)— 前后端归属审计 + 绞杀者中间态看板(TPM 整模块漏迁复盘)
+
+**踩坑事实**:TPM 迁移做完 P0-P4、自评「主体完整」后,复盘才发现**计量器具检定 + 特种设备检定两个整模块后端从未迁到新平台**——实体层已建,但 AppService / Controller / DTO 全无,**前端已 React 化但 api 仍指向老 CoreTPMWebApi**(`migration-gap-review.md:43-49`;实测 `AI.REACT.PROD.TPM/src/api/index.js` 中 `tpmApi`(=老 `TPMWebApi`/CoreTPMWebApi)引用 `grep -c=10`:`SpecialEquipment/SimplePagination:111`、`EquipmentModel/List:97` 等仍指老后端)。这不是死链 404,而是**「前端迁了、后端没迁」的隐性半迁态**,P0-P4 全程未覆盖、progress 未记录,纯靠事后复盘碰运气才暴露。
+
+**复盘定性**:这是**异构重写迁移**(老 .NET Framework MVC + cshtml → 全新 ABP + React 独立平台,**非**同构框架升级)特有的盲区。业界同构升级最佳实践(绞杀者 Strangler Fig + YARP + System.Web Adapters)针对「同进程逐路由替换 + 共享 Session」,对独立新平台 + SSO 统一鉴权场景**基本不适用**;但其「**迁移前做依赖 / 可行性全量扫描**」这条通用原则,在我们场景的等价物**缺位**——源工件清单(2026-06-12 修订已扩到含 `layouts/` 壳层)仍按**已知 Phase 模块**枚举,枚举不到「前端已存在、但后端仍指向老系统」这一整类。补两条铁律:
+
+1. **前后端归属全量审计(迁移启动强制前置 = 依赖扫描的我们版)**:迁移立项时产**前端 api endpoint 全量归属清单**(逐 endpoint 标:指向老后端 / 新后端)。凡指老后端 = 未迁 / 半迁,强制登记进迁移看板,**不得遗漏到 Phase 执行后才发现**。挂载:§1.1 Front-load 源工件清单(与「壳层枚举」并列的第二张全量表,前端 api 寻址层多后端的工作区必产)。
+2. **绞杀者中间态看板 + 后端归属 DoD**:每模块按 `前端(老/新) × 后端(老/新)` 四象限登记,目标全部到 `(新, 新)`;**`(新前端 + 老后端)` 是中间态,必登记为「未完成」,禁算迁完**。迁移完成 DoD(三层等价之上)硬加一条:**后端归属 = 新平台**,归属审计未清零不得宣告模块迁移完成。挂载:DoD ④ 入口可达性等价 增列「后端归属」判据。
+
+**适用**:SRM / MES / WMS / EAM / TPM 全迁移改造系列;尤其前端可在新老后端间切换(api 寻址层多后端,如 TPM `hostMap` 同时存 `TPMWebApi`/`JYTPMWebApi`)的工作区,B1 类盲区高发。锚点:TPM `specs/2026-06-13-tpm-legacy-migration/migration-gap-review.md`(P5 补迁立项)+ `progress.md:206-213`;`AI.REACT.PROD.TPM/src/api/index.js:4,97,111-112`(tpmApi 残留实测)+ `src/hostMap.js:8-9`。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
@@ -205,3 +216,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 2026-05-09 | Proposed → Accepted | 涛哥拍板;触发场景 = AI Coding 价值最大化(Front-load + Back-automate);适用 5 个未来迁移改造项目 |
 | 2026-05-24 | 修订 | §4 E2 UI 钉死「必验 ADR-008 ⑤ 入口可达性全链(菜单可见可点)+ 必打部署/集成环境(非 dev server)」。踩坑:SRM 采购端 MVC→React 缺口补全,把 dev 端 render-walk(直渲路由组件)当 E2 验收,漏菜单种子+权限码,操作用户在菜单里看不到模块 → 标准早在 ADR-008 ⑤,问题是迁移轨 E2 被降级,本次回链钉死 |
 | 2026-06-12 | 修订 | 壳层功能清单缺口复盘(SRMShop 购物车入口随源顶栏整删):① 源工件清单必含 layouts/壳层+产功能去留表 ② layout 收敛类任务前置去留表(视觉收敛≠功能裁剪)③ E2E 业务闭环段间禁 goto 拼接(应用内入口必真实点击);ADR-008 ⑤ 含义扩展 |
+| 2026-06-14 | 修订 | 前后端归属审计 + 绞杀者中间态看板(TPM 计量/特种检定整模块后端漏迁复盘):① 迁移启动强制产前端 api endpoint 全量归属清单(指老后端=半迁必登记)② 模块按 前端×后端 四象限看板登记,(新前端+老后端)禁算迁完,DoD ④ 加「后端归属=新平台」判据。异构重写迁移(非同构升级)专属盲区,SRM/MES/WMS/EAM/TPM 复用 |
