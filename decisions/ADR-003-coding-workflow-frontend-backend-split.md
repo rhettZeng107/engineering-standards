@@ -79,6 +79,19 @@
 
 ---
 
+## 修订(2026-06-14)— qwen-default-frontend-guard 取消强制(block → warn)
+
+**背景**:① 动态 workflow fan-out 试点(迁移轨批量页面迁移,ADR-014 增强)需 `frontend-developer` 并行落盘;② 实践中复杂业务页 qwen 不擅长(plan P1/P2 教训),`frontend-developer` 才是合适落盘方。原 hook 硬 block `frontend-developer`(要 `# qwen-exception:` 豁免)成为日常摩擦。
+
+**决策**:`qwen-default-frontend-guard.js` 从 **block(exit 2)→ warn(exit 0 + stderr 软提醒)**(涛哥拍板)。
+- 前端默认 qwen **仍是推荐**(成本优化,简单 CRUD qwen 胜任)——hook 仍软提醒。
+- **不再硬拦 `frontend-developer`**:复杂业务页 / workflow fan-out / 跨组件重构用它,无需豁免注释。
+- 落盘方判断回归语义:简单 CRUD → qwen;复杂 / fan-out → `frontend-developer`。
+
+**影响**:路由表(line 37「qwen 默认」)+ 兜底优先级语义不变(qwen 仍默认),只是 `frontend-developer` 不再被 hook 硬拦;「Qwen 硬约束/兜底」中"强制"语义弱化为"默认推荐"。配套全局 CLAUDE.md「编码工作流路由」段同步(强制→软提醒)。**未变**:`qwen-yolo-flag-guard`(qwen 调用仍强制 -y)、E2E 禁 qwen、qwen 6 条硬约束(用 qwen 时仍适用)。
+
+---
+
 ## Consequences
 
 ### 正向
@@ -141,3 +154,4 @@
 | 2026-04-21 | teams 模式雏形 | 三路之一 |
 | 2026-05-02 | 重新校准为前后端硬切分 | 涛哥拍板 |
 | 2026-05-05 | ADR-003 回溯落地 | 上提全局 |
+| 2026-06-14 | 修订 | qwen-default-frontend-guard 取消强制(block→warn):前端默认 qwen 仍推荐,但复杂业务页/workflow fan-out 用 frontend-developer 不再硬拦。触发=workflow fan-out 试点 + 复杂页 qwen 不擅长(P1/P2 教训) |
