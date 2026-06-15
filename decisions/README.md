@@ -103,6 +103,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-036](ADR-036-code-review-mandatory-gate.md) | 代码评审强制 commit 门禁(hook BLOCK) | Accepted | 2026-05-28 | 跨项目 | 本仓 |
 | [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md) | 跨前后端契约锁定责任归属(本体锁,非 subagent) | Accepted | 2026-06-01 | 跨项目 | 本仓 |
 | [ADR-038](ADR-038-subapp-master-data-via-api-not-direct-table.md) | 子应用主数据消费 API 不直查共享表 + 业务重建 | Accepted | 2026-06-15 | 跨项目 | 本仓 |
+| [ADR-039](ADR-039-standard-task-workflow.md) | 标准任务工作流 — 6 阶段主线(调研→实证→判断→处理→检查→汇报) | Accepted | 2026-06-15 | 跨项目 | 本仓 |
 
 ---
 
@@ -112,7 +113,7 @@ Deprecated   → 废弃但未被取代
 
 | 簇 | ADR | 一句定位 |
 |---|---|---|
-| **治理元方法** | 002·004·009·015·016·019·021·027·029·030·031·033 | 文档分层/PM视角/cheatsheet/事实驱动/扫历史/规则可推翻/lint+eval/复盘沉淀/工作区bootstrap/GSD融合/自动接续/治理金字塔 |
+| **治理元方法** | 002·004·009·015·016·019·021·027·029·030·031·033·039 | 文档分层/PM视角/cheatsheet/事实驱动/扫历史/规则可推翻/lint+eval/复盘沉淀/工作区bootstrap/GSD融合/自动接续/治理金字塔/标准任务工作流主线 |
 | **项目地图** | 025·026(~~013 归档~~) | 自适应维护 + MECHANISMS 第8维(013 已 Superseded by 025) |
 | **迁移轨** | 014·028 → [playbook §0](../standards/legacy-migration-playbook.md) | 014 怎么执行 / 028 做什么算完;总入口 playbook §0 |
 | **交付验证** | 008·024·022·034 | E2E 8项 / 三轨分级 / CICD监控 / APM-lite |
