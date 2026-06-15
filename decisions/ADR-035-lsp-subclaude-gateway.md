@@ -319,7 +319,55 @@ C# 文件 Edit 后 Claude Code 注入的 `<new-diagnostics>` 满屏框架引用�
 ### defer
 
 - 官方 issue #16360(CC LSP 客户端缺 solution path)/ #38683(CC 对 Roslyn LS 兼容)未复查;本次走 lsp-nav 自建 bridge,不依赖 CC 原生 LSP,不受影响。
-- hook `core-lsp-autostart.js` 文案「后台加载 3-5 分钟」对 Roslyn 已过时(实测秒级),但 csharp-ls fallback 场景仍准 → 暂不改。
+- hook `core-lsp-autostart.js` / `lsp-nav.js` 文案「后台加载 3-5 分钟」已改为「Roslyn 秒级 / csharp-ls fallback 3-5 分钟」(本次修订 2026-06-15b 一并修)。
+
+---
+
+## 修订(2026-06-15b)— Roslyn 秒级冷启 → 会话引用计数自动关停 bridge(SessionEnd autostop)
+
+### 触发场景(本会话,涛哥问「常驻 vs 随会话关」)
+
+承上「Roslyn 打通」修订:涛哥指出 Roslyn 升级后冷启「不要 3-5 分钟了」。复查发现先前「常驻省 3-5 分钟冷启」论据用的是**老 csharp-ls 数字**(ADR-015 触线已纠正);本机改走 Roslyn 后冷启秒级。
+
+### 实证(本机 macOS,2026-06-15)
+
+- **冷启实测**:供应域 sln `stop → start → loaded=true` 全程 **2s**(`port 65263`,可重现);3 sln 并行约 2-5s。
+- **内存代价**:常驻 4× Roslyn `LanguageServer.dll` 实测 280-590MB/个 ≈ **1.5GB/工作区**;多工作区叠加(SRM/SYS/TPM 各一套)≈ 4.5GB+。
+- 结论:冷启 2s + SessionStart autostart 自动补 ≈ 体感无差;常驻省 2s 不值 1.5GB → **从「常驻保活」改「随会话关」**。
+
+### 决策(涛哥 2026-06-15 拍板 B:自动化 + 并发约束)
+
+涛哥选 B(自动闭环)并加硬约束:**同一工作区可并发多会话,关闭时须判断,还有活动会话就不能一刀切关掉 bridge**。
+
+实现 = **会话引用计数**(仅本工作区最后一个会话退出才停其 `.claude/lsp-autostart.json` 列的 sln):
+1. 新 `~/.claude/hooks/core-lsp-session.js`(共用库:登记/注销/对账)。
+2. 新 `~/.claude/hooks/core-lsp-autostop.js`(SessionEnd hook:注销自己 + 对账 → 剩余 0 才 `stop --project`)。
+3. `core-lsp-autostart.js`(SessionStart)加**登记本会话**(必须早于 spawn start,防并发 race)。
+4. 全局 `settings.json` 新增 `SessionEnd` 块挂 autostop(timeout 15)。
+
+### 身份与存活判定(实证收敛)
+
+进程级探活三条路径**实证均不可靠,放弃**:
+- `process.ppid` — 多层 wrapper(ghostty→login→zsh→claude-tmux.sh→tmux→caffeinate→claude)下非 claude 主进程;
+- 祖先链爬取 — wrapper 层多且环境差异大,脆弱;
+- `lsof transcript` — claude 不持续持有 transcript 写句柄(实测返空)。
+
+采用:**session_id 配对(主键,正常退出精确)+ transcript jsonl mtime 幽灵兜底**(kill -9/崩溃不触发 SessionEnd → 登记残留;死会话 transcript 停更超 8h 判死清除;cwd→transcript 目录编码 `/`、`.` 均转 `-`,lossy 启发式仅作信号源)。
+
+**fail-safe 红线**:任何不确定 → 倾向「保留 bridge 不停」(绝不误停正用着的);session_id 缺失 → 自动 stop 退化为手动(不误停)。
+
+### 评审 + 测试
+
+- `code-reviewer` 2 HIGH 已回修:① register 提前到 spawn start 之前(防并发 SessionEnd 看不到新会话误停);② transcript 路径推导失败时退化 registry-mtime 8h 容差 + tdir 存在性 guard(防活会话误判死→误停,修正 fail-safe 方向)。
+- 隔离 fixture 测试 **17/17 通过**(多会话不停/幽灵清理/启动宽限/8h 阈值/tdir 缺失 guard/autostop 端到端)。
+
+### 待验证(下次重启会话)
+
+SessionEnd 真实触发 + SessionStart/SessionEnd 两端 session_id 一致性,本会话无法自验(settings 运行中不重载);需一次真实重启确认。未通过则退化「不自动停」(fail-safe,不误停),手动 `stop --all` 仍可用。
+
+### 影响范围
+
+机器级全局(所有配 `.claude/lsp-autostart.json` 的 C# 工作区);对未配置工作区 autostop 静默不动(不误碰别工作区 bridge)。
 
 ## History(变更轨迹)
 
@@ -331,3 +379,4 @@ C# 文件 Edit 后 Claude Code 注入的 `<new-diagnostics>` 满屏框架引用�
 | 2026-06-10 | 修订(lsp-nav v2.1 双后端落地)| macOS csharp-ls 路线实证 63 refs/$0/常驻秒级,双仓多实例不串;补位共存:同仓高频 symbol → lsp-nav,跨子项目/context 隔离 → gateway;#16360 实证仍 OPEN(oncall,last update 5/26) |
 | 2026-06-11 | 修订(SessionStart 自动预热)| 全局 hook core-lsp-autostart.js + 工作区 .claude/lsp-autostart.json 声明式接入;无配置静默跳过;HC 首接(srm/srm02/srmc);幂等 + find 实证通过 |
 | 2026-06-15 | 修订(macOS Roslyn 打通 + 关官方 csharp-lsp 插件消框架假阳性)| 框架引用假阳性源=官方插件 csharp-ls 0.24 语义诊断(非 lsp-nav);涛哥拍板 A2:关插件(settings false)+ lsp-nav 升 Roslyn(VS Code C# 扩展 v2.140.9 + .NET 10.0.9 runtime,加载 2s,find 精确);机器级,所有 C# 工作区 lsp-nav 自动升 Roslyn;csharp-ls 降 fallback |
+| 2026-06-15 | 修订(会话引用计数自动关停 bridge,2026-06-15b)| Roslyn 冷启实测 2s → 常驻改「随会话关」;涛哥拍板 B + 并发约束(多会话不一刀切关);引用计数(session_id 配对 + transcript-mtime 8h 幽灵兜底,实证放弃 ppid/lsof/祖先链);core-lsp-session/autostop hook + settings SessionEnd;CR 2 HIGH 回修 + 17 测试过;真实 SessionEnd 触发待重启验证 |

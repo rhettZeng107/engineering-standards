@@ -159,7 +159,7 @@ async function startBridge(projectPath, wait) {
                 if (st.projectLoaded) { console.log(`Bridge 就绪,端口 ${port}(项目已加载)。`); return; }
             } catch {}
             if (!wait && i > 3) {
-                console.log(`Bridge 就绪,端口 ${port}(项目后台加载中,约 3-5 分钟;查询会等待/被守卫保护,进度看 status)。`);
+                console.log(`Bridge 就绪,端口 ${port}(项目后台加载中,Roslyn 秒级 / csharp-ls fallback 约 3-5 分钟;查询会等待/被守卫保护,进度看 status)。`);
                 return;
             }
         }
