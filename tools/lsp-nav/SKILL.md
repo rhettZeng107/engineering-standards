@@ -10,11 +10,11 @@ version: 2.1.0
 `item.Approve()` 会精确解析到 `item` 真实类型的那个方法,而不是按名糊成一团。
 适合迁移改造中"改接口/砍代码前查影响面"。
 
-**双后端自动发现**(v2.1,2026-06-10):
+**双后端自动发现**(v2.1,2026-06-10;Roslyn macOS 路线 2026-06-15 打通):
 | 后端 | 来源 | 适用 | 实测 |
 |---|---|---|---|
-| **Roslyn LS**(优先) | VS Code C# 扩展 DLL + 其 .NET 10 runtime | 装了 VS Code 的机器,语义质量最高 | Windows |
-| **csharp-ls**(次选) | `dotnet tool install -g csharp-ls` | 无 VS Code 的纯 CLI 机器 | macOS arm64 |
+| **Roslyn LS**(优先) | VS Code C# 扩展 DLL + 其 .NET 10 runtime | 装了 VS Code 的机器,语义质量最高 | Windows + **macOS arm64**(2026-06-15:C# 扩展 v2.140.9 + .NET 10.0.9 runtime,sln 加载 **2s**) |
+| **csharp-ls**(次选/fallback) | `dotnet tool install -g csharp-ls` | 无 VS Code 的纯 CLI 机器 | macOS arm64(0.24,sln 加载 3-5 分钟) |
 
 bridge 自实现 Claude Code 缺失的 3 个 LSP client 应答(claude-code#16360 缺口:
 `workspace/configuration` / `client/registerCapability` / `window/workDoneProgress/create`),
@@ -90,7 +90,7 @@ node lsp-nav.js implementation  --file <f> --line <n> --col <n>
 ## 注意事项
 
 - `--line` / `--col` 为 **0-based**(LSP 标准);用 `find`/`callers` 可避免手算
-- **加载耗时**(一次性,bridge 常驻后免):Roslyn 路线 30-90s(Windows 实测);csharp-ls 路线大 sln **3-5+ 分钟**(macOS 实测,无 solution 缓存,每次冷启全量 MSBuild/Roslyn 工作区构建,机器负载相关)
+- **加载耗时**(一次性,bridge 常驻后免):Roslyn 路线 Windows 30-90s / **macOS 实测 ~2s**(2026-06-15 JY.TPM.sln,Roslyn 有 solution 缓存);csharp-ls 路线大 sln **3-5+ 分钟**(macOS 实测,无 solution 缓存,每次冷启全量 MSBuild/Roslyn 工作区构建,机器负载相关)→ **优先 Roslyn 的另一收益:加载提速两个数量级**
 - 加载窗口期查询:csharp-ls 会把请求挂起到加载完成再答(实测正确非空);**未加载完成的语义空结果会报错而非静默返空**(防假"0 引用"陷阱),有结果即可信
 - 加载等待上限:`LSP_LOAD_TIMEOUT`(秒,默认 300)
 - 状态/依赖目录(`.state/`、`node_modules/`)不入库,按机器本地生成
