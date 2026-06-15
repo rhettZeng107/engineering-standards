@@ -54,4 +54,16 @@
   - 消费契约仍受 **ADR-037** 约束(跨栈契约锁:动词/路由/字段/大小写)。
   - 跨子应用调用鉴权按 BP 门户统一 SSO/token 范式。
   - 各项目 CLAUDE.md / memory 回链本 ADR;存量直查项进各项目 `backlog`。
-- **首个落地**:TPM 设备组织迁移(`TPMV2/docs/superpowers/specs/2026-06-15-eam-organization-migration/`)—— 人员/岗位/物料消费 SYS/MDM API,组织树/挂载/分管业务在 TPM 重建(参见 TPM `docs/decisions/ADR-005`)。
+- **首个落地**:TPM 设备组织迁移(`TPMV2/docs/superpowers/specs/2026-06-15-eam-organization-migration/`)—— 人员/岗位消费 SYS API,组织树/挂载/分管业务在 TPM 重建(参见 TPM `docs/decisions/ADR-005`)。
+
+## 修订(2026-06-15)
+
+**澄清「主数据消费 API」的适用判据 —— 不是所有挂"主数据"名号的对象都走 owner API。**
+
+TPM 设备组织迁移实际落地时,"设备类别/设备类型"**未**走 MDM API,而是 TPM 子应用**自建/复用本应用内的分类实体**(`EquipmentCategory` 树 + 自建关系表 `TPM_OrganizationToCategory`)。原文背景示例曾把"物料/设备类别"一律归为"走 MDM API",过宽。修正判据:
+
+- **走 owner API(决策 1)** 的前提是:该数据**确为他方 owner 的权威主数据**且 owner 已发布稳定 webapi(如 SYS 的人员/岗位)。
+- 若某"分类/类型"**本就是使用方子应用的业务维度**(各应用对"设备类别"的口径/层级/扩展字段不同),则属决策 2「业务在各自子应用重建」——**子应用自建分类实体 + 关系表,不强行消费他方 API**,反而更独立。
+- 判定顺序:先问"这是谁的权威主数据?"→ 是他方且有 API → 消费;是本应用业务维度 / 他方无稳定 API / 各应用口径不一 → 自建。
+
+→ 人员/岗位(SYS 权威)= 消费 API;设备类别(TPM 业务维度)= 自建。两者都服务于"应用独立性"总原则,只是手段不同。
