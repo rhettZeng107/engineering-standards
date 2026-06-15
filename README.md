@@ -22,25 +22,57 @@
 
 ```
 engineering-standards/
-├── README.md                      # 本文件(主索引)
-├── standards/                     # 设计标准 / 编码规范 / 工作流标准
-│   ├── frontend-ui-standard.md    # antd 5 + ProTable 列表页统一标准
-│   ├── react-ui-guidelines.md     # React + antd 列表页/编辑页交互规约
-│   ├── doc-conventions.md         # 文档目录约定(spec/plan/ADR 命名)
-│   └── (后续) subapp-onboarding-guide.md  # 子应用接入 platform 标准手册
-└── decisions/                     # ADR(架构决策记录)
-    ├── README.md                  # ADR 索引 + 用法
-    ├── _template-adr.md           # ADR 模板
-    ├── ADR-002-four-layer-doc-structure.md
-    ├── ADR-003-coding-workflow-frontend-backend-split.md
-    ├── ADR-004-pm-view-business-scenario.md
-    ├── ADR-005-customer-fresh-deploy-no-ops.md
-    ├── ADR-007-auth-4-rigidity.md
-    ├── ADR-008-end-to-end-8-checks.md
-    └── ADR-009-claude-md-cheatsheet-distillation.md
+├── README.md            # 本文件(全仓总索引 / 知识地图)
+├── decisions/           # ADR — 为什么这样定(35 ADR + README 九簇导航)
+├── standards/           # 工程标准 — 怎么做(14 篇)
+├── templates/           # 可复制模板(CLAUDE.md / CICD / web.config / controller…)
+└── tools/               # 可执行工具(lsp-nav / migration-fanout / migration-audit)
 ```
 
-**项目特化决策(ADR-001 / ADR-006 等)留在各项目仓内**(如 `SYSV2/docs/decisions/`),不进本仓。
+**项目特化决策(ADR-001 / ADR-006 / ADR-010 等)留各项目仓内**(如 `SYSV2/docs/decisions/`),不进本仓。
+
+---
+
+## 知识地图 — 查什么去哪(单一检索入口)
+
+> 四类知识载体分工:**decisions/ = 为什么这样定(ADR)** · **standards/ = 怎么做(标准/手册)** · **templates/ = 可复制模板** · **tools/ = 可执行工具**。
+> ADR 详细按主题分组见 [decisions/README 九簇导航](decisions/README.md#按主题簇导航9-簇)。
+
+### 主题检索表(我要做 X → 看这些)
+
+| 我要… | ADR(为什么) | standards(怎么做) | templates / tools |
+|---|---|---|---|
+| **老项目迁移** | ADR-014(执行)+ ADR-028(完成判定) | **legacy-migration-playbook §0 总入口** | tools/migration-fanout(执行) + migration-audit(查漏) + templates/subapp-migration-checklist |
+| **子应用接入 BP** | ADR-011 / 012 / 038 | subapp-onboarding-guide · subapp-menu-manifest-publish | templates/subapp-migration-checklist · iis-web.config-spa-subapp |
+| **前端页面 / UI** | ADR-020 / 023 / 032 | frontend-ui-standard · frontend-ui-v2-standard · frontend-i18n-standard · react-ui-guidelines | templates/frontend-i18n-init · frontend-env-production |
+| **鉴权** | ADR-007 | (subapp-onboarding-guide 含接入侧) | — |
+| **CICD / E2E / 监控** | ADR-008 / 024 / 022 / 034 | cicd-e2e-in-pipeline-standard · observability-apm-lite-standard | templates/azure-pipelines-e2e · pipeline-e2e · cicd-ado-monitor.js |
+| **主数据消费** | ADR-038 | sys-master-data-api-standard | templates/csharp-list-controller |
+| **项目地图 / codebase** | ADR-025 / 026 | (gsd `/gsd-map-codebase`) | — |
+| **新建工作区** | ADR-029 | workspace-bootstrap-guide | templates/bootstrap-workspace.sh · workspace-CLAUDE.md/QWEN.md · MEMORY.md.template |
+| **LSP 符号导航** | ADR-035 | tools/lsp-nav/SKILL.md | tools/lsp-nav |
+| **治理 / 精简规则** | ADR-009 / 033 / 021 | memory-maintenance-standard · governance-reduction-audit(一次性审计记录) | — |
+| **文档目录规范** | ADR-002 | doc-conventions | — |
+| **工作纪律 / 决策授权** | ADR-005 / 015 / 016 / 017 / 018 / 019 / 027 / 031 | — | — |
+
+### standards/ 全清单(14 篇)
+
+| 文档 | 是什么 |
+|---|---|
+| legacy-migration-playbook | 老项目迁移改造手册(§0 = 迁移轨标准工作流总入口) |
+| subapp-onboarding-guide | 子应用接入业务门户(BP)手册 |
+| subapp-menu-manifest-publish | 子应用菜单发布(manifest + ScanMenus) |
+| sys-master-data-api-standard | SYS 主数据接口调用规约 |
+| frontend-ui-standard | 前端 UI 设计标准(antd5 + ProTable) |
+| frontend-ui-v2-standard | 前端 UI V2(Atlas)业务页三范式 |
+| frontend-i18n-standard | 前端中英 i18n 标准 |
+| react-ui-guidelines | React 列表页/编辑页交互规约 |
+| cicd-e2e-in-pipeline-standard | CI/CD E2E-in-pipeline(部署后自动验证) |
+| observability-apm-lite-standard | APM-lite 应用层可观测体系接入 |
+| workspace-bootstrap-guide | 新工作区 Bootstrap 指南 |
+| doc-conventions | 文档目录规范(spec/plan/ADR 命名) |
+| memory-maintenance-standard | Memory 维护标准 |
+| governance-reduction-audit-2026-05-21 | 治理减法审计记录(一次性快照,非长期标准) |
 
 ---
 

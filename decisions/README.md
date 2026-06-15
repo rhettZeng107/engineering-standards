@@ -100,6 +100,27 @@ Deprecated   → 废弃但未被取代
 | [ADR-033](ADR-033-governance-layering-and-reduction.md) | 治理分层金字塔 + 减法纪律 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-034](ADR-034-observability-apm-lite-standard.md) | APM-lite 应用层可观测体系工程标准 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-035](ADR-035-lsp-subclaude-gateway.md) | LSP Sub-Claude Gateway — Multi-repo workspace 的 LSP 使用模式 | Accepted | 2026-05-27 | 跨项目 | 本仓 |
+| [ADR-036](ADR-036-code-review-mandatory-gate.md) | 代码评审强制 commit 门禁(hook BLOCK) | Accepted | 2026-05-28 | 跨项目 | 本仓 |
+| [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md) | 跨前后端契约锁定责任归属(本体锁,非 subagent) | Accepted | 2026-06-01 | 跨项目 | 本仓 |
+| [ADR-038](ADR-038-subapp-master-data-via-api-not-direct-table.md) | 子应用主数据消费 API 不直查共享表 + 业务重建 | Accepted | 2026-06-15 | 跨项目 | 本仓 |
+
+---
+
+## 按主题簇导航(9 簇)
+
+> 35 个 ADR 是正交决策非冗余(2026-06-15 聚类审计:keep=34 / merge=0 / archive=1)。按主题快速定位:
+
+| 簇 | ADR | 一句定位 |
+|---|---|---|
+| **治理元方法** | 002·004·009·015·016·019·021·027·029·030·031·033 | 文档分层/PM视角/cheatsheet/事实驱动/扫历史/规则可推翻/lint+eval/复盘沉淀/工作区bootstrap/GSD融合/自动接续/治理金字塔 |
+| **项目地图** | 025·026(~~013 归档~~) | 自适应维护 + MECHANISMS 第8维(013 已 Superseded by 025) |
+| **迁移轨** | 014·028 → [playbook §0](../standards/legacy-migration-playbook.md) | 014 怎么执行 / 028 做什么算完;总入口 playbook §0 |
+| **交付验证** | 008·024·022·034 | E2E 8项 / 三轨分级 / CICD监控 / APM-lite |
+| **安全鉴权** | 007 | 鉴权 4 条刚性 |
+| **子应用集成** | 011·012·038 | BP门户边界 / 接入SOP / 主数据走API |
+| **前端工程标准** | 020·023·032 | i18n范围 / 4基建标准 / UI V2 Atlas |
+| **AI工程工作流** | 003·035·037 | 编码路由 / LSP网关 / 契约锁归属 |
+| **工作纪律/决策授权** | 005·017·018·036 | 全新部署剔运维 / 批次节奏 / 授权三档 / CR门禁 |
 
 ---
 

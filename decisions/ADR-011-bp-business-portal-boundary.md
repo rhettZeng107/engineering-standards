@@ -71,7 +71,7 @@
 ### 负向 / 代价
 
 - 超管在 BP 仍走 bypass 路径(Standard 模式)— 临时不"干净",但已有审计留痕兜底
-- 数据级权限(用户 × 数据范围)未在本 ADR 涵盖,留独立合规 spec(ADR-013 候选)
+- 数据级权限(用户 × 数据范围)未在本 ADR 涵盖,留独立合规 spec(未来 ADR 候选,编号未定)
 - portal 三层硬切分需要 Compliance spec 落地中间件,本 ADR 仅定方向不实施
 
 ### 影响范围
@@ -111,7 +111,7 @@
 - plan:[`_template-app-onboarding.md`](../../SYSV2/docs/superpowers/plans/_template-app-onboarding.md)(子应用接入模板)
 - 配套 ADR:[ADR-012 子应用接入 SOP 强制](./ADR-012-subapp-onboarding-sop-enforcement.md)
 - 上游 ADR:[ADR-007 鉴权 4 条刚性](./ADR-007-auth-4-rigidity.md)(portal 边界是其延伸)
-- 下游 ADR(候选):ADR-013(数据级权限第五维授权,独立合规 spec)
+- 下游 ADR(候选):数据级权限第五维授权(独立合规 spec,未来 ADR,编号未定;注:ADR-013 编号实为 codebase 画像,已 Superseded by 025)
 
 ## History
 

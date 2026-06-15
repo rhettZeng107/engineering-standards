@@ -55,7 +55,7 @@
 ### 影响范围
 
 - 影响所有项目所有 spec / plan 的 discuss 启动流程。
-- 影响 ADR-004(全局理解格式扩展为三分)、ADR-013 / ADR-025(地图维度 7→8)、ADR-016(启动必扫含 MECHANISMS)。
+- 影响 ADR-004(全局理解格式扩展为三分)、ADR-025(地图维度 7→8)、ADR-016(启动必扫含 MECHANISMS)。
 - 影响 memory:[feedback_verify_platform_mechanism_before_conclusion](项目 memory)。
 - 影响 agent:`~/.claude/agents/code-explorer.md`(已加事实驱动铁律)。
 
@@ -80,7 +80,7 @@
 ## Related(相关引用)
 
 - spec:`SYSV2/docs/superpowers/specs/2026-05-17-mdm-master-data-distribution/`
-- 上游 ADR:ADR-004(PM 视角 + 全局理解)、ADR-013 / ADR-025(项目地图维护)、ADR-016(启动必扫历史)
+- 上游 ADR:ADR-004(PM 视角 + 全局理解)、ADR-025(项目地图维护)、ADR-016(启动必扫历史)
 
 ## History(变更轨迹)
 

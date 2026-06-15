@@ -48,7 +48,7 @@ SYSV2 / MDM / 应用中心 / SubApp / 菜单 等概念都是 Claude 配合涛哥
 - 所有 spec/plan 启动流程
 - memory:`feedback_load_project_history_first.md`
 - memory:`feedback_evidence_consumer_vs_producer.md`(配套规则)
-- ADR-013(codebase 画像作前置事实,自动化版本)
+- ADR-025(项目地图自适应维护,作前置事实;原 ADR-013 已 Superseded by 025)
 
 ## Alternatives Considered
 
@@ -62,7 +62,7 @@ SYSV2 / MDM / 应用中心 / SubApp / 菜单 等概念都是 Claude 配合涛哥
 
 ## Related
 
-- ADR-013:codebase 画像维护(自动化历史扫描)
+- ADR-025:项目地图自适应维护(原 ADR-013 已 Superseded by 025)
 - ADR-015:事实驱动禁臆测(上位规则)
 - memory:`feedback_load_project_history_first.md`
 - memory:`feedback_evidence_consumer_vs_producer.md`

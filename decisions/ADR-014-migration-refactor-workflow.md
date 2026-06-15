@@ -181,7 +181,7 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 
 ## Related
 
-- 上游 ADR:[ADR-002 四层文档](./ADR-002-four-layer-doc-structure.md) / [ADR-004 PM 视角业务场景化](./ADR-004-pm-view-business-scenario.md) / [ADR-008 E2E 8 项核对](./ADR-008-end-to-end-8-checks.md) / [ADR-013 codebase 画像](./ADR-013-codebase-profile-maintenance.md)
+- 上游 ADR:[ADR-002 四层文档](./ADR-002-four-layer-doc-structure.md) / [ADR-004 PM 视角业务场景化](./ADR-004-pm-view-business-scenario.md) / [ADR-008 E2E 8 项核对](./ADR-008-end-to-end-8-checks.md) / [ADR-025 项目地图](./ADR-025-project-map-adaptive-maintenance.md)(原 ADR-013 已 Superseded by 025)
 - 配套 memory:
   - `feedback_e2e_double_layer_risk_checklist.md`(E2E 双层 checklist)
   - `feedback_skeleton_equivalent_migration.md`(功能骨架等价)
