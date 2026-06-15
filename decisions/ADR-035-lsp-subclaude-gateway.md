@@ -369,6 +369,46 @@ SessionEnd 真实触发 + SessionStart/SessionEnd 两端 session_id 一致性,�
 
 机器级全局(所有配 `.claude/lsp-autostart.json` 的 C# 工作区);对未配置工作区 autostop 静默不动(不误碰别工作区 bridge)。
 
+---
+
+## 修订(2026-06-15c)— 真实会话验证 + 补 .handoff 存活信号(根治 transcript 主信号系统性失效)
+
+### 触发场景
+
+15b「待验证(下次重启会话)」项落实:涛哥配合开/关真实标准 `claude` CLI 会话(Ghostty,当前版),逐项实证引用计数。
+
+### 实证(本机 macOS,2026-06-15,带 file/命令来源)
+
+| 验项 | 结果 | 证据 |
+|---|---|---|
+| SessionStart register | ✅ 真生效 | 本会话 + 真实会话 A 开启即写 `.lsp-sessions/<sid>`,内容 `{"ts":…}` |
+| SessionEnd autostop 触发 | ✅ Ghostty+当前版真触发 | 会话 A 关后其登记被注销(2→1) |
+| 注销 / 非末位关保留 | ✅ | A 关后 bridge 因本会话仍活而保留;3 SRM bridge loaded |
+| 末位关→停 | ✅ | 本会话起 bridge 全 `lstart=16:00:55`(=上会话 autostop 停旧 + 本会话 autostart 重起)+ 隔离 hook 端到端 stop 正确 |
+| **transcript-mtime 主信号** | 🔴 **系统性失效** | 当前版 claude **不写** `~/.claude/projects/<enc>/<sid>.jsonl`(真实会话 A 有活动后仍 `No such file`;近4分钟 0 jsonl 更新);会话数据改落 `session-env/<sid>` + `.handoff/ctx-<sid>.json`;历史 48MB `<sid>.jsonl` 系**旧版**产物 |
+
+### 根因 + 红线
+
+15b 的 transcript-mtime 幽灵兜底**依赖 `<sid>.jsonl` 约定**,当前版已不写 → reconcile 对所有当前会话**恒退化为 registry-mtime 单信号**。registry mtime 仅 SessionStart 写一次、会话期不刷新 → **会话运行 >8h(夜间 watchdog 续跑)被另一会话 reconcile 判死 → 误停其正用的 bridge**,破「绝不误停」红线(真实可达,非理论)。
+
+### 修复(涛哥拍板 A:纯 fail-safe 只增不减判活)
+
+`core-lsp-session.js` reconcile 存活判定改 **三信号取 max**(任一新鲜即活,皆超 8h 才判死):
+1. transcript `<sid>.jsonl` mtime —— 旧版增量写,缺则跳过(`tdirOk` 守卫保留)
+2. **`.handoff/ctx-<sid>.json` mtime —— 新增**;当前版会话期持续刷新、按 session_id 命名、机器级全局(无 cwd 编码歧义);实测本会话 ctx 16:00→16:27 在刷新
+3. registry 登记文件 mtime —— 静态地板(旧兜底保留)
+
+只增不减判活方向:`live = max(信号)`,新信号只会让判活更宽,**绝不会比 15b 更激进**;唯一副作用=偶尔「过度保留」(dead 会话 handoff 异常续更),fail-safe 可接受,8h 阈值 + `lsp-nav cleanup` 兜底。`transcriptDir`/`handoffDir` 加 `CLAUDE_PROJECTS_DIR`/`CLAUDE_HANDOFF_DIR` 测试注入 seam(prod 不设)。
+
+### 测试
+
+- 落盘回归 `~/.claude/hooks/core-lsp-session.test.js`(零依赖,`node` 直跑):**15/15 通过** —— handoff 新鲜判活(核心)/ 全信号陈旧判死 / registry 地板宽限 / 旧版 jsonl 兼容 / 取 max 不被陈旧拖死 / 注销自己 / 非法名清除 / 多会话保留。(15b 的「17 测试」未落盘,本次以可复跑文件替代。)
+- 改后真实环境冒烟:reconcile 判本会话活(经 handoff)/ autostop 端到端 keep+stop 正确 / 3 SRM bridge 全程未碰 / 本会话登记完好。
+
+### 影响范围
+
+同 15b(机器级全局,所有配 `.claude/lsp-autostart.json` 的 C# 工作区)。`core-lsp-session.js` 单点改存活判定,autostart/autostop 调用方不变。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -380,3 +420,4 @@ SessionEnd 真实触发 + SessionStart/SessionEnd 两端 session_id 一致性,�
 | 2026-06-11 | 修订(SessionStart 自动预热)| 全局 hook core-lsp-autostart.js + 工作区 .claude/lsp-autostart.json 声明式接入;无配置静默跳过;HC 首接(srm/srm02/srmc);幂等 + find 实证通过 |
 | 2026-06-15 | 修订(macOS Roslyn 打通 + 关官方 csharp-lsp 插件消框架假阳性)| 框架引用假阳性源=官方插件 csharp-ls 0.24 语义诊断(非 lsp-nav);涛哥拍板 A2:关插件(settings false)+ lsp-nav 升 Roslyn(VS Code C# 扩展 v2.140.9 + .NET 10.0.9 runtime,加载 2s,find 精确);机器级,所有 C# 工作区 lsp-nav 自动升 Roslyn;csharp-ls 降 fallback |
 | 2026-06-15 | 修订(会话引用计数自动关停 bridge,2026-06-15b)| Roslyn 冷启实测 2s → 常驻改「随会话关」;涛哥拍板 B + 并发约束(多会话不一刀切关);引用计数(session_id 配对 + transcript-mtime 8h 幽灵兜底,实证放弃 ppid/lsof/祖先链);core-lsp-session/autostop hook + settings SessionEnd;CR 2 HIGH 回修 + 17 测试过;真实 SessionEnd 触发待重启验证 |
+| 2026-06-15 | 修订(真实会话验证 + 补 .handoff 存活信号,2026-06-15c)| 涛哥配合真实 CLI 会话实证:register/SessionEnd autostop/注销/非末位保留/末位停 全 ✅;**但当前版 claude 不写 `<sid>.jsonl` → transcript 主信号系统性失效 → 只剩静态 registry → >8h 活会话误停(破红线)**;涛哥拍板 A:reconcile 三信号取 max 补 `.handoff/ctx-<sid>.json`(会话期刷新),纯只增不减判活;落盘回归 core-lsp-session.test.js 15/15 + 真实冒烟过 |
