@@ -275,6 +275,52 @@ web + GitHub issue 交叉印证:
 - **实证(2026-06-11)**:hook 实测幂等正确(srm02 已运行跳过,srm/srmc 新启);预热后 `find M02Context` 返回 2 类定义精确命中,查询守卫在加载窗口正确等待不返假阴性。
 - **资源约定**:常驻 csharp-ls 每 sln 一实例;批次结束 `stop --all` 释放(hook 注入提示语已带)。
 
+## 修订(2026-06-15)— macOS Roslyn 路线打通 + 关官方 csharp-lsp 插件消「框架引用假阳性诊断」
+
+### 触发场景(本会话,涛哥问)
+
+C# 文件 Edit 后 Claude Code 注入的 `<new-diagnostics>` 满屏框架引用飘红(CS0518 `IsExternalInit` / CS0656 `RequiredMemberAttribute` / CS0246·CS0234 `Microsoft.AspNetCore.*` / CS0012 `IApplicationBuilder`),而 `dotnet build` = 0 error。问:是否假阳性 + 能否优化。
+
+### 根因实证(假阳性源 = 官方 csharp-lsp 插件的 csharp-ls 0.24,**非 lsp-nav**)
+
+机器有**两条独立 C# LSP 通道,共用同一 csharp-ls 0.24 二进制**:
+
+| 通道 | 实证 | 角色 | 假阳性责任 |
+|---|---|---|---|
+| 官方 `csharp-lsp@claude-plugins-official` | `settings.json` enabledPlugins=true;插件目录仅 `README.md`+`LICENSE`(无 plugin.json / 无 server 配置项,server 由 CC core 写死探测 csharp-ls);`ps` 裸 `.csharp-ls.shim`(无 sln 参数) | Edit/Write 后注入 `<new-diagnostics>` | **就是它** |
+| lsp-nav bridge | `ps` `.csharp-ls.shim -s <sln> -l` | 主动 `find`/`callers` 导航(workspace symbol index,可信) | 无关 |
+
+- 环境本身健康(排除 restore / targeting pack 缺失):.NET SDK `8.0.421` + ASP.NET Core 共享框架 `8.0.27` 在位、6 个 `.csproj` 的 `project.assets.json` 全 restore → `dotnet build` 0 error 为真相。
+- **真根因**:csharp-ls 0.24.0(社区单作者轻量 server)对 .NET 8 SDK-style **隐式框架引用**(`Microsoft.AspNetCore.App` 由 SDK 隐式注入)+ targeting pack 引用程序集的 MSBuild design-time 解析不完整 → 语义诊断引擎拿不到框架元数据,专挑 `record`/`required`/ASP.NET 类型飘红;但 workspace symbol index 有源码符号 → 「**navigation 可信、diagnostics 不可信**」分裂正源于此。
+- **关键**:lsp-nav 切 Roslyn **不碰官方插件** → 纯换 lsp-nav 后端消不掉这批假阳性;消假阳性唯一手段 = **关官方插件**。
+
+### 决策(涛哥 2026-06-15 拍板 A2:关插件 + lsp-nav 上 Roslyn)
+
+实证反转纠正(ADR-015):初版方案把「lsp-nav 换 Roslyn」描述为「假阳性基本消除」,深挖后证伪(假阳性源是官方插件不是 lsp-nav)→ 升档回报 → 校准后涛哥选 A2:
+
+1. **A 关官方 csharp-lsp 插件**:`~/.claude/settings.json` enabledPlugins `csharp-lsp@claude-plugins-official` → **false**(消假阳性注入源;session 重启生效);导航零损失(lsp-nav 独立通道)。`typescript-lsp@…` 不动,保留。
+2. **C lsp-nav 升 Roslyn**(macOS 路线打通,**反转 2026-06-10 修订「本机阻断」**):
+   - 涛哥本机已装 VS Code 1.123.2(`~/Desktop/VS Code/`,非 /Applications 故早期 `which code` 未探到);
+   - `code --install-extension ms-dotnettools.csharp` → C# 扩展 **v2.140.9**(darwin-arm64),自带 Roslyn DLL `.roslyn/Microsoft.CodeAnalysis.LanguageServer.dll`;
+   - Roslyn `runtimeconfig.json` 要 `net10.0`(rollForward Major)→ `dotnet-install.sh --channel 10.0 --runtime dotnet` 装 **.NET 10.0.9 runtime** 到 lsp-nav 期望路径 `…/ms-dotnettools.vscode-dotnet-runtime/.dotnet/10.0/`;
+   - `lsp-nav doctor` → 「LSP 后端:✓ Roslyn(语义质量最高)」;bridge 重启实测 `initialize OK(26 caps)` / **`projectInitializationComplete` 耗时 2s**(csharp-ls 同 sln 冷启 3-5 分钟,提速两个数量级);`find EquipmentGetListOutputDto`→`:6:14`、`find TpmWebApiModule`→`:59:14` 精确。
+
+### 装机要求更新(覆盖 Decision §5 line 99-106)
+
+- **C# 优先后端改 Roslyn**:VS Code C# 扩展(`ms-dotnettools.csharp`,自带 Roslyn DLL)+ .NET 10 runtime(lsp-nav `.dotnet/10.x/` 路径);**csharp-ls 0.24 降为「无 VS Code 机器」的 fallback**(2026-06-10 双后端结论保留:Roslyn 优先、csharp-ls 次选)。
+- **官方 `csharp-lsp@claude-plugins-official` 反转为 disable**(原 §5 line 102 要求启用):它只用 csharp-ls 0.24、无法切 Roslyn、是框架假阳性诊断唯一注入源;**C# 编译正确性以 `dotnet build` 为唯一裁定,符号导航走 lsp-nav(Roslyn)**。
+
+### 影响范围(跨项目机器级)
+
+- Roslyn DLL + .NET 10 runtime 是**机器级共享**(`~/.vscode/extensions/` + VS Code globalStorage);`lsp-nav doctor` 现全局返 Roslyn → **SYSV2 / SRMV2 / HC / TPMV2 所有 C# 工作区的 lsp-nav 下次 autostart 自动升级 Roslyn**(无需各自配置)。
+- 关官方 csharp-lsp 插件是**全局 settings**,对所有 C# 工作区一致生效(消假阳性 + 不再起裸 csharp-ls 实例)。
+- 本次 `stop --all` 停了 SYSV2(SYS/MDM)历史 bridge;下次各 session autostart 用 Roslyn 重起。
+
+### defer
+
+- 官方 issue #16360(CC LSP 客户端缺 solution path)/ #38683(CC 对 Roslyn LS 兼容)未复查;本次走 lsp-nav 自建 bridge,不依赖 CC 原生 LSP,不受影响。
+- hook `core-lsp-autostart.js` 文案「后台加载 3-5 分钟」对 Roslyn 已过时(实测秒级),但 csharp-ls fallback 场景仍准 → 暂不改。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -284,3 +330,4 @@ web + GitHub issue 交叉印证:
 | 2026-06-01 | 修订(SRMV2 复现 + 病根精确定位)| 原生 C# LSP 根 session 语义静默返空(documentSymbol 通/findReferences 空+CS0518);真因=monorepo 根无 .sln(非 CC 协议,csharp-ls 0.24.0 已修握手);关联 anthropics/claude-code#16360(oncall OPEN)#38683;gateway 被 web 背书 |
 | 2026-06-10 | 修订(lsp-nav v2.1 双后端落地)| macOS csharp-ls 路线实证 63 refs/$0/常驻秒级,双仓多实例不串;补位共存:同仓高频 symbol → lsp-nav,跨子项目/context 隔离 → gateway;#16360 实证仍 OPEN(oncall,last update 5/26) |
 | 2026-06-11 | 修订(SessionStart 自动预热)| 全局 hook core-lsp-autostart.js + 工作区 .claude/lsp-autostart.json 声明式接入;无配置静默跳过;HC 首接(srm/srm02/srmc);幂等 + find 实证通过 |
+| 2026-06-15 | 修订(macOS Roslyn 打通 + 关官方 csharp-lsp 插件消框架假阳性)| 框架引用假阳性源=官方插件 csharp-ls 0.24 语义诊断(非 lsp-nav);涛哥拍板 A2:关插件(settings false)+ lsp-nav 升 Roslyn(VS Code C# 扩展 v2.140.9 + .NET 10.0.9 runtime,加载 2s,find 精确);机器级,所有 C# 工作区 lsp-nav 自动升 Roslyn;csharp-ls 降 fallback |
