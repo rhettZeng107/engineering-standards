@@ -210,8 +210,16 @@ while (dry < 2 && round < MAX_ROUNDS) {
 }
 
 // 严重度分桶 + 中间态汇总
+// 漏标 severity 时按 type 兜底高危(防 backend-not-migrated / shell-feature-dropped 被静默降 MED、逃逸 DoD 阻塞)
+const sevOf = (g) =>
+  g.severity ||
+  (g.type === 'backend-not-migrated' || g.type === 'shell-feature-dropped'
+    ? 'CRITICAL'
+    : g.type && g.type.indexOf('tripartite') === 0
+    ? 'HIGH'
+    : 'MED')
 const bySeverity = { CRITICAL: [], HIGH: [], MED: [], LOW: [] }
-for (const g of allGaps) (bySeverity[g.severity] || bySeverity.MED).push(g)
+for (const g of allGaps) (bySeverity[sevOf(g)] || bySeverity.MED).push(g)
 const midState = [...new Set(criticTrail.flatMap((c) => c.midStateModules || []))]
 
 return {
