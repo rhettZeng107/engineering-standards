@@ -5,6 +5,8 @@
 - **Decider**: 涛哥
 - **Scope**: 跨项目(老项目迁移改造系列:SYS / MDM 已做 + SRM / MES / WMS / EAM / TPM 计划)
 
+> **迁移轨决策两半**:本 ADR 管「**做什么算完**」(基线 + 三层等价 DoD + STEP1/2 解耦);「**怎么执行**」(Front-load / Back-automate / 中断纪律 / 完整性审计 workflow)见 [ADR-014](./ADR-014-migration-refactor-workflow.md)。**端到端操作主线(唯一总入口)= [legacy-migration-playbook §0](../standards/legacy-migration-playbook.md)。**
+
 ---
 
 ## Context(背景 / 为什么需要决策)

@@ -5,6 +5,8 @@
 - **Decider**: 涛哥
 - **Scope**: 跨项目(老项目迁移改造系列: SYS / MDM 已做 + **SRM / MES / WMS / EAM / TPM 计划**)
 
+> **迁移轨决策两半**:本 ADR 管「**怎么执行**」(工作流 / 自治 / 中断纪律 / 完整性审计 workflow);「**做什么算完**」(基线 + 三层等价 DoD + STEP1/2 解耦)见 [ADR-028](./ADR-028-legacy-migration-baseline-two-step.md)。**端到端操作主线(唯一总入口)= [legacy-migration-playbook §0](../standards/legacy-migration-playbook.md)。**
+
 ---
 
 ## Context(背景)
@@ -209,6 +211,24 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 
 **适用**:SRM / MES / WMS / EAM / TPM 全迁移改造系列;尤其前端可在新老后端间切换(api 寻址层多后端,如 TPM `hostMap` 同时存 `TPMWebApi`/`JYTPMWebApi`)的工作区,B1 类盲区高发。锚点:TPM `specs/2026-06-13-tpm-legacy-migration/migration-gap-review.md`(P5 补迁立项)+ `progress.md:206-213`;`AI.REACT.PROD.TPM/src/api/index.js:4,97,111-112`(tpmApi 残留实测)+ `src/hostMap.js:8-9`。
 
+## 修订(2026-06-15)— 完整性审计 workflow 化(从「人工一遍过」到「多维并扫 + 收敛循环」)
+
+**根因再定性(跨三次迁移)**:MDM→SRM→TPM 三轮迁移的高代价坑,本质是**同一类 —— 完整性盲区**:① 整模块后端漏迁(TPM 计量/特种检定,前端迁了后端仍指老系统,见 2026-06-14 段)② 壳层功能随 layout 整删(SRMShop 购物车入口,见 2026-06-12 段)③ 菜单种子整组漏种(SRM 外协单元,playbook §5 坑 8/9)。前几次修订一直在**补检查项**(归属清单 / 壳层去留表 / 三方交叉矩阵),检查项已齐;但仍复发,说明病根不在「缺内容」,在**检查方式** —— 完整性检查是「人工/单 agent 一遍过」:线性、靠记忆穷举维度、易漏一整类(漏的那一维自己不会冒出来提醒)。
+
+**决策(即时生效)**:迁移完整性审计从「被动检查清单」升级为「**主动多维扫描机制**」,三个 Workflow 质量模式组合:
+
+- **multi-modal sweep(多维并扫)**:N 个 agent 各扫一个维度、**互相盲**(一个维度的盲区不污染另一个)。初始 4 维对应四类历史坑:① 前后端归属(按 api 寻址层逐 endpoint 标老/新后端)② 壳层功能(layouts/全局组件逐项去留)③ 三方交叉(菜单↔页面↔后端 4 类异常)④ 源工件退化/半成品(git 核原始版本,防把退化产物当设计意图)。
+- **completeness critic(完整性批判收口)**:每轮末一个 agent 专问「**还漏哪个维度 / 哪个模块停在(新前端+老后端)中间态 / 哪个声称迁完但无证据**」,挖出的遗漏维度并入下一轮补扫 —— 机器不会像人一样「忘了还有 X 没查」。
+- **loop-until-dry(连续 2 轮无新发现才停)**:防「扫一遍就宣告干净」的线性遗漏,收敛到稳定。
+
+**承载工具**:`tools/migration-audit/migration-audit.workflow.js`(跨项目通用,首版)。**只读审计,不改码、不拍板**;契约锁定 / 风险拍板仍由主会话本体做(ADR-037)。与 `tools/migration-fanout`(执行=批量落盘)互补:audit 管「查漏」,fanout 管「做」。
+
+**触发时机(强制)**:① **迁移启动前置** —— 扫存量盲区(尤其前端 api 寻址层多后端的工作区,B1 类整模块漏迁高发)② **每模块 STEP1 验收前** —— 扫该模块四维完整性 ③ **迁移完结 DoD** —— 后端归属清零未达不得宣告迁完。挂载:playbook §3.1(源工件清单)/ §3.6(三方交叉)/ §5 坑 8-11;归属审计(2026-06-14 段那条人工清单)即由本机制承载执行。
+
+**适用 + 复验**:SRM / MES / WMS / EAM / TPM 全迁移改造系列。决策即时生效;承载工具为首版,**下个迁移项目启动时首用并复验三指标**(主 context 省 / wall-clock / gap 检出率),达标后从「首版」转「稳定推广」。关联 [ADR-037](./ADR-037-cross-stack-contract-lock-ownership.md)(契约锁不进 workflow)+ 迁移 fanout 试点 memory `project-migration-fanout-workflow-pilot`。
+
+---
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
@@ -217,3 +237,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 2026-05-24 | 修订 | §4 E2 UI 钉死「必验 ADR-008 ⑤ 入口可达性全链(菜单可见可点)+ 必打部署/集成环境(非 dev server)」。踩坑:SRM 采购端 MVC→React 缺口补全,把 dev 端 render-walk(直渲路由组件)当 E2 验收,漏菜单种子+权限码,操作用户在菜单里看不到模块 → 标准早在 ADR-008 ⑤,问题是迁移轨 E2 被降级,本次回链钉死 |
 | 2026-06-12 | 修订 | 壳层功能清单缺口复盘(SRMShop 购物车入口随源顶栏整删):① 源工件清单必含 layouts/壳层+产功能去留表 ② layout 收敛类任务前置去留表(视觉收敛≠功能裁剪)③ E2E 业务闭环段间禁 goto 拼接(应用内入口必真实点击);ADR-008 ⑤ 含义扩展 |
 | 2026-06-14 | 修订 | 前后端归属审计 + 绞杀者中间态看板(TPM 计量/特种检定整模块后端漏迁复盘):① 迁移启动强制产前端 api endpoint 全量归属清单(指老后端=半迁必登记)② 模块按 前端×后端 四象限看板登记,(新前端+老后端)禁算迁完,DoD ④ 加「后端归属=新平台」判据。异构重写迁移(非同构升级)专属盲区,SRM/MES/WMS/EAM/TPM 复用 |
+| 2026-06-15 | 修订 | 完整性审计 workflow 化(multi-modal sweep + completeness critic + loop-until-dry):跨三次迁移根因再定性=完整性盲区,病根在检查方式(人工一遍过)非检查内容;升级为主动多维并扫+收敛循环,承载工具 `tools/migration-audit/migration-audit.workflow.js`(只读审计,与 fanout 执行互补)。SRM/MES/WMS/EAM/TPM 复用,首版待下个迁移项目复验 |
