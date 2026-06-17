@@ -104,6 +104,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md) | 跨前后端契约锁定责任归属(本体锁,非 subagent) | Accepted | 2026-06-01 | 跨项目 | 本仓 |
 | [ADR-038](ADR-038-subapp-master-data-via-api-not-direct-table.md) | 子应用主数据消费 API 不直查共享表 + 业务重建 | Accepted | 2026-06-15 | 跨项目 | 本仓 |
 | [ADR-039](ADR-039-standard-task-workflow.md) | 标准任务工作流 — 6 阶段主线(调研→实证→判断→处理→检查→汇报) | Accepted | 2026-06-15 | 跨项目 | 本仓 |
+| [ADR-040](ADR-040-cicd-onprem-iis-deploy-channel.md) | 自托管 Agent→内网 IIS 部署通道改用 MsDepSvc(弃 WMSvc 8172);配套 standards/cicd-onprem-iis-deploy-standard.md | Accepted | 2026-06-17 | 跨项目 | 本仓 |
 
 ---
 
