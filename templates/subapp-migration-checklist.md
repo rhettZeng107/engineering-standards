@@ -33,6 +33,8 @@
 - [ ] 路由切到对应页(**逐菜单**,非抽样;多 tab = 多 iframe,按端口+subPath 取对应 frame)
 - [ ] service 请求指向正确后端(production iframe origin / VITE_Url,**非相对路径**)
 - [ ] API 200 出真实数据(非空表默认态、非「网络异常」toast)
+- [ ] (独立站点跨域)后端 prod CORS 配 BP 来源 + `AllowCredentials`,真机响应头 `acao` 精确(非 `*`)+ `acac=true`(onboarding 附录 L)
+- [ ] 后端 JWT 验签 key == SYS 同族签发 key(**勿用脚手架/模板默认值**);业务 401 先读响应 `WWW-Authenticate` 头判失败类型(签名 key 错 / 过期 / 缺 token)再修(onboarding 附录 M)
 - [ ] 渲染无双层外框、无 ErrorBoundary
 
 ---

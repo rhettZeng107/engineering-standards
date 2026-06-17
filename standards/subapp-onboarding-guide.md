@@ -1071,6 +1071,24 @@ function PreloadHost() {
 
 ---
 
+### 附录 M. 子应用后端 JWT 签名 key 与 SYS 同族对齐(验 BP token)
+
+> 2026-06-18 TPM B 方案沉淀。BP 业务请求带的是 **SYS 签发的 BP token**(BP 登录走 SYS `OAuthController`,HS256,claims `iss=aud=JYInfo`+PlantCode+LoginUserName)。子应用后端 `[Authorize]` 必须用**与 SYS 同族的签名 key** 验签,否则 **CORS 全对、token 全带,业务请求仍 401**(附录 L 与本附录是 BP 业务 200 的两道独立闸门:CORS 过 ≠ 鉴权过)。
+
+**规则**:
+- 子应用后端验签 key(`JwtOptions:SecurityKey` → `IssuerSigningKey`)必须 == SYS 签发 BP token 的 key(JY 同族共享)。**勿沿用脚手架/模板默认值** —— TPM 首落地即因 `SecurityKey` 抄自老仓模板残值致**全量业务 401**(CORS/token 链全对,极易误判)。
+- `ValidIssuer`/`ValidAudience` 也须 = SYS 签发值(默认 `JYInfo`);`ValidateLifetime` 默认开。
+- 真 key 由 SYS 运行时从 **Consul `Jwt:SecretKey`** 取(子应用仓读不到);基准对照**已工作子应用后端**硬编码 `IssuerSigningKey`(如 MDM `Program.cs`)。明文 key 全族共享属已知 compliance-debt,接入文档不复述明文。
+- 字符串编码坑:SYS 签发用 `Encoding.ASCII`、子应用验签常用 `Encoding.UTF8` —— 纯 ASCII 字符 key 两者字节相同无碍;含非 ASCII 字符时须一致。
+
+**确诊/对齐方法(确定性,不依赖 Consul)**:拿真实 BP token(BP 登录后 iframe `localStorage.__bp_sso_token__`),本地逐 candidate key 重算 HS256(`HMAC-SHA256(header.payload, key)` base64url 比 token 末段 sig),**命中者即真 key**。
+
+**401 边界取证(不臆测哪一层)**:JwtBearer 把失败原因写进响应 **`WWW-Authenticate`** 头 —— `error_description="The signature key was not found"`=key 错 / `"The token expired"`=过期 / 无该头=没带 token。配 token claims 解码(iss/aud/exp)一次定位是签名 key 还是 iss/aud/exp/缺 token。
+
+**验收(CR HIGH + 真机)**:BP 真机逐菜单 walk,业务 `[Authorize]` 端点返 **200**(非仅 swagger);若 401,先读 `WWW-Authenticate` 头判失败类型再修。TPM 2026-06-18:改回同族 key 后逐菜单 41×业务 200、0 鉴权失败。
+
+---
+
 ## 3. 历史与变更
 
 | 日期 | 版本 | 变更 |
@@ -1079,6 +1097,7 @@ function PreloadHost() {
 | 2026-05-08 | 1.1 | 加附录 K — BP 容器层 React 陷阱清单(BP 菜单 2 天踩坑教训沉淀);后续 SRM/WMS/MES 接入前必扫 K.5 自检清单 |
 | 2026-05-21 | 1.2 | **手册口径校正 + 防迁移再踩坑**(SRMV2 Contract):步骤 8 改为 G 方案 postMessage 路由同步强制(原"wujie sync 0 代码"已停用,误导致漏监听 → 每菜单同页);附录 A.1 加 G 方案 postMessage 契约表;步骤 10 加 E2 production-like + 逐菜单 + service baseURL 强约束;新增子应用侧 G 方案自检清单 |
 | 2026-06-18 | 1.3 | **TPM B 方案沉淀**(首个 ABP+Furion + 后端独立站点跨域子应用):附录 C MenuController 加 ABP/Furion `[NonUnify]` 警示(否则 manifest 被包 `{statusCode,data}` envelope → ScanMenus 拉空,极隐蔽);新增**附录 L 独立站点 prod CORS**(前端 BP + 后端独立站点跨域必需,dev CORS 不覆盖 prod;CORS 头 `acao 精确+acac=true` 真机验收) |
+| 2026-06-18 | 1.4 | **新增附录 M 子应用 JWT 签名 key 与 SYS 同族对齐**(TPM P5 实证:`JwtOptions:SecurityKey` 抄模板残值致 CORS/token 全对仍全量业务 401):验签 key 须 == SYS 签发 BP token 的 key(勿用脚手架默认值);真 token 本地 HS256 反推确诊 + `WWW-Authenticate` 头判失败类型;与附录 L CORS 为 BP 业务 200 两道独立闸门 |
 
 ---
 
