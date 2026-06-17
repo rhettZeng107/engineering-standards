@@ -409,6 +409,35 @@ SessionEnd 真实触发 + SessionStart/SessionEnd 两端 session_id 一致性,�
 
 同 15b(机器级全局,所有配 `.claude/lsp-autostart.json` 的 C# 工作区)。`core-lsp-session.js` 单点改存活判定,autostart/autostop 调用方不变。
 
+## 修订(2026-06-17)— 「symbol 查询默认 LSP」从约定升级为 PreToolUse 软提醒 hook
+
+### 翻车案例(本次触发)
+
+SYSV2 排查 TPM 子应用发布到 BP 的 `PortalScope` 可见性疑点时,需要查:① `AuthInfoQueryService` BP 菜单过滤字段(`BGroup`/`IsPcMenu`/`SysFlag`)在哪些行被引用;② `AuthInfo.cs` 是否有 `BGroup`/`IsPcMenu`/`PortalScope` 属性定义 —— **这两个都是 symbol 查询(引用/定义),本应走 lsp-nav,却用了 grep**,违反本 ADR「任何 symbol 查找默认 LSP,grep 降级旁证」。另外 zsh shell glob(`docs/specs/*tpm*`)无匹配报错两次(应走 Glob 工具)。涛哥点名:「能用 LSP 查询的都要严格走 LSP。」
+
+> 注:同次有一条 `grep PortalScope`(证伪「PortalScope 是否 C# 符号」)**是对的** —— PortalScope 只在 SQL 字面量,非符号,LSP 对不存在的符号返空无法区分「没有」vs「查错」,这类「证伪某词是否符号」grep 才是正解。这条恰是破案关键,**任何硬拦都会误伤它**。
+
+### 决策
+
+新增全局 hook **`~/.claude/hooks/core-lsp-symbol-grep-guard.js`**(`PreToolUse` / `Bash` / **warn 软提醒,非阻断**):
+
+- **触发(启发式,全部满足)**:命令含 `grep`/`rg` + 搜索 pattern 是标识符样式(单符号 / `A\|B\|C` 多符号 OR / 成员访问 `Foo.Bar`,且含大写字母)+ 目标有代码信号(`.cs/.ts/.tsx/.jsx`、`AI.Extend`/`AI.REACT`/`src`/`Controllers`/`Domain` 等)+ 无文档信号(`.sql/.md/.json/.log/.txt/.csv/.yml`)。
+- **行为**:stderr 提醒改走 LSP,**直接喂现成命令** `node ~/Projects/engineering-standards/tools/lsp-nav/lsp-nav.js find <symbol>` / `callers <symbol>`;放行不阻断。
+- **静音**:命令含 `# str-literal` / `# lsp-ok` 注释跳过;cwd 不在 `~/Projects` 跳过。
+
+### 为何 warn 不 block(涛哥拍板,2026-06-17)
+
+hook **无法语义判断**「这次 grep 该不该走 LSP」,只能启发式 → 必有假阳性(查 SQL/字符串字面量、注释词、ground-truth 旁证)。上述「证伪 PortalScope 是否符号」的合法 grep 若被硬 block,反而拦掉破案关键步。故定 warn:**降复发率的提醒器 + 把 LSP 命令喂到面前,非根除**;根除仍靠纪律(symbol 任务第一反应 lsp-nav)。与 `qwen-default-frontend-guard`(2026-06-14 由 block 改 warn)同向。
+
+### 配套
+
+- 文件名/路径查找走 **Glob 工具**,不用 Bash shell glob(治 zsh no-match 报错)。
+- 落盘启发式回归:10 条 case(含本次 4 条真实历史命令)验证通过;hook 导出 `shouldWarn` 等便于回归。
+
+### 影响范围
+
+机器级全局,所有 `~/Projects` 下工作区(SYSV2/SRMV2/HC/未来 MES/WMS/EAM/TPM)生效。纯提醒,不改任何工具行为。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -421,3 +450,4 @@ SessionEnd 真实触发 + SessionStart/SessionEnd 两端 session_id 一致性,�
 | 2026-06-15 | 修订(macOS Roslyn 打通 + 关官方 csharp-lsp 插件消框架假阳性)| 框架引用假阳性源=官方插件 csharp-ls 0.24 语义诊断(非 lsp-nav);涛哥拍板 A2:关插件(settings false)+ lsp-nav 升 Roslyn(VS Code C# 扩展 v2.140.9 + .NET 10.0.9 runtime,加载 2s,find 精确);机器级,所有 C# 工作区 lsp-nav 自动升 Roslyn;csharp-ls 降 fallback |
 | 2026-06-15 | 修订(会话引用计数自动关停 bridge,2026-06-15b)| Roslyn 冷启实测 2s → 常驻改「随会话关」;涛哥拍板 B + 并发约束(多会话不一刀切关);引用计数(session_id 配对 + transcript-mtime 8h 幽灵兜底,实证放弃 ppid/lsof/祖先链);core-lsp-session/autostop hook + settings SessionEnd;CR 2 HIGH 回修 + 17 测试过;真实 SessionEnd 触发待重启验证 |
 | 2026-06-15 | 修订(真实会话验证 + 补 .handoff 存活信号,2026-06-15c)| 涛哥配合真实 CLI 会话实证:register/SessionEnd autostop/注销/非末位保留/末位停 全 ✅;**但当前版 claude 不写 `<sid>.jsonl` → transcript 主信号系统性失效 → 只剩静态 registry → >8h 活会话误停(破红线)**;涛哥拍板 A:reconcile 三信号取 max 补 `.handoff/ctx-<sid>.json`(会话期刷新),纯只增不减判活;落盘回归 core-lsp-session.test.js 15/15 + 真实冒烟过 |
+| 2026-06-17 | 修订(symbol 查询默认 LSP 升级为 PreToolUse 软提醒 hook)| 翻车:TPM BP 发布排查时 symbol 查询(AuthInfoQueryService 引用 / AuthInfo.cs 定义)用 grep 没走 LSP;涛哥拍板 warn 档新增 `core-lsp-symbol-grep-guard.js`(启发式检测疑似符号 grep → 喂 lsp-nav 现成命令,非阻断);warn 不 block 因「证伪某词是否符号」的合法 grep 不能误伤;配套文件查找走 Glob 工具 |
