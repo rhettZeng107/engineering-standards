@@ -107,6 +107,7 @@ SYSV2 SYS 实例:`contentPath="SYS3-Console/JYCoreSysWebApi"`。
    ```bash
    curl -s -o /dev/null -w "%{http_code}\n" http://<IIS_HOST>:<port>/<path>/swagger/index.html
    ```
+   > ⚠️ **健康门禁必须正向断言 `== 200`,严禁把非 2xx(尤其 `403`)当"预期/容忍"放过**。反例(2026-06-17 TPM):pipeline Verify 把跨进程子应用 manifest 的 `403` 判为「IP allowlist 拦截 agent,属预期非故障」→ 后端 `500.30`(连接串 `${ENV}` 占位符未设)被假绿掩盖,直到下游实测才暴露。`403.18`(IIS 应用池/部署故障)与中间件 allowlist `403` body 不同(IIS HTML vs 纯文本),但**都不算健康** —— 一律要求 200,后端无 /health 用 `swagger/index.html`。
 3. **凭据自检(改 yml 前可先验,省 CI 往返)**:能直连内网时,
    ```bash
    curl --ntlm -u '<MACHINE>\<account>:<pwd>' -s -o /dev/null -w "%{http_code}\n" http://<IIS_HOST>/MsDeployAgentService
@@ -126,6 +127,8 @@ SYSV2 SYS 实例:`contentPath="SYS3-Console/JYCoreSysWebApi"`。
 | `ERROR_COULD_NOT_CONNECT`(MsDepSvc :80) | MsDepSvc 未启 / 80 被防火墙挡 | §2.1 启服务 + §2.4 放行 80 |
 | 站点显示「维护中 / app_offline」 | AppOffline 部署中途失败遗留 | 删目标站点物理目录下 `app_offline.htm` |
 | 变量 `$(DEPLOY_ADMIN_USER)` 原样未展开 | 该项目变量组没加这两个变量 | §3 给该项目变量组补变量 |
+| `403` 且 body 是 IIS 403.18 HTML | 应用池路由错(请求没进应用),**非 allowlist** | 查 IIS 子应用 AppPool(独立 AppPool / No Managed Code);别去改 manifest `AllowedIPs` |
+| `500.30`(ANCM app failed to start) | 后端进程启动崩,常见连接串 `${ENV}` 占位符读不到 machine env(改后 w3wp 未刷新) | stdout log / 目标机直跑 `dotnet <App>.dll` 定位;给 AppPool 加 env 或重启机 + `iisreset` |
 
 ---
 

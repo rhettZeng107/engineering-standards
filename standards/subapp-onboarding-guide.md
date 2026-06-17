@@ -75,10 +75,15 @@
 - `curl http://子应用/<base>/manifest` 从应用中心服务器 IP 返回 200 + 合法 JSON
 - 同 curl 从其他 IP(如开发者本机)返回 403 + 错误信息
 
+> ⚠️ **必须正向断言 `200 + 合法 JSON`,别只看到"非白名单 IP 返 403"就以为端点活了**。后端进程没起来(500.30)或应用池配错(403.18)时从任何 IP 都不可达,而 `403` 极易被误当成"IP allowlist 预期"放过(2026-06-17 TPM 实证:manifest 403 实为后端 500.30 启动失败,被当 allowlist 预期假绿掩盖)。CI 健康校验同理,见 CICD 部署标准 §5。
+
 **失败排查**:
 - 405 Method Not Allowed → 检查路由方法 `[HttpGet]`
 - 500 → 检查 `wwwroot/menu-manifest.json` 是否存在(prod 路径)或 `menu-manifest.dev.json`(dev fallback)
-- 403 → 检查 `appsettings.json` 配置 `SubAppManifest:AllowedIPs` 数组是否包含调用方 IP
+- **500.30(IIS ANCM "app failed to start")→ 后端进程根本没起来,与 manifest 无关**。常见根因:`appsettings` 连接串 `${ENV_VAR}` 占位符在目标 IIS 读不到 machine env(改后 w3wp 未刷新)→ 启动期 fail-fast。先看 stdout log 或目标机直跑 `dotnet <App>.dll` 定位
+- **403 先看 body 分清两种**(改错地方白忙):
+  - body 是 **IIS 403.18 HTML 详细错误** = 应用池路由/部署故障(请求没进应用)→ **不是 allowlist,改 `AllowedIPs` 无用**,查 IIS 子应用的 AppPool 配置(独立 AppPool / No Managed Code)
+  - body 是中间件**纯文本 `IP not in allowlist: {ip}`** = 真 allowlist 拦截 → 才检查 `appsettings.json` 的 `SubAppManifest:AllowedIPs` 含调用方 IP
 
 ---
 
