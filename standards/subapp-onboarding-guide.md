@@ -511,6 +511,8 @@ public class MenuController : ControllerBase
     /// 鉴权例外:由 SubAppManifestIpAllowlistMiddleware 单边 IP 白名单接管。
     /// </summary>
     [AllowAnonymous]
+    // ⚠️ ABP/Furion(UnifyResult)项目必加 [NonUnify] 豁免全局响应包装,否则裸 JSON 被包 {statusCode,data} → ScanMenus 拉空(2026-06-18 TPM)
+    // [NonUnify]  // using <Unify 命名空间>,如 JY.Framework.AspNetCore.UnifyResult;prod 缺文件分支用 return StatusCode(503) 而非 throw(throw 走异常 filter 仍被包)
     [HttpGet("manifest")]
     public IActionResult GetManifest()
     {
@@ -1054,6 +1056,21 @@ function PreloadHost() {
 
 ---
 
+### 附录 L. 独立站点后端 prod CORS(前端 BP 跨域调后端独立站点)
+
+> 2026-06-18 TPM B 方案沉淀。**前端挂 BP(:8002)+ 后端独立 IIS 站点(TPM CoreTPMWebApi:5030 / MDM-Api:5026 / SRM BuyerApi:5028)= 跨域**,后端必须配 prod CORS,否则浏览器拦所有业务请求。附录 F 的 dev server CORS **不覆盖 prod**。
+
+**后端(.NET)CORS 注册**(ABP 在 Module / 非 ABP 在 Program):
+- `AddCors` policy `WithOrigins(读 App:CorsOrigins)` + `AllowAnyHeader/AllowAnyMethod` + **`AllowCredentials()`**(JWT 跨域必需);`UseCors` 在 `UseRouting` 之后、`UseAuthentication/UseAuthorization` 之前。
+- ⚠️ `AllowCredentials` 与 `AllowAnyOrigin('*')` **互斥** → 必须 `WithOrigins(具体 BP 来源)`,不能 `*`。
+- `appsettings App:CorsOrigins` 加 BP 来源(如 `http://172.21.10.8:8002`);入仓留占位/本地值,prod 经 env 覆盖。
+
+**前端寻址**(独立站点跨域):前端 host 映射**拆两个变量** —— ①后端 API host(独立站点 `host:port` 绝对 URL)②BP 门户 host(Static/i18n/子应用资源,prod 留空=相对同源)。业务 API 指后端独立站点,门户资源走相对;**勿共用一个 host 变量**(否则 Static/i18n 跟着错指后端站点 404)。
+
+**验收(CR HIGH + 真机)**:从 BP origin 跨域打带 JWT 的 `[Authorize]` 业务端点,断言响应头 `Access-Control-Allow-Origin: <BP来源>`(精确非 `*`)+ `Access-Control-Allow-Credentials: true` 回写 + 业务 200。**只验 swagger 200 证明不了跨域链路**(swagger 同源无 CORS)。TPM 2026-06-18 真机实证:`acao=http://172.21.10.8:8002 + acac=true`。
+
+---
+
 ## 3. 历史与变更
 
 | 日期 | 版本 | 变更 |
@@ -1061,6 +1078,7 @@ function PreloadHost() {
 | 2026-05-07 | 1.0 | 首版落地(Platform spec P-C 同步);MDM 作首个参考实现 |
 | 2026-05-08 | 1.1 | 加附录 K — BP 容器层 React 陷阱清单(BP 菜单 2 天踩坑教训沉淀);后续 SRM/WMS/MES 接入前必扫 K.5 自检清单 |
 | 2026-05-21 | 1.2 | **手册口径校正 + 防迁移再踩坑**(SRMV2 Contract):步骤 8 改为 G 方案 postMessage 路由同步强制(原"wujie sync 0 代码"已停用,误导致漏监听 → 每菜单同页);附录 A.1 加 G 方案 postMessage 契约表;步骤 10 加 E2 production-like + 逐菜单 + service baseURL 强约束;新增子应用侧 G 方案自检清单 |
+| 2026-06-18 | 1.3 | **TPM B 方案沉淀**(首个 ABP+Furion + 后端独立站点跨域子应用):附录 C MenuController 加 ABP/Furion `[NonUnify]` 警示(否则 manifest 被包 `{statusCode,data}` envelope → ScanMenus 拉空,极隐蔽);新增**附录 L 独立站点 prod CORS**(前端 BP + 后端独立站点跨域必需,dev CORS 不覆盖 prod;CORS 头 `acao 精确+acac=true` 真机验收) |
 
 ---
 
