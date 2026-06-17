@@ -146,9 +146,21 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 
 4. **「Claude 自主行为约定」适用条件补强**:推送后**必须**自主用 monitor 查 CI(凭据已就位,见第 1 条),**不得**向涛哥要 build 状态或 PAT;红了走 [[cicd-self-heal-sop]] 三层分流。该行为是跨项目基线(本 ADR),不下沉项目级 memory。
 
+## 修订(2026-06-17)
+
+**背景**:self-hosted Agent 单 worker(SYSV2-OnPrem)串行处理队列;被更新提交取代的在途 build(`notStarted`/`inProgress`)继续占 Agent = 纯浪费。2026-06-17 MsDepSvc 全工作区铺开时,同一 pipeline 出现"旧 build(只改通道)+ 新 build(再改一处)"并存,涛哥指出应取消被取代的旧 build。原「自主行为约定」line 65 已含此意但措辞偏窄("push 后 trigger 多次时"),本次升格为**显式铁律 + 扩至全工作区**。
+
+**build 去重铁律**:
+
+1. **每次 push 更新提交后**(代码或 pipeline 改动触发了构建),对该 pipeline 跑 `cancel-old <repo>` —— 按 `queueTimeDescending` **保留最新一个,取消其余全部在途**(无论旧 build 是 1 个还是多个、`notStarted` 还是 `inProgress`;`inProgress` 的旧 build 也取消,不为已跑一半的过时 build 等结果)。
+2. **Claude 双推后自动执行**,Tier 1 自主不问涛哥(可逆 + 队列管理,对齐 line 65 / ADR-018);与 post-push monitor 配套:`push → cancel-old → watch 最新`。
+3. **范围**:所有 ADO self-hosted 单/少 worker pipeline —— SYSV2 / SRMV2 / MES / TPM / 未来工作区一致。
+4. **落地**:操作指引同步进 [`standards/cicd-onprem-iis-deploy-standard.md`](../standards/cicd-onprem-iis-deploy-standard.md) §队列卫生,各工作区 Claude 干部署时读。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-14 | Proposed → Accepted | 涛哥拍板,Phase 1 闭环 task #7/#8/#10 一并落地 |
 | 2026-05-28 | 修订(不改编号) | PAT 路径统一 `~/.claude/ado-pat` + monitor `.ps1→.js` 迁移对照 + build≠部署判定 + 自主查 CI 强制(涛哥拍板) |
+| 2026-06-17 | 修订(不改编号) | build 去重铁律升格 — push 后必 `cancel-old` 留最新、取消其余在途(含 inProgress)+ 扩至全工作区(涛哥拍板) |

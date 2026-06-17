@@ -135,7 +135,7 @@ SYSV2 SYS 实例:`contentPath="SYS3-Console/JYCoreSysWebApi"`。
 2. 确认目标机已完成 §2 一次性准备(MsDepSvc Running + 本地管理员 + LocalAccountTokenFilterPolicy=1);未完成 → 升报涛哥/运维。
 3. 确认本项目变量组已有 §3 两变量;无 → 提示涛哥补(变量组按项目隔离)。
 4. 按 §4.3 对照表改部署步骤(后端用 §4.1 / 前端用 §4.2);dest 保持 IIS 路径,**不得改盘符路径**。
-5. commit + 双推 → master 自动触发;按 §5 验证 Deploy stage + 健康端点 200。
+5. commit + 双推 → master 自动触发;**随即 `cancel-old <repo>` 清掉被取代的在途 build(§9)**;按 §5 验证 Deploy stage + 健康端点 200。
 6. 红 → 按 §6 排错矩阵自愈。
 
 ---
@@ -146,6 +146,22 @@ SYSV2 SYS 实例:`contentPath="SYS3-Console/JYCoreSysWebApi"`。
 - 迁移动作与 §4.3 完全一致:换 MsDepSvc 端点 + NTLM + 本地管理员凭据;dest 用 MES 站点名(如 `MES-Api`)。
 - 前置:MES 各自的 ADO 项目变量组按 §3 补 `DEPLOY_ADMIN_USER`/`DEPLOY_ADMIN_PWD`。
 - 凭据请走各自变量组 secret,**勿在群里/文档明文传密码**。
+
+---
+
+## 9. 队列卫生 — push 后 cancel-old(单 worker Agent 必做)
+
+> 决策:[ADR-022 修订(2026-06-17)build 去重铁律](../decisions/ADR-022-cicd-monitor-feedback.md#修订2026-06-17)。
+
+self-hosted Agent 单 worker 串行处理队列;被更新提交取代的在途 build 继续占 Agent = 浪费。**每次 push 触发构建后,对该 pipeline 跑 `cancel-old`,只留最新一个**:
+
+```bash
+node docs/ops/cicd-ado-monitor.js cancel-old <repo>   # 保留 queueTime 最新,取消其余在途(含 inProgress)
+```
+
+- 无论被取代的旧 build 是 1 个还是多个、`notStarted` 还是 `inProgress`,一律取消(不为已跑一半的过时 build 等结果)。
+- Claude 双推后**自动执行**,Tier 1 自主(可逆 + 队列管理),不问涛哥;节奏 = `push → cancel-old → watch 最新`。
+- 适用所有 ADO self-hosted 单/少 worker pipeline(SYSV2 / SRMV2 / MES / TPM / 未来工作区)。
 
 ---
 
