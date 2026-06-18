@@ -21,8 +21,8 @@
 | 2 | **后端 manifest 端点 + IP 白名单** | `MenuController /<app>api/menu/manifest` 裸返 `{AppName,Menus}` + `SubAppManifestIpAllowlistMiddleware`(server-to-server,IP 单边鉴权) | `subapp-menu-manifest-publish` §2-4 ·`subapp-onboarding-guide` 附录 C | 白名单 IP 打端点验 raw body(见 §3 闸门①) |
 | 3 | **菜单发布到 SYS(禁手工)** | 应用中心填 `MenuApiUrl` → `ScanMenus` 增量 upsert `SYS_AuthInfo` → 补派生字段(`BGroup/IsPcMenu/BEnd`)+ `ActiveModule` + 工厂绑定 + 角色授权 | `subapp-menu-manifest-publish`(铁律:禁手工改 SYS_AuthInfo) | BP 登录看到菜单树 + 逐目标页可达(ADR-008 #5) |
 | 4 | **IIS 站点拓扑 + 部署通道** | 前端 sub-path vdir(SPA web.config)+ 后端站点(**同源子应用 vs 独立站点**,见 §2);凭证 env(占位符 + fail-fast,明文不入库);部署走 MsDepSvc | `cicd-onprem-iis-deploy-standard`(MsDepSvc 通道 + 排错矩阵)·`templates/iis-web.config-spa-subapp` | 前端 sub-path=200 + 后端 swagger=200 |
-| 5 | **前后端 CI/CD pipeline** | 各三 stage `Build → Deploy(MsDepSvc) → Verify/E2E`;ADO 变量组按项目隔离;触发分支锁定 | `cicd-e2e-in-pipeline-standard` ·`cicd-onprem-iis-deploy-standard` §4 ·`templates/azure-pipelines-e2e` | `cicd-e2e-stage-guard` 钩子不报缺 stage;push 自动触发绿 |
-| 6 | **部署后自动 E2E 三段** | `critical-boot`(swagger/health 200,进程健康)+ `critical-render-walk` + `critical-menu-walk`(操作员视角从 BP 菜单逐页点进),`continueOnError:false` | `cicd-e2e-in-pipeline-standard` ·`templates/pipeline-e2e` | 三段绿,CRASH=0 |
+| 5 | **前后端 CI/CD pipeline** | 各三 stage `Build → Deploy(MsDepSvc) → Verify/E2E`;**后端 Verify=API-Health floor**(swagger 200 + manifest 非空,所有后端必跑);前端 E2E job `timeoutInMinutes ≥ 60`;ADO 变量组按项目隔离;触发分支锁定 | `cicd-e2e-in-pipeline-standard` §7 ·**ADR-045**(分层定级)·`templates/pipeline-e2e/tier-decide.mjs` | `cicd-e2e-stage-guard` 钩子不报缺 stage;push 自动触发绿 |
+| 6 | **部署后自动 E2E(分层定级,ADR-045)** | **L0 floor**(每次跑):`critical-boot` + `critical-quality` + `critical-i18n-mix`(中英混杂)+ 核心导航 smoke;**L1 定向**(改动模块)`@module` 逐页;**L2 全量**(首发/共享层/判不准)`critical-menu-walk` 逐页+截图。`tier-decide.mjs` 按 git diff 自动定级,**两个保险**(L0 永远跑 / 判不准默认 L2);`continueOnError:false` | `cicd-e2e-in-pipeline-standard` §7 ·`templates/pipeline-e2e` | 当层全绿,CRASH=0 + 中英混杂=0 |
 | 7 | **CI 监控 + 自愈 + 鉴权门真机验收** | 推送后 `cicd-ado-monitor.js watch` 起监控,红走 `cicd-self-heal-sop`;真机从 BP 跨域打带 JWT 的 `[Authorize]` 业务端点验 200(非仅 swagger) | ADR-022 ·`tools/cicd-ado-monitor.js` ·`subapp-onboarding-guide` 附录 L/M | 逐菜单业务 200 + 0 鉴权失败 + 0 错误 toast |
 
 > **顺序约束**:1→2→3 是菜单链(代码→端点→SYS);4→5→6 是部署链(站点→pipeline→E2E);3 与 4 可并行,但 **6 的 menu-walk 要 3(菜单进 BP)+ 5(后端部署)都完成**才能真机验。
@@ -71,7 +71,7 @@
 
 ## 6. 关联资源
 
-- **ADR**:ADR-011 / 012 / 038(子应用接入)· ADR-007(鉴权 4 条)· ADR-008 / 024(E2E 8 项核对 + 阶段分级)· ADR-022(CI 监控反馈)· ADR-040(MsDepSvc 部署通道)
+- **ADR**:ADR-011 / 012 / 038(子应用接入)· ADR-007(鉴权 4 条)· ADR-008 / 024(E2E 8 项核对 + 阶段分级)· **ADR-045(部署后 E2E 分层定级治理 — L0/L1/L2 + 中英混杂门禁 + 后端 floor)**· ADR-022(CI 监控反馈)· ADR-040(MsDepSvc 部署通道)
 - **standards**:`subapp-onboarding-guide`(前端接入 + 附录 C/L/M backend 闸门)·`subapp-menu-manifest-publish`(菜单发布)·`cicd-onprem-iis-deploy-standard`(IIS 部署)·`cicd-e2e-in-pipeline-standard`(部署后 E2E)
 - **templates / tools**:`templates/subapp-migration-checklist` · `templates/iis-web.config-spa-subapp` · `templates/azure-pipelines-e2e` · `tools/cicd-ado-monitor.js`
 
