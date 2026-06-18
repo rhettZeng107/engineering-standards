@@ -79,6 +79,6 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 
 **两个保险(强制)**:① L0 永远跑 ② 改动路径自动定级 + **判不准默认 L2**(共享层 `components/v2/layouts/router/locales/request 封装/构建配置` 命中即 L2;未映射模块/首发 → L2)。
 
-**关键机制**:`@module:<name>` 页级标签(目录名=模块)→ diff 选跑;`menu-manifest.json` diff 出新页=首发→L2;后端契约改→契约锁标 `consumers`→**触发消费前端仓 pipeline**(本期做,不留二期);**后端 floor**(API-Health)所有后端必跑。
+**关键机制**:`@module:<name>` 页级标签(目录名=模块)→ diff 选跑;`menu-manifest.json` diff 出新页=首发→L2(前端 manifest 不进 git 时由 routes.config/无基线两保险兜,首发逐页落后端 manifest publisher,详 ADR-045 §修订);后端契约改→**后端 pipeline 绿后 REST queue 消费前端 pipeline + 传 affectedModules→前端 L1 定向**(机制 B,consumers manifest 落后端仓 `pipeline-e2e/contract-consumers.json`,详 [ADR-046](../decisions/ADR-046-cross-repo-contract-driven-e2e-trigger.md);本期做,不留二期);**后端 floor**(API-Health)所有后端必跑。
 
 > 后端 post-deploy 也要 floor:`dotnet test`(pre-deploy 门,SYS 范式)+ **API-Health Verify**(post-deploy,swagger 200 硬断言 + manifest 非空,TPM 范式)。MDM/SRM/MES 后端现缺,按本标准补。
