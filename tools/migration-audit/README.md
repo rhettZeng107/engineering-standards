@@ -2,7 +2,7 @@
 
 > 决策依据:[ADR-014 修订 2026-06-15](../../decisions/ADR-014-migration-refactor-workflow.md)(完整性审计 workflow 化)。
 > 配套手册:[legacy-migration-playbook.md](../../standards/legacy-migration-playbook.md) §3.1 / §3.6 / §5。
-> 姊妹工具:[migration-fanout](../migration-fanout/)(执行=批量落盘);本工具 = 审计(查漏,只读)。
+> 姊妹工具:[migration-fanout](../migration-fanout/)(执行=批量落盘);[baseline-adversarial](./baseline-adversarial.workflow.js)(建基准查「误判」);本工具查「漏」。均只读。
 
 ## 解决什么
 
@@ -27,6 +27,19 @@ Workflow({ scriptPath: '<repo>/tools/migration-audit/migration-audit.workflow.js
 ```
 
 args 见 workflow 文件头注释。关键:`apiAddrFiles` / `oldBackendMarkers` / `newBackendMarkers`(归属维度)、`layoutPaths`(壳层)、`menuDbQuery`(三方交叉)、`legacyRepo`(退化核对)、`modules`、`maxRounds`。
+
+## 姊妹门:baseline-adversarial(adversarial verification,查「误判」)
+
+[ADR-014 修订 2026-06-18 / ADR-044 G5](../../decisions/ADR-014-migration-refactor-workflow.md)。同目录 `baseline-adversarial.workflow.js`,与本工具**正交**:
+
+| | migration-audit | baseline-adversarial |
+|---|---|---|
+| 查什么 | **漏**(completeness):哪些维度/模块没枚举 | **误判**(correctness):枚举了但判错 |
+| 模式 | multi-modal sweep + critic + loop-until-dry | fan-out-and-vote(每判定 3 视角独立 skeptic refute + 多数票) |
+| 防的坑 | 整模块漏迁 / 壳层整删 / 菜单漏种 | 坑 2 半成品当完好、坑 10 退化产物当设计意图 |
+| 触发 | 启动前置 / 每模块验收 / 完结 DoD | 建基准时(源工件清单/退化判定/UI 清单锁定前) |
+
+建基准时**两者都跑**:audit 查漏 + adversarial 查误判。adversarial 的 `disputed`(多数 refute)= 基准不得锁定,交主会话复核。args:`artifacts`(待裁决判定清单)+ `frontendDir/backendDir/legacyRepo`。
 
 ## 边界
 

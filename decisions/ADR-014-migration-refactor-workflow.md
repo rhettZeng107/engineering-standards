@@ -241,7 +241,7 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 
 **承载工具**:`tools/migration-audit/baseline-adversarial.workflow.js`(parallel N verifier + 多数票,复用 migration-audit 多维并扫基础设施)。只读判定门,不改码;契约锁定/拍板仍主会话本体(ADR-037)。**分工**:migration-audit = 查漏(completeness),baseline-adversarial = 查误判(correctness),建基准时两者都跑。
 
-**适用 + 节奏**:SRM/MES/WMS/EAM/TPM 全迁移系列。本修订先落**设计 + 流程**(挂载 playbook §3.1);workflow 脚本下一轮单独实现,首用复验"误判检出率"。锚点:ADR-044(G5)+ playbook §3.1/§3.2 + §5 坑 2/10。
+**适用 + 节奏**:SRM/MES/WMS/EAM/TPM 全迁移系列。设计 + 流程(挂载 playbook §3.1)+ 承载脚本 `tools/migration-audit/baseline-adversarial.workflow.js`(fan-out-and-vote:每判定 3 视角独立 skeptic refute + 多数票)**均已落地**;首用复验"误判检出率"。锚点:ADR-044(G5)+ playbook §3.1/§3.2 + §5 坑 2/10。
 
 ---
 
@@ -254,4 +254,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 2026-06-12 | 修订 | 壳层功能清单缺口复盘(SRMShop 购物车入口随源顶栏整删):① 源工件清单必含 layouts/壳层+产功能去留表 ② layout 收敛类任务前置去留表(视觉收敛≠功能裁剪)③ E2E 业务闭环段间禁 goto 拼接(应用内入口必真实点击);ADR-008 ⑤ 含义扩展 |
 | 2026-06-14 | 修订 | 前后端归属审计 + 绞杀者中间态看板(TPM 计量/特种检定整模块后端漏迁复盘):① 迁移启动强制产前端 api endpoint 全量归属清单(指老后端=半迁必登记)② 模块按 前端×后端 四象限看板登记,(新前端+老后端)禁算迁完,DoD ④ 加「后端归属=新平台」判据。异构重写迁移(非同构升级)专属盲区,SRM/MES/WMS/EAM/TPM 复用 |
 | 2026-06-15 | 修订 | 完整性审计 workflow 化(multi-modal sweep + completeness critic + loop-until-dry):跨三次迁移根因再定性=完整性盲区,病根在检查方式(人工一遍过)非检查内容;升级为主动多维并扫+收敛循环,承载工具 `tools/migration-audit/migration-audit.workflow.js`(只读审计,与 fanout 执行互补)。SRM/MES/WMS/EAM/TPM 复用,首版待下个迁移项目复验 |
-| 2026-06-18 | 修订 | 基准建立 adversarial verification 门(ADR-044 G5):区分 migration-audit 查"漏"(completeness)vs adversarial 查"误判"(correctness);主门前移到建基准(源状态/退化判定/清单完整性 N verifier 投票 refute,多数票锁契约基准),验收变赴约打钩;承载 `baseline-adversarial.workflow.js`(脚本下一轮实现)。防坑 2 半成品盲区/坑 10 退化误判 |
+| 2026-06-18 | 修订 | 基准建立 adversarial verification 门(ADR-044 G5):区分 migration-audit 查"漏"(completeness)vs adversarial 查"误判"(correctness);主门前移到建基准(源状态/退化判定/清单完整性 N verifier 投票 refute,多数票锁契约基准),验收变赴约打钩;承载 `baseline-adversarial.workflow.js`(已实现:fan-out-and-vote 3 视角 refute+多数票)。防坑 2 半成品盲区/坑 10 退化误判 |
