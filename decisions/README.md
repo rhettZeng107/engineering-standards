@@ -109,6 +109,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-042](ADR-042-git-pull-before-push-team-collab.md) | Git 推送前必同步(pull --rebase before push)+ 禁裸 force(团队多人协作);配套 hook `core-git-pull-before-push-guard.js` | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 | [ADR-043](ADR-043-onprem-server-ssh-ops.md) | On-Prem 部署服务器 SSH 运维通道(Claude 经机器级 SSH key 直连跑远程 PowerShell;弃 MCP/人工手贴);配套 standards/onprem-server-ssh-ops-standard.md + skill `onprem-server-ssh-ops` + templates/onprem-ssh-pubkey-install.ps1 | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 | [ADR-044](ADR-044-anthropic-methodology-alignment.md) | 对标 Anthropic 官方方法论 — 工作流哲学增补(G1 最简优先+subagent 克制 / G2 context 稀缺第一原则 / G3 harness 老化审计节律;衍生立项 G4 skill 化 progressive disclosure + G5 迁移轨 6 模式重构) | Accepted | 2026-06-18 | 跨项目 | 本仓 |
+| [ADR-045](ADR-045-post-deploy-e2e-tiered-scoping-governance.md) | 部署后 E2E 分层定级治理(替代人工测试)— 三层 L0 floor/L1 定向/L2 全量 + 改动路径自动定级 + 两个保险(L0 永远跑 / 判不准默认全量)+ 前后端全覆盖(后端 API-Health floor + 跨仓契约联动)+ E2E timeout≥60min;扩展 ADR-024 | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 
 ---
 

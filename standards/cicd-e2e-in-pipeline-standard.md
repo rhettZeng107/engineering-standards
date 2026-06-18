@@ -1,6 +1,6 @@
 # 标准 — CI/CD E2E-in-pipeline(部署后自动验证)
 
-> 决策依据:ADR-024(Plan E2E 分级 + CI/CD 接管,修订段确立本标准为硬基线)+ ADR-022(CICD 监控)+ ADR-027(复盘分层蒸馏)。
+> 决策依据:ADR-024(Plan E2E 分级 + CI/CD 接管,修订段确立本标准为硬基线)+ ADR-022(CICD 监控)+ ADR-027(复盘分层蒸馏)+ **ADR-045(部署后 E2E 分层定级治理,§7)**。
 > 模板:`templates/pipeline-e2e/` + `templates/azure-pipelines-e2e-stage.snippet.yml`。
 > 钩子:`templates/hooks/cicd-e2e-stage-guard.js`(前端 pipeline 缺 E2E_Verify stage 即警示)。
 > 由来:SYSV2 MDM pipeline(已含 E2E_Verify Stage 3)+ SRMV2 部署 10.8 踩坑(抄了无 E2E 的样板 → CI 绿 + dev render OK,但 prod build 上 10 个菜单点开即崩)。
@@ -62,3 +62,23 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 - [ ] **标准 antd-console/门户应用:critical-i18n-mix 中英混杂门禁通过(zh-CN 0 命中,scanned 哨兵过线);定制双语应用豁免须注释理由**
 - [ ] Table dataSource 数组守卫(编码标准)
 - [ ] 钩子 `cicd-e2e-stage-guard` 未报缺 stage
+- [ ] **E2E job `timeoutInMinutes ≥ 60`**(全量套件留余量;分层后 L0/L1 远低于此)
+
+---
+
+## 7. 分层定级(替代人工测试,ADR-045)
+
+> 目标:部署后 E2E 替代人工逐页 QA;首发全量、日常增量只测受影响面、异常自治修。详 [ADR-045](../decisions/ADR-045-post-deploy-e2e-tiered-scoping-governance.md) + SYSV2 spec `2026-06-18-post-deploy-e2e-tiered-scoping`。
+
+| 层 | 触发 | 跑什么 |
+|---|---|---|
+| **L0 核心 floor** | **每次部署无条件** | 前端 boot+i18n-mix+quality+核心导航 smoke(登录+进 3-5 主菜单页);**后端 API-Health**(swagger 200 + menu/manifest 非空,TPM 范式) |
+| **L1 定向** | diff 只碰单模块(非共享层) | L0 + 该 `@module` 逐页 render+视觉 + 前后端契约关联页 |
+| **L2 全量逐页** | 首发 / 碰共享层 / 判不准 / 夜间 | L0 + 全菜单逐页 render+视觉+**截图**(替代人工) |
+| **L3 自愈** | 任一层红 | `cicd-self-heal-sop` 三层分流 |
+
+**两个保险(强制)**:① L0 永远跑 ② 改动路径自动定级 + **判不准默认 L2**(共享层 `components/v2/layouts/router/locales/request 封装/构建配置` 命中即 L2;未映射模块/首发 → L2)。
+
+**关键机制**:`@module:<name>` 页级标签(目录名=模块)→ diff 选跑;`menu-manifest.json` diff 出新页=首发→L2;后端契约改→契约锁标 `consumers`→**触发消费前端仓 pipeline**(本期做,不留二期);**后端 floor**(API-Health)所有后端必跑。
+
+> 后端 post-deploy 也要 floor:`dotnet test`(pre-deploy 门,SYS 范式)+ **API-Health Verify**(post-deploy,swagger 200 硬断言 + manifest 非空,TPM 范式)。MDM/SRM/MES 后端现缺,按本标准补。
