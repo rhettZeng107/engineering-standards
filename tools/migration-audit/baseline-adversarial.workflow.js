@@ -130,9 +130,9 @@ const results = await parallel(
       // 只用「真正投了票」的(剔除 errored)做多数分母 —— 崩溃的 verifier 不得算作「确认基准」的一票
       const substantive = valid.filter((v) => !v._error)
       const refuteCount = substantive.filter((v) => v.refuted).length
-      // fail-safe(adversarial 默认存疑):不足 2 个 verifier 真正投票(panel 退化)→ 强制 disputed;
-      // 否则崩溃的 panel 会静默 confirmed,而 disputed 正是本门要产出的 DoD 阻塞信号
-      const disputed = substantive.length < 2 ? true : refuteCount * 2 > substantive.length
+      // fail-safe(adversarial 默认存疑):① 不足 2 个 verifier 真正投票(panel 退化)→ 强制 disputed;
+      // ② 平票(refute 占半数)也判 disputed —— 50% skeptic 找到反证即不得锁基准(用 `>=`,堵剔除 errored 后偶数票平分缺口)
+      const disputed = substantive.length < 2 ? true : refuteCount * 2 >= substantive.length
       return {
         id: a.id || a.subject,
         kind: a.kind,
