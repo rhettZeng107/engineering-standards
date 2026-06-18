@@ -126,7 +126,16 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.selfTest) return selfTest();
   const cfg = loadConfig(args.config);
-  const files = getChangedFiles(args);
+  let files;
+  try {
+    files = getChangedFiles(args);
+  } catch (e) {
+    // git diff 失败(浅克隆无 HEAD~1 / ref 不存在)→ 保守默认 L2(两个保险之一)
+    console.log(`[tier-decide] git diff 失败(${String(e.message).split('\n')[0]})→ 保守 L2`);
+    console.log('##vso[task.setvariable variable=E2E_TIER]L2');
+    console.log('##vso[task.setvariable variable=E2E_GREP]');
+    return;
+  }
   const r = decide(files, cfg, !!args.firstPublish);
   // 人读日志
   console.log(`[tier-decide] tier=${r.tier} | ${r.reason}`);
