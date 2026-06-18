@@ -1089,6 +1089,16 @@ function PreloadHost() {
 
 ---
 
+### 附录 N. 子应用 i18n locale 自托管(中英混杂防坑)
+
+> 2026-06-18 TPM 沉淀。子应用 `i18next-http-backend` 的 `loadPath` 必须指**自己 base**(`import.meta.env.BASE_URL`,如 `/sub-tpm/`)+ **自带 locale 文件**(`public/plugins/i18next/locales/{zh-CN,en-US}/<ns>.json` 随 build 进 dist)。
+
+**反模式**:loadPath 指 BP 门户 `/Static` —— 门户**不服务**任何子应用 locale,返 SPA fallback HTML(非 JSON)→ i18next 解析失败 → **所有 `t()` key 裸显**(硬编码中文部分正常 = 中英混杂)。TPM 首落地即栽于此(状态过滤 `common.all`/`enable`/`disable` 裸显)。
+
+**验收**:部署后 `curl <base>/plugins/i18next/locales/zh-CN/<ns>.json` 必须 `content-type: application/json`(返 `text/html` = 没服务到);SPA `web.config` rewrite 须 `{REQUEST_FILENAME} IsFile negate=true` 放行真实文件 + `.json` MIME。E2E 加 i18n 视觉校验(截图核中文 value,ADR-024 ⑥;Playwright 跨 iframe 读文本不可靠)。详 `frontend-i18n-standard` §4.1 + §6.5。
+
+---
+
 ## 3. 历史与变更
 
 | 日期 | 版本 | 变更 |
@@ -1098,6 +1108,7 @@ function PreloadHost() {
 | 2026-05-21 | 1.2 | **手册口径校正 + 防迁移再踩坑**(SRMV2 Contract):步骤 8 改为 G 方案 postMessage 路由同步强制(原"wujie sync 0 代码"已停用,误导致漏监听 → 每菜单同页);附录 A.1 加 G 方案 postMessage 契约表;步骤 10 加 E2 production-like + 逐菜单 + service baseURL 强约束;新增子应用侧 G 方案自检清单 |
 | 2026-06-18 | 1.3 | **TPM B 方案沉淀**(首个 ABP+Furion + 后端独立站点跨域子应用):附录 C MenuController 加 ABP/Furion `[NonUnify]` 警示(否则 manifest 被包 `{statusCode,data}` envelope → ScanMenus 拉空,极隐蔽);新增**附录 L 独立站点 prod CORS**(前端 BP + 后端独立站点跨域必需,dev CORS 不覆盖 prod;CORS 头 `acao 精确+acac=true` 真机验收) |
 | 2026-06-18 | 1.4 | **新增附录 M 子应用 JWT 签名 key 与 SYS 同族对齐**(TPM P5 实证:`JwtOptions:SecurityKey` 抄模板残值致 CORS/token 全对仍全量业务 401):验签 key 须 == SYS 签发 BP token 的 key(勿用脚手架默认值);真 token 本地 HS256 反推确诊 + `WWW-Authenticate` 头判失败类型;与附录 L CORS 为 BP 业务 200 两道独立闸门 |
+| 2026-06-18 | 1.5 | **新增附录 N 子应用 i18n locale 自托管**(TPM 实证:loadPath 指 BP 门户 /Static → SPA fallback → 全 t() key 裸显中英混杂):loadPath 须指子应用自己 base + 自带 locale 文件;部署后 curl 验 application/json;E2E 加 i18n 视觉校验(截图地面真值,ADR-024 ⑥) |
 
 ---
 

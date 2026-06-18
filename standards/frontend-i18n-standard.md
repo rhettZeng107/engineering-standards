@@ -110,6 +110,22 @@ public/plugins/i18next/locales/
     └── translation.json
 ```
 
+**loadPath 必自托管(子应用尤其,2026-06-18 TPM 实证)**:locale 文件随子应用 build 进 `dist/`,`i18next-http-backend` 的 `loadPath` 必须指**子应用自己的 base**,不能指门户/别的 host:
+
+```js
+// ✅ 自托管:从子应用自己 base(vite base,如 /sub-tpm/)加载,locale 随 dist 部署
+function i18nLoadPath() {
+  let b = import.meta.env.BASE_URL ?? '/';
+  if (b === './' || b === '.') b = '/';
+  return `${b.endsWith('/') ? b : b + '/'}plugins/i18next/locales/{{lng}}/{{ns}}.json`;
+}
+// ❌ 反模式:loadPath 指 BP 门户 /Static(门户不服务子应用 locale)→ 见 §6.5
+```
+
+- 子应用必须**自带** locale 文件(`public/plugins/...`),不能假设门户/别处有(MDM 自带 = 基准)。
+- **部署后确定性回归验**:`curl <base>/plugins/i18next/locales/zh-CN/<ns>.json` 必须 `content-type: application/json` 且 body 真 JSON;返 `text/html`(SPA fallback)= 没服务到,所有 key 会裸显。SPA `web.config` 的 rewrite 必须 `{REQUEST_FILENAME} IsFile negate=true` 放行真实文件 + `.json` MIME=application/json。
+- 只声明实际用到的 `ns`(未用的别留,避免预载 404/fallback 解析噪音)。
+
 **namespace 命名约定**:页面英文 camelCase,与路由 path 一一对应:
 
 | 路由 | namespace | 翻译 key 前缀 |
@@ -249,6 +265,16 @@ document.cookie = `lng=${lang};path=/;domain=.example.com;max-age=31536000`;
 
 **修复**:t() 化范围必须覆盖整个页面包(主 index + 所有 components/* 子组件 + 引用的工具函数)。
 
+### 6.5 子应用 loadPath 指门户 /Static → locale 全没加载(2026-06-18 TPM)
+
+**症状**:TPM 子应用发布 BP 后,状态过滤框/状态列显示裸 key `common.all`/`enable`/`disable`,硬编码中文部分正常 = 中英混杂。
+
+**根因**:`i18n.js` loadPath 指 BP `hostMap("Static")/Static`,且前端没带本地 locale。curl 实测门户 `/Static/plugins/i18next/locales/zh-CN/*.json` 对**任何**子应用(mdm/sys/mes 同测)都返 BP **SPA fallback HTML**(711 字节,非 JSON)→ i18next-http-backend 解析失败 → **所有 `t()` key 裸显**(只是大部分页面硬编码中文,才没全垮)。
+
+**修复**:loadPath 改子应用自己 base 自托管(§4.1)+ 自带 locale 文件;部署后 curl 验返 `application/json`。
+
+**E2E 教训(ADR-024 ⑥)**:网络层断言(业务 200/无 toast)**看不到视觉 i18n** —— 必加 zh-CN value 校验:① curl locale 端点验 `application/json`(确定性,直抓本类根因)② 截图核中文 value 非裸 key(Playwright 跨 iframe 读文本不可靠,**截图是地面真值**)。
+
 ---
 
 ## 7. 工作流嵌入
@@ -281,6 +307,7 @@ document.cookie = `lng=${lang};path=/;domain=.example.com;max-age=31536000`;
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-05-10 | v1.0 | 涛哥拍板初版;SYSV2 实战拨乱后抽离;明确"用户输入不双语 / 平台 UI 必双语"边界;反例 4 条 |
+| 2026-06-18 | v1.1 | **TPM 子应用 i18n 沉淀**:§4.1 加 loadPath 自托管规则(子应用必指自己 base + 自带 locale,勿指门户 /Static)+ 部署后 curl locale=application/json 确定性回归 + 只声明实用 ns;§6.5 反例(loadPath 指 BP /Static → SPA fallback → 全 key 裸显)+ E2E i18n 视觉校验补 ADR-024 ⑥(截图是地面真值) |
 
 ## 9. 配套引用
 
