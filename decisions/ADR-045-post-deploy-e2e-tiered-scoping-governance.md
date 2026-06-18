@@ -68,6 +68,19 @@
 - **B. 纯选择性(只测受影响)**:最省时但漏跨切面回归,替代人工有缺口 —— 不选(故加两个保险)。
 - **C. 留二期做跨仓联动**:本期只同仓 —— 涛哥拍板不留二期,跨仓本期做。
 
+## 修订
+
+### 2026-06-18(P3 首发检测落地 — 实证反转,ADR-015)
+
+原决策设「前端 pipeline 复用 menu-manifest diff 做首发检测」。P3 落地前实证(SYSV2 4 前端仓)发现前提不成立:
+- 前端 `menu-manifest.json` 是 postbuild 产物且 **gitignored 不进 git**;committed manifest 在**后端** `wwwroot/`。前端 pipeline 无可 diff 的 manifest。
+- portals(SYS.3/BP/AuditPortal)无 `routes.config.mjs`(菜单来自后端 SYS_AuthInfo);仅 MDM 前端有,且已被 `sharedLayer` 判 L2。
+
+**修订后实施**:
+1. 前端首发由**现有两保险**覆盖(菜单声明变更→L2 / 全新仓无基线→L2),不在前端做 manifest-diff。
+2. tier-decide 加防御规则:`menu-manifest.json` / `routes.config` 命中 → `菜单结构变更(首发风险)→ L2`(canonical 模板,self-test 17/17;`.dev.json` 不误触)。
+3. **首发逐页真正落点 = 后端 manifest publisher + 跨仓触发**:后端 `wwwroot/menu-manifest.json` committed,后端 deploy git-diff 出新 Path = 首发 → 后端 L2 + 经前后端契约关联(本 ADR Decision 第3条/spec §5)触发消费前端 L2。并入后端 floor + P4 实施,不在前端 pipeline 重复。
+
 ## References
 - [ADR-024](ADR-024-plan-e2e-tiered-cicd-handover.md) / [ADR-022](ADR-022-cicd-monitoring.md) / [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md)
 - 标准:`standards/cicd-e2e-in-pipeline-standard.md`

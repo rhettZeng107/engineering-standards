@@ -55,6 +55,13 @@ export function decide(files, cfg = DEFAULT_CONFIG, firstPublish = false) {
   if (files.length === 0) {
     return { tier: 'L0', modules: [], grep: '', reason: '无改动文件(仅 floor)' };
   }
+  // 菜单结构变更 → 首发风险,强制全量逐页(ADR-045 §4 防御规则)
+  // committed menu-manifest.json 出新页 = 模块首发;routes.config 是前端菜单真理源声明。
+  // 注:前端 routes.config 通常已落共享层;本规则主要给 commit manifest 的后端/未来仓兜底(前端 dist manifest gitignored 不进 diff)。
+  const menuStructure = files.filter((f) => /(^|\/)menu-manifest\.json$/.test(f) || /(^|\/)routes\.config[./]/.test(f));
+  if (menuStructure.length > 0) {
+    return { tier: 'L2', modules: [], grep: '', reason: `菜单结构变更(首发风险→全量逐页):${menuStructure.slice(0, 5).join(', ')}` };
+  }
   const shared = files.filter((f) => cfg.sharedLayer.some((re) => new RegExp(re).test(f)));
   if (shared.length > 0) {
     return { tier: 'L2', modules: [], grep: '', reason: `命中共享层(blast radius 宽):${shared.slice(0, 5).join(', ')}` };
@@ -101,6 +108,8 @@ function selfTest() {
     { f: ['src/v2/AutoHeightProTable.tsx'], exp: 'L2' },
     { f: ['src/locales/zh-CN.json'], exp: 'L2' },
     { f: ['src/router/index.ts'], exp: 'L2' },
+    { f: ['MDMWebApi/wwwroot/menu-manifest.json'], exp: 'L2' }, // committed manifest 菜单变更 → 首发风险
+    { f: ['src/routes.config.mjs'], exp: 'L2' },                // 菜单真理源声明变更 → 首发风险
     { f: ['package.json'], exp: 'L2' },
     { f: ['vite.config.ts'], exp: 'L2' },
     { f: ['src/App.tsx'], exp: 'L2' },
