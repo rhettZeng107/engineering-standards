@@ -63,6 +63,25 @@ git -C <repo> push github <branch>            # 双推仓:origin(协作真源)�
 
 `git clone <url>` 默认抓取**远程所有分支**为 remote-tracking 引用(`refs/remotes/origin/*`),但**只检出默认分支**(master/main)为本地工作分支;**不**用 `--single-branch`。SYSV2 等仓已在本机,日常不重新 clone。
 
+### D5. 克隆/初始化必做「分支侦察」—— 禁默认在 master 闷头干(踩坑修订)
+
+**[踩坑实证]** clone 后默认检出 `master`,但团队实际在 `develop`(或其他分支)开发并积累最新提交 —— 在 master 闷头干 = 基于旧代码 = 白干。`git remote show origin` 报的 HEAD 分支常年仍是 master,**不可靠**;最可靠信号是「哪个分支最近有提交 / 领先最多」。
+
+**触发场景**(任一):① 新工作区 bootstrap;② 某仓首次接触;③ 该仓双推分支尚未写进 CLAUDE.md 双推表 + push-guard `REPO_REGISTRY`。
+
+**动作**(任何 work/commit 前先跑一次,只读):
+
+```bash
+git fetch --all --prune
+# 各远程分支按最近提交时间排名(最顶 = 疑似活跃分支)
+git for-each-ref --sort=-committerdate refs/remotes/origin \
+  --format='%(refname:short)  last=%(committerdate:short)  by=%(authorname)'
+# 当前检出 vs 头部候选 的 落后/领先(left=本地领先 right=远程领先)
+git rev-list --left-right --count HEAD...origin/<候选分支>
+```
+
+**规则**:**不自动 checkout**,把「当前检出 X vs 疑似活跃分支 Y(领先 N、最近 date、作者)」摆给涛哥确认工作分支;确认后才 `git checkout <Y>` + 写进 CLAUDE.md 双推表 + `REPO_REGISTRY` 锁定,之后才进 pull-before-push 常规流程。**站对分支(D5)是 D1 同步的前提** —— D1 只管「同一分支落后多少」,管不了「站错分支」,二者互补。落点:本 ADR + `workspace-bootstrap` skill §3。
+
 ## 影响 / Consequences
 
 - ✅ 团队协作下杜绝「强推覆盖同事代码」「盲 push 撞 non-fast-forward 卡死」;rebase 保线性历史。
@@ -70,6 +89,7 @@ git -C <repo> push github <branch>            # 双推仓:origin(协作真源)�
 - ⚠️ 每次 push 前 hook 多一次 fetch(只读,~1-3s);离线时 fetch 超时后 fail-open(push 本就会失败)。
 - ⚠️ rebase 若改写已镜像到 github 的提交,github 推可能需 `--force-with-lease`(边界,经确认)。
 - 📌 各工作区 `CLAUDE.md` git 节同步加「pull --rebase before push + 禁裸 force」;全局 `~/.claude/CLAUDE.md` git 段加同条铁律。
+- 📌 D5 分支侦察纳入 `workspace-bootstrap` skill §3 + CLAUDE.md `<git 双推表>` 填空前置 —— 双推分支禁默认 master,必先侦察 + 涛哥确认再锁。
 
 ## 替代方案 / Alternatives
 

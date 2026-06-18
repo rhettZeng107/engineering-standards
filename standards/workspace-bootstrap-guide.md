@@ -51,6 +51,7 @@ memory 不在工作区内,在 `~/.claude/projects/<工作区路径转义>/memory
 
 1. **建容器仓**:`mkdir <workspace> && cd <workspace> && git init`;workspace 容器仓只追踪 `docs/` `scripts/` 根 `*.md`,nested 项目仓写进 `.gitignore`。
 2. **实例化 CLAUDE.md**:复制 `templates/workspace-CLAUDE.md.template` → `<workspace>/CLAUDE.md`,逐个填 `<占位符>`(见 §4)。
+   - **填双推表前必跑「分支侦察」(ADR-042 D5,踩坑铁律)**:clone 后默认在 `master`,但团队常在 `develop` 等分支开发最新代码 —— 闷头在 master 干 = 基于旧代码 = 白干。每个 nested 仓填双推/默认分支前先跑 `git fetch --all --prune` → `git for-each-ref --sort=-committerdate refs/remotes/origin --format='%(refname:short) last=%(committerdate:short) by=%(authorname)'`(最顶 = 疑似活跃分支)→ `git rev-list --left-right --count HEAD...origin/<候选>`(领先/落后)。**不自动 checkout**,把「当前 X vs 疑似活跃 Y」摆给涛哥确认再 checkout + 锁进双推表 + push-guard registry。`git remote show origin` 的 HEAD 分支不可靠,以提交新鲜度为准。
 3. **建文档骨架**:`docs/superpowers/{specs,plans,backlog}/` + `docs/decisions/` + `docs/ops/`。
 4. **建项目地图**:`.planning/codebase/`,跑 `/gsd-map-codebase` 扫出 7 文件项目地图。**地图是 ADR-030 新会话自动导航的数据源** —— 建好后全局 hook `project-map-session-digest`(新会话注入地图摘要)+ `project-map-staleness-check`(漂移检测)即自动生效。
 5. **CI/CD 配置 + 监控**(ADR-022 监控双轨):配置各 nested 项目仓的 CI/CD 流水线;接监控两路 —— **被动**:全局 post-push 监控提醒 hook 已自动生效(推送后提示起 build 监控);**主动**:把 build 监控脚本(如 `cicd-ado-monitor`)+ 自治修复 SOP `cicd-self-heal-sop.md` 放工作区 `docs/ops/`。监控脚本可从已有工作区(SYSV2 `docs/ops/`)复用。
@@ -68,7 +69,7 @@ memory 不在工作区内,在 `~/.claude/projects/<工作区路径转义>/memory
 |---|---|
 | `<工作区名>` / `<一句话定位>` | 工作区名与业务定位 |
 | `<交付线表>` | 各交付线:目录 / 技术栈 / 端口 |
-| `<git 双推表>` | 各 nested 仓:远程 / 默认分支 |
+| `<git 双推表>` | 各 nested 仓:远程 / 默认分支。**填前必跑分支侦察(ADR-042 D5)定活跃分支 + 涛哥确认,禁默认填 master** |
 | `<构建命令>` | 前后端 build / dev 命令 |
 | `<架构落点>` | Context / Controller / Policy 注册等关键路径 |
 | `<CI/CD 与监控>` | 各仓 CI/CD 平台 + 流水线 / build 监控脚本 / 自治修复 SOP |
