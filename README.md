@@ -43,7 +43,7 @@ engineering-standards/
 | 我要… | ADR(为什么) | standards(怎么做) | templates / tools |
 |---|---|---|---|
 | **老项目迁移** | ADR-014(执行)+ ADR-028(完成判定) | **legacy-migration-playbook §0 总入口** | tools/migration-fanout(执行) + migration-audit(查漏) + templates/subapp-migration-checklist |
-| **子应用接入 BP** | ADR-011 / 012 / 038 | subapp-onboarding-guide · subapp-menu-manifest-publish | templates/subapp-migration-checklist · iis-web.config-spa-subapp |
+| **子应用发布 BP + CICD** | ADR-011 / 012 / 038 / 040 | **subapp-bp-release-pipeline-standard(总纲入口)** · subapp-onboarding-guide · subapp-menu-manifest-publish · cicd-onprem-iis-deploy-standard | templates/subapp-migration-checklist · iis-web.config-spa-subapp |
 | **前端页面 / UI** | ADR-020 / 023 / 032 | frontend-ui-standard · frontend-ui-v2-standard · frontend-i18n-standard · react-ui-guidelines | templates/frontend-i18n-init · frontend-env-production |
 | **鉴权** | ADR-007 | (subapp-onboarding-guide 含接入侧) | — |
 | **CICD / E2E / 监控** | ADR-008 / 024 / 022 / 034 | cicd-e2e-in-pipeline-standard · observability-apm-lite-standard | templates/azure-pipelines-e2e · pipeline-e2e · cicd-ado-monitor.js |
@@ -55,11 +55,12 @@ engineering-standards/
 | **文档目录规范** | ADR-002 | doc-conventions | — |
 | **工作纪律 / 决策授权** | ADR-005 / 015 / 016 / 017 / 018 / 019 / 027 / 031 | — | — |
 
-### standards/ 全清单(14 篇)
+### standards/ 全清单(16 篇)
 
 | 文档 | 是什么 |
 |---|---|
 | legacy-migration-playbook | 老项目迁移改造手册(§0 = 迁移轨标准工作流总入口) |
+| subapp-bp-release-pipeline-standard | 子应用发布 BP + CICD 流水线编排总纲(7 环节,串各 detail doc)|
 | subapp-onboarding-guide | 子应用接入业务门户(BP)手册 |
 | subapp-menu-manifest-publish | 子应用菜单发布(manifest + ScanMenus) |
 | sys-master-data-api-standard | SYS 主数据接口调用规约 |
@@ -68,6 +69,7 @@ engineering-standards/
 | frontend-i18n-standard | 前端中英 i18n 标准 |
 | react-ui-guidelines | React 列表页/编辑页交互规约 |
 | cicd-e2e-in-pipeline-standard | CI/CD E2E-in-pipeline(部署后自动验证) |
+| cicd-onprem-iis-deploy-standard | 自托管 Agent → 内网 IIS 部署通道(MsDepSvc 远程代理)|
 | observability-apm-lite-standard | APM-lite 应用层可观测体系接入 |
 | workspace-bootstrap-guide | 新工作区 Bootstrap 指南 |
 | doc-conventions | 文档目录规范(spec/plan/ADR 命名) |

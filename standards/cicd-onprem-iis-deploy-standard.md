@@ -68,6 +68,8 @@ Agent ≠ IIS 同机 → 不能本地拷文件 → 必须远程部署通道。
     $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
     & $msdeploy `
       -verb:sync `
+      -retryAttempts:20 `
+      -retryInterval:3000 `
       -source:contentPath="$(Pipeline.Workspace)\drop\<App>" `
       -dest:contentPath="<Site>/<SubApp>",computerName="http://$($env:IIS_HOST)/MsDeployAgentService",userName="$($env:ADMIN_USER)",password="$($env:ADMIN_PWD)",authType="NTLM" `
       -enableRule:AppOffline `
@@ -126,6 +128,7 @@ SYSV2 SYS 实例:`contentPath="SYS3-Console/JYCoreSysWebApi"`。
 | `401 / ERROR_USER_UNAUTHORIZED`(MsDepSvc) | 账号/密码错,或未设 `LocalAccountTokenFilterPolicy=1`,或非本地管理员 | 查 §2.2/2.3 + 变量组密码;curl 对照(§5.3) |
 | `ERROR_COULD_NOT_CONNECT`(MsDepSvc :80) | MsDepSvc 未启 / 80 被防火墙挡 | §2.1 启服务 + §2.4 放行 80 |
 | 站点显示「维护中 / app_offline」 | AppOffline 部署中途失败遗留 | 删目标站点物理目录下 `app_offline.htm` |
+| `ERROR_FILE_IN_USE`(更新某 DLL 时) | 运行中 w3wp 持 DLL 锁;`-enableRule:AppOffline` 虽停机,但 ASP.NET Core 释放文件句柄有延迟,msdeploy 已开始 copy = 偶发竞态(同一 pipeline 偶尔过偶尔失败) | msdeploy 加 `-retryAttempts:20 -retryInterval:3000`(锁文件重试至释放 ~60s),已内置 §4 模板(2026-06-18 TPM #758)|
 | 变量 `$(DEPLOY_ADMIN_USER)` 原样未展开 | 该项目变量组没加这两个变量 | §3 给该项目变量组补变量 |
 | `403` 且 body 是 IIS 403.18 HTML | 应用池路由错(请求没进应用),**非 allowlist** | 查 IIS 子应用 AppPool(独立 AppPool / No Managed Code);别去改 manifest `AllowedIPs` |
 | `500.30`(ANCM app failed to start) | 后端进程启动崩,常见连接串 `${ENV}` 占位符读不到 machine env(改后 w3wp 未刷新) | stdout log / 目标机直跑 `dotnet <App>.dll` 定位;给 AppPool 加 env 或重启机 + `iisreset` |
