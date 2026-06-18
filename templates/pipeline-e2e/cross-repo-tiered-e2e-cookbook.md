@@ -30,11 +30,13 @@
 
 `<后端仓>/ci/contract-consumers.json`(**纯 ASCII,勿放中文** —— Windows PS 5.1 读 UTF-8 中文会乱码):见同目录 `contract-consumers.example.json`。
 - `contractGlobs`:契约面(`*/Controllers/*` `*Dto*` `*ViewModel*`;ABP 项目按实际)。
+  - ⚠️ **ABP dynamic API 必加 AppService glob**(TPMV2 实证踩坑):若后端用 `ConventionalControllers.Create(...)`(`*WebApiModule.cs`),则**真实 wire 契约面是 AppService 而非手写 Controller** —— `JY.X.Application/Services/*AppService.cs` 的公开方法被自动暴露成端点。仅 `*/Controllers/*`+`*Dto*` 会漏「改 AppService 签名/路由不改 Dto」的契约破坏(前端假绿)。**补 `*/Services/*AppService.cs`**(轻微过度触发实现改动,但 ADR-046 过度触发 < 漏触发)。grep `ConventionalControllers` 判定是否 ABP dynamic API。
 - `consumers[]`:`{repo, project, definitionId, modules:[]}`(modules 先留 `[]` → 前端跑 @floor;@module 标签到位后填,自动升 L1)。
 
 ### 2b. 后端仓:TriggerConsumers stage
 
 把同目录 `trigger-consumers-stage.yml` **整段**追加到后端 `azure-pipelines.yml` 末尾(DeployTest 之后)。它:deploy 绿后 git-diff 命中 contractGlobs → 用 `$(ADO_QUEUE_PAT)` REST queue 各 consumer + 传 affectedModules。best-effort(不阻塞 deploy)。
+- **`dependsOn` 按后端有无 post-deploy Verify stage 选**(TPMV2 实证):模板默认 `dependsOn: DeployTest`(MDM 无 Verify);若后端有 **API-Health/Verify stage**(swagger 200 + manifest 非空,ADR-045 后端 floor)→ 改 `dependsOn: Verify`,确保后端进程确认健康后才触发前端 E2E(否则前端可能对未起来的后端跑 → 假红)。
 
 ### 2c. 消费前端仓:consumer-trigger 5 处改
 
