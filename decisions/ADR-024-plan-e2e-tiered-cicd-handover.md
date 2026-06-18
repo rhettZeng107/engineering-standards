@@ -162,6 +162,17 @@
 
 ---
 
+## 修订(2026-06-18)— 部署后 E2E 增 critical-i18n-mix 中英混杂门禁
+
+> 触发:涛哥要求统一各工作区前端「CI 部署后 E2E 标准」,消除部署后视觉中英混杂 + 打开异常。
+
+- **新增 critical-i18n-mix**(标准 antd-console/门户应用必跑):zh-CN 默认模式扫描菜单/标签/列头/按钮渲染文本,堵中英混杂 — ① 原始 i18n key 泄露 ② 未渲染插值 ③ zh 模式纯英文菜单(白名单豁免)。力度=**稳健+英文菜单拦**(涛哥拍板)。检测器 `templates/pipeline-e2e/helpers/i18n-mix.ts`(`collectMixHits`→`{hits,scanned}`);**哨兵** scanned 过少判失败防假绿。
+- **适用边界**:① 定制双语设计应用(审计卷宗风英文是设计非 bug)**整仓豁免** ② 子应用(需父门户 token)standalone 留 boot/shell,业务菜单走查留父门户 iframe(B 方案)。详标准 §3.4/§3.6。
+- **试点实证**(SYSV2,2026-06-18):SYS.3 51 项·BP 404 项 zh-CN **0 命中**(现状干净);检测器正控 19/19(抓 raw-key/未翻译英文,放行中文+MDM/SRM/API/KPI 缩写);AuditPortal 豁免;MDM 延 B 方案。其它工作区(SRMV2 含 Contract.2 缺 E2E / TPMV2)按本标准铺。
+- 标准载体:[`standards/cicd-e2e-in-pipeline-standard.md`](../standards/cicd-e2e-in-pipeline-standard.md) §3.4 + §3.6 + §6。
+
+---
+
 ## Related
 
 - **配套全局规则**:`~/.claude/CLAUDE.md`「E2E 8 项核对」+「三轨工作流」段
