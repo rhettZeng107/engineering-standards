@@ -94,10 +94,12 @@ cross-ws-send.sh --to <目标工作区> --msg "<短任务>"  [--from <来源>]
 
 ## 实施 / Implementation
 
-1. **`~/.claude/bin/cross-ws-send.sh`**(本 ADR 落地,投递器:寻址/判态/写文件/短触发/回执/离线兜底/dry-run)。
-2. **`~/.claude/skills/workspace-bootstrap/SKILL.md` §6.3「跨工作区自治协作」**(治理真理源 skill,非已冻结的 workspace-bootstrap-guide.md):依赖图声明 + 投递用法 + inbox 结构 + 消费约定。
-3. **各工作区 CLAUDE.md** 加「下游依赖图」段(显式声明改契约时通知谁)。
-4. **(分期)`core-progress-resume-inject.js` inbox 扩展**:SessionStart 扫 `~/.claude/.cross-ws/<本工作区>/inbox/` 列协作候选 + 确认门——离线消费落地时实现。
+1. ✅ **`~/.claude/bin/cross-ws-send.sh`** 投递器(寻址/白名单判态/文件载任务/短触发/回执/离线兜底/dry-run)。
+2. ✅ **`~/.claude/skills/workspace-bootstrap/SKILL.md` §6.3「跨工作区自治协作」**(治理真理源 skill,非已冻结的 workspace-bootstrap-guide.md)。
+3. ✅ **`~/.claude/bin/cross-ws-autotrigger.sh` + `~/.claude/.cross-ws/dependency-graph.json`** 自动触发器:读依赖图按 `<from>.downstream` 批量投递(环防护/失败汇总/依赖图缺位禁自决)。
+4. ✅ **`~/.claude/bin/cross-ws-contract-hook.sh`(git post-commit + post-merge)** 触发点:commit/merge 动 contract-lock → 自动调 autotrigger。**各上游工作区容器仓须装两个 hook**——`git merge` 不触发 post-commit(实证),故 post-merge + `diff-tree -m` 兜 merge 引入的 contract-lock。SYSV2 已装。
+5. ✅ **`core-progress-resume-inject.js` inbox 扩展** 离线消费:目标离线时入 inbox,上线 SessionStart 自动列「跨工作区协作待办」。
+6. ⏳ **(P2)各工作区 CLAUDE.md「下游依赖图」段**(人读真源)+ **契约类型细分**(subapp-auth/bp-menu/mdm 各自下游)+ **节流去重**——先用 dependency-graph.json 工作区粒度试跑,稳定后细化。
 
 ## 参考 / References
 
