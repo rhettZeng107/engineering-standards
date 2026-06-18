@@ -1,0 +1,17 @@
+{
+  "backend": "<本后端 ADO project 名>",
+  "_doc": "ADR-046 cross-repo contract-driven E2E trigger. Backend deploy green -> TriggerConsumers reads this -> if git diff hits contractGlobs, REST-queue each consumer frontend pipeline with affectedModules. Empty modules -> frontend runs @floor (L0); auto-upgrades to L1 when @module tags exist. KEEP THIS FILE PURE ASCII (Windows PS 5.1 Get-Content mis-decodes UTF-8 CJK).",
+  "contractGlobs": [
+    "*/Controllers/*",
+    "*Dto*",
+    "*ViewModel*"
+  ],
+  "consumers": [
+    {
+      "repo": "<消费前端 ADO project 名>",
+      "project": "<同上(URL 段)>",
+      "definitionId": 0,
+      "modules": []
+    }
+  ]
+}

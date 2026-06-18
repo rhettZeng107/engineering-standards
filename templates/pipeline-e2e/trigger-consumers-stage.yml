@@ -1,0 +1,61 @@
+# ADR-046 后端 TriggerConsumers stage —— 整段追加到【触发方后端】azure-pipelines.yml 末尾(DeployTest stage 之后)。
+# 前置:① 同目录 contract-consumers.example.json 落成 <后端仓>/ci/contract-consumers.json(纯 ASCII)
+#       ② 该后端 project 变量组配 secret 变量 ADO_QUEUE_PAT(PAT scope Build R&E)
+# 已含 SYSV2 实证踩平的全部坑(见 cross-repo-tiered-e2e-cookbook.md §3),勿改下列细节:
+#   ${code} 防驱动器变量 / Get-Content -Encoding UTF8 / 空 affectedModules 省略 / PAT Basic auth / 末尾 exit 0 best-effort
+
+- stage: TriggerConsumers
+  displayName: '契约改 → 触发消费前端 E2E (ADR-046)'
+  dependsOn: DeployTest
+  condition: succeeded()
+  jobs:
+    - job: QueueConsumerE2E
+      displayName: 'Queue consumer frontend pipelines'
+      steps:
+        - checkout: self
+          fetchDepth: 2   # 需 HEAD~1 算本次是否动契约面
+        - powershell: |
+            $manifestPath = Join-Path "$(Build.SourcesDirectory)" "ci/contract-consumers.json"
+            if (-not (Test-Path $manifestPath)) { Write-Host "##[warning]无 ci/contract-consumers.json,跳过触发"; exit 0 }
+            $m = Get-Content $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json   # Windows PS 5.1 默认 ANSI 码页,UTF-8 manifest 必须显式 -Encoding UTF8
+
+            $changed = @(git diff --name-only HEAD~1 HEAD 2>$null)
+            if (-not $changed -or $changed.Count -eq 0) {
+              Write-Host "git diff 失败/空 → 保守视为动契约面(ADR-045 两个保险)"
+              $hit = $true
+            } else {
+              $hit = $false
+              foreach ($f in $changed) {
+                foreach ($g in $m.contractGlobs) { if ($f -like $g) { $hit = $true; break } }
+                if ($hit) { break }
+              }
+            }
+            if (-not $hit) {
+              Write-Host "本次未动契约面($($m.contractGlobs -join ', ')),不触发消费前端"
+              exit 0
+            }
+            Write-Host "契约面改动 → 触发 $($m.consumers.Count) 个消费前端"
+            $col = "$(System.CollectionUri)".TrimEnd('/')
+            $pat = "$env:ADO_QUEUE_PAT"
+            if (-not $pat) { Write-Host "##[warning]ADO_QUEUE_PAT 未配 → 跳过触发(ADR-046 凭据前置)"; exit 0 }
+            $b64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
+            $headers = @{ Authorization = "Basic $b64" }
+            foreach ($c in $m.consumers) {
+              $mods = ($c.modules -join ',')
+              # 实证:显式空字符串 templateParameter 被 ADO 校验拒 → affectedModules 仅非空时传,空则前端用默认 ''
+              $tp = @{ e2eOnly = $true }
+              if ($mods) { $tp['affectedModules'] = $mods }
+              $body = @{ templateParameters = $tp } | ConvertTo-Json -Depth 5
+              $url = "$col/$($c.project)/_apis/pipelines/$($c.definitionId)/runs?api-version=7.0"
+              try {
+                $resp = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $body -ContentType 'application/json'
+                Write-Host "✅ queued $($c.repo) (def $($c.definitionId)) runId=$($resp.id) affectedModules='$mods'"
+              } catch {
+                $code = $_.Exception.Response.StatusCode.value__
+                Write-Host "##[warning]触发 $($c.repo) 失败 HTTP ${code} - $($_.Exception.Message)（403/401=凭据无 Queue 权限或跨 project 受 enforceJobAuthScope 限制）"
+              }
+            }
+            exit 0   # best-effort:触发问题只 warning,不让已成功的后端 deploy 变红
+          displayName: 'Read consumers + REST queue (PAT)'
+          env:
+            ADO_QUEUE_PAT: $(ADO_QUEUE_PAT)
