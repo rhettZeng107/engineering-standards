@@ -106,6 +106,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-039](ADR-039-standard-task-workflow.md) | 标准任务工作流 — 6 阶段主线(调研→实证→判断→处理→检查→汇报) | Accepted | 2026-06-15 | 跨项目 | 本仓 |
 | [ADR-040](ADR-040-cicd-onprem-iis-deploy-channel.md) | 自托管 Agent→内网 IIS 部署通道改用 MsDepSvc(弃 WMSvc 8172);配套 standards/cicd-onprem-iis-deploy-standard.md | Accepted | 2026-06-17 | 跨项目 | 本仓 |
 | [ADR-041](ADR-041-cross-workspace-autonomous-collab.md) | 跨工作区自治协作(文件载任务 + tmux 短触发注入 + 注入前判态);配套 `~/.claude/bin/cross-ws-send.sh` + workspace-bootstrap skill §6.3 | Accepted | 2026-06-18 | 跨项目 | 本仓 |
+| [ADR-042](ADR-042-git-pull-before-push-team-collab.md) | Git 推送前必同步(pull --rebase before push)+ 禁裸 force(团队多人协作);配套 hook `core-git-pull-before-push-guard.js` | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 
 ---
 
@@ -123,7 +124,7 @@ Deprecated   → 废弃但未被取代
 | **子应用集成** | 011·012·038 | BP门户边界 / 接入SOP / 主数据走API |
 | **前端工程标准** | 020·023·032 | i18n范围 / 4基建标准 / UI V2 Atlas |
 | **AI工程工作流** | 003·035·037 | 编码路由 / LSP网关 / 契约锁归属 |
-| **工作纪律/决策授权** | 005·017·018·036 | 全新部署剔运维 / 批次节奏 / 授权三档 / CR门禁 |
+| **工作纪律/决策授权** | 005·017·018·036·042 | 全新部署剔运维 / 批次节奏 / 授权三档 / CR门禁 / 推前必同步禁裸force |
 
 ---
 
