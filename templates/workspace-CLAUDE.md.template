@@ -137,6 +137,17 @@ cd <项目目录> && git push origin master && git push <第二远程> master
 
 ---
 
+## 仓级 CLAUDE.md / Per-Repo CLAUDE.md(multi-repo 工作区才需)
+
+> 依据 ADR-029 修订 2026-06-18。单仓工作区**跳过本段**;multi-repo 工作区**逐仓铺** `<repo>/CLAUDE.md`(Claude 进该仓干活时按需加载)。
+
+- **何时铺**:nested 仓 ≥ 2 且各仓技术细节(构建/端口/HTTP/分层/契约)差异大 → 每仓一份。
+- **职责**:仓级**只放本仓特化**(构建运行命令、dev 端口、鉴权特化、DbContext/库、序列化约定、目录/feature 约定、契约锚点、易错点),**不重复**工作区根 / 全局 / 跨项目标准层;目标 < 200 行。
+- **已有 `AGENTS.md` 的仓**:仅当该 AGENTS.md **已实证校验对齐当前仓**才写 `@AGENTS.md` import 复用(共享单一源);若由其他 agent 维护可能漂移,import = 单向信任会灌未校验内容,**先校准或直接自写**。multi-repo 同类仓统一形态,勿混用 import / 自写。
+- **stub 骨架**(后端仓):标题行 + 回链 blockquote(`> 工作区级规则见 ../CLAUDE.md;跨项目工作流见 ~/.claude/CLAUDE.md。本文件只放本仓特化,不重复上层。`)+ 段:`## 来源` / `## 构建 / 运行` / `## 鉴权(ADR-007)` / `## 数据访问(EF Context/库)` / `## 序列化 / 返回约定` / `## Controllers` / `## 易错点(别假设)`。前端仓把数据访问段换成 `## HTTP / 鉴权` + `## 路由 / UI`。可直接抄已落地工作区各仓 CLAUDE.md 作样板,改占位即可。
+
+---
+
 ## 项目地图 / Project Map
 
 > 完整机制见 `engineering-standards` ADR-025(自适应维护 + multi-repo 适配)+ ADR-026(8 维 + MECHANISMS)。

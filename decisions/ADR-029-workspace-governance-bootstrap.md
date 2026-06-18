@@ -30,7 +30,7 @@
 |---|---|---|---|
 | **全局层** | `~/.claude/`(CLAUDE.md / rules / hooks / agents) | 自动套到本机所有工作区 | 跨项目通用工作流、编码路由、批次任务、鉴权刚性等 |
 | **跨项目标准层** | `engineering-standards` 仓(decisions / standards / templates) | 任何工作区引用,单一真理源,可 git 分发给团队 | ADR、工程标准、迁移手册、本模板 |
-| **工作区层** | `<workspace>/CLAUDE.md` + `docs/superpowers/` + 项目地图 + memory | 用 bootstrap 模板实例化 | **仅项目特化 + 项目级覆盖全局规则** |
+| **工作区层** | `<workspace>/CLAUDE.md` + `docs/superpowers/` + 项目地图 + memory | 用 bootstrap 模板实例化 | **仅项目特化 + 项目级覆盖全局规则**(multi-repo 再细化为工作区根 + 仓级 CLAUDE.md,详修订 2026-06-18) |
 
 ### 边界铁律
 
@@ -81,6 +81,11 @@
 - 缺点:全局层是本机级,团队复用要靠可 git 分发的 `engineering-standards`;且工作区特化不该进全局层。
 - 不选原因:团队复用 + 职责分层都要求跨项目标准独立成仓。
 
+### D. 仓级特化用工作区根 `.claude/rules/` 路径范围化(glob)替代仓级 CLAUDE.md(2026-06-18 修订评估)
+- 优点:规则集中工作区根,`paths:` glob 按路径触发。
+- 缺点:`.claude/rules` 落工作区根容器仓,nested 仓各自独立 git(SRMV2 推 ADO+GitHub)单独 clone 即丢治理上下文;且 `.claude/rules` 是 Claude 私有,Codex 等其他 agent 看不到。
+- 不选原因:仓级 CLAUDE.md **随仓 git 走 + 物理就近**(规则跟代码同目录,单仓 clone 也带上下文),对 multi-repo 独立仓更优。
+
 ---
 
 ## Related(相关引用)
@@ -89,8 +94,28 @@
 - 相关 ADR:ADR-002(四层文档)、ADR-009(CLAUDE.md cheatsheet 化)、ADR-025(项目地图自适应维护)、ADR-028(老项目迁移基线)
 - 工作流偏好:SYSV2 走 spec/plan 体系、不启用 GSD
 
+---
+
+## 修订 2026-06-18 — multi-repo 工作区层细化为「工作区根 + 仓级」两落点
+
+**背景**:Claude Code 官方 memory 机制(`code.claude.com/docs/en/memory`)—— CLAUDE.md 从 cwd 向上链**全量加载**,**子目录 CLAUDE.md 在 Claude 读该目录文件时按需加载**(progressive disclosure,不污染无关仓 context);`AGENTS.md` Claude **不读**。SRMV2(7 nested 仓)实证:工作区根单一 CLAUDE.md 承载不了各仓技术细节(构建/端口/HTTP/分层/契约),Claude 进子仓干活缺仓级 context。
+
+**修订**(三层治理模型不变,仅「工作区层」物理载体细化):
+
+1. **工作区层 = 工作区根 `CLAUDE.md` + 各仓 `<repo>/CLAUDE.md`** 两个落点。单仓工作区只有前者;**multi-repo 工作区两者都铺**。
+2. **职责切分**:
+   - **工作区根**:跨仓定位(域/仓架构)、Git 双推表、Teams 映射、LSP 通道、项目级覆盖全局规则。
+   - **仓级**:本仓特化 —— 构建/运行命令、dev 端口、鉴权特化、DbContext/库、序列化约定、目录/feature 约定、契约锚点、易错点。
+3. **边界铁律延伸**:仓级 CLAUDE.md 同样**只放本仓特化,不重复**工作区根 / 全局层 / 跨项目标准层;顶部回链 `../CLAUDE.md` + `~/.claude/CLAUDE.md`;目标 < 200 行(超 = 仓特化过载,先精简)。
+4. **仲裁铁律(防分叉,本 ADR 核心价值)**:同一事实只在**最高适用层**写一次 —— 跨仓共享/协调(共享库 server、跨域契约、Teams 映射、测试环境)→ 工作区根;仓内实现细节(本仓 DbContext 列表、JWT key 变量名、dev 端口)→ 仓级;下层只在"本仓偏离/特化"时才重述。
+5. **AGENTS.md 桥接(有前提)**:仓若已有**经实证校验对齐当前仓**的 `AGENTS.md`,仓级 `CLAUDE.md` 才写一行 `@AGENTS.md` import 复用(Claude 不读 AGENTS.md 本身,但读 import)。⚠️ **import = 单向信任**:AGENTS.md 由其他 agent(Codex)维护可能漂移,import 前必须校准(命令/端口/路由实测对齐),否则把未校验内容灌进 context(违 ADR-015);校准成本高时直接自写。**multi-repo 前端/同类仓统一形态**(全自写 或 全 import 受控),勿"有 AGENTS.md 就 import"致分叉。
+6. **模板/脚本**:`workspace-CLAUDE.md.template` 增「仓级 CLAUDE.md」段(含 stub);bootstrap 时 multi-repo 逐仓实例化。`bootstrap-workspace.sh` + skill `workspace-bootstrap` 加"nested 仓 ≥2 → 逐仓落仓级 stub"逻辑**待跟进**(暂人工铺)。
+
+**横向影响**:后续 multi-repo 工作区(MES/WMS/EAM/TPM)bootstrap 一并铺仓级 CLAUDE.md。SRMV2 7 仓已落(**均自写** —— 前端 Buyer/Supplier 原有 Codex `AGENTS.md` 实证已过时 craco→vite/端口错,未 import 改自写)。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-18 | Proposed → Accepted | 涛哥拍板,SRM 迁移新建 SRMV2 工作区驱动 |
+| 2026-06-18 | Accepted(修订) | multi-repo 工作区层细化为「工作区根 + 仓级」两落点;Claude 官方按需加载 + AGENTS.md import 桥接;涛哥拍板 |
