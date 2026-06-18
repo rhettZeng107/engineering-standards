@@ -105,6 +105,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-038](ADR-038-subapp-master-data-via-api-not-direct-table.md) | 子应用主数据消费 API 不直查共享表 + 业务重建 | Accepted | 2026-06-15 | 跨项目 | 本仓 |
 | [ADR-039](ADR-039-standard-task-workflow.md) | 标准任务工作流 — 6 阶段主线(调研→实证→判断→处理→检查→汇报) | Accepted | 2026-06-15 | 跨项目 | 本仓 |
 | [ADR-040](ADR-040-cicd-onprem-iis-deploy-channel.md) | 自托管 Agent→内网 IIS 部署通道改用 MsDepSvc(弃 WMSvc 8172);配套 standards/cicd-onprem-iis-deploy-standard.md | Accepted | 2026-06-17 | 跨项目 | 本仓 |
+| [ADR-041](ADR-041-cross-workspace-autonomous-collab.md) | 跨工作区自治协作(文件载任务 + tmux 短触发注入 + 注入前判态);配套 `~/.claude/bin/cross-ws-send.sh` + workspace-bootstrap skill §6.3 | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 
 ---
 
