@@ -24,6 +24,15 @@
    - E2E job 的 `checkout: self` 把 `fetchDepth: 1` → `fetchDepth: 2`(tier-decide 要 HEAD~1)。
    - 「Run E2E」步换成分层块(`$E2E_TIER`/`$E2E_GREP` 由 tier-decide 出):L0 跑 `--grep @floor` / L1 跑 `--grep "@floor|$grep"` / L2 全量。
 
+### 1.1 门户登录 wujie 子应用 floor 的稳定化(TPMV2 实证,3 个真坑,务必照做)
+
+> 子应用(嵌门户的 wujie/iframe 子应用)floor 必须经门户登录 + 钻 iframe;**共享 self-hosted agent 高负载时 E2E 时序膨胀 4-5x**(实测 55s/页 vs 本地 1s),固定 sleep 必假红。
+
+- **导航全程 wait-based,禁 fixed sleep**(否则 CI 负载下假红):登录选厂/确认/token 用 `locator.waitFor`/`waitForFunction`(对齐各仓 `login.ts` 25s timeout 范式);菜单展开等 `aria-expanded=true`;叶子 `waitFor visible` 再点;**iframe 挂载轮询 ≥30s**(CPU 饥饿挂载极慢)。本地无法预验(子应用 API 内网不可达)时,把登录段抽 helper 在本机对门户跑通(门户登录页通常可达)再推。
+- **资产 MIME/健康检查限本子应用自己的 base 路径**(`/sub-xxx/`):门户走查会带出**其他子应用**(如 `/qms/` `/srm/`)的资产,它们坏(404→门户 SPA fallback 返 index.html)不是你的部署问题,全局 MIME 检查会误报假红。
+- **floor 核心页 3 个足够**(跨 2-3 主组)+ beforeAll 一次登录 + serial 3 describe 断言切片:省昂贵重复登录,CPU 饥饿 agent 上更快更稳。`clicked`/`frame` 诊断打日志,红了一眼判 click 失败 vs 挂载超时。
+- **firing 探针**(验跨仓触发)用 comment-only 改一个契约面文件(如 AppService)+ `# skip-cr`;实证 `✅ queued def<前端> runId=...` + 被触发前端 run **Build/Deploy SKIPPED**。非契约 commit(pipeline/manifest 改)顺带验「不触发」。
+
 ## 2. 层二:后端契约改 → 跨仓触发前端(每个后端仓 + 其消费前端)
 
 ### 2a. 后端仓:consumers manifest
