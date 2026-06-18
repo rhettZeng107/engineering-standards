@@ -68,6 +68,8 @@
 | **enforceJobAuthScope=true** | System.AccessToken 跨 project 403 | 用 **PAT**(Basic auth `base64(":$pat")`) |
 | **触发失败阻塞 deploy** | 后端 deploy 已绿却整体红 | TriggerConsumers 末尾 `exit 0` + try/catch warning(best-effort) |
 | **本地无 pwsh** | 改不出能 lint 的 PowerShell | YAML 用 js-yaml 校验结构;PowerShell 靠推 + 小步验;脚本避非 ASCII |
+| **pnpm 全局装 EEXIST**(共享 agent) | `npm error EEXIST ...node\..\pnpm file already exists` → Build 红(多 pnpm 项目共享 self-hosted agent 抢装 stale 全局 shim) | Install pnpm 步用 `npm install -g pnpm@<ver> --force`(覆盖 stale);**SRMV2 2026-06-19 实证** |
+| **standalone 前端 floor 的 biz-API 豁免**(非 `/api/` 路径) | 部分前端业务 API 路径无 `/api/` 前缀(如供应商 `POController/action`,baseURL=VITE_Url)→ floor 的 `/api/` 豁免漏掉 → 无 token 时**跨源后端 5xx/4xx 假红** | floor 豁免改**「跨源(host≠部署前端)即豁免」+ 保留 /api/**,只检前端**同源**资源(`isExternal(u)=new URL(u).host!==new URL(E2E_TARGET).host`);**SRMV2 2026-06-19 实证** |
 
 ## 4. 落地纪律
 
