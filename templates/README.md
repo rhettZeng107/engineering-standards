@@ -12,6 +12,7 @@
 | `iis-web.config-spa-root.template.xml` | IIS SPA 主应用 web.config(含 inheritInChildApplications=false 防穿透) | `<前端>/public/web.config` |
 | `iis-web.config-spa-subapp.template.xml` | IIS SPA 子应用 web.config(wujie 子 VDir 用) | `<子应用前端>/public/web.config` |
 | `pipeline-pre-check.snippet.yml` | ADO pipeline pre-check YAML 片段 | `<项目>/azure-pipelines.yml` Stage 1 第 1 步 |
+| `onprem-ssh-pubkey-install.ps1` | On-Prem 部署服务器为 Claude 装 SSH 公钥(管理员组;含 ACL 去 Authenticated Users 坑) | 服务器【管理员】PowerShell 执行(填本机 `~/.ssh/id_sys_deploy.pub`) |
 
 ## 关联标准
 
@@ -19,6 +20,7 @@
 - `standards/frontend-ui-standard.md` — UI 完整规范
 - `decisions/ADR-008-end-to-end-8-checks.md` — 端到端交付 8 项核对
 - `docs/ops/deployment-ip-map.md` — IP 中心化表(SYSV2 项目内)
+- `standards/onprem-server-ssh-ops-standard.md` — On-Prem 部署服务器 SSH 运维完整 SOP(ADR-043)
 
 ## 使用流程
 

@@ -107,6 +107,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-040](ADR-040-cicd-onprem-iis-deploy-channel.md) | 自托管 Agent→内网 IIS 部署通道改用 MsDepSvc(弃 WMSvc 8172);配套 standards/cicd-onprem-iis-deploy-standard.md | Accepted | 2026-06-17 | 跨项目 | 本仓 |
 | [ADR-041](ADR-041-cross-workspace-autonomous-collab.md) | 跨工作区自治协作(文件载任务 + tmux 短触发注入 + 注入前判态);配套 `~/.claude/bin/cross-ws-send.sh` + workspace-bootstrap skill §6.3 | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 | [ADR-042](ADR-042-git-pull-before-push-team-collab.md) | Git 推送前必同步(pull --rebase before push)+ 禁裸 force(团队多人协作);配套 hook `core-git-pull-before-push-guard.js` | Accepted | 2026-06-18 | 跨项目 | 本仓 |
+| [ADR-043](ADR-043-onprem-server-ssh-ops.md) | On-Prem 部署服务器 SSH 运维通道(Claude 经机器级 SSH key 直连跑远程 PowerShell;弃 MCP/人工手贴);配套 standards/onprem-server-ssh-ops-standard.md + skill `onprem-server-ssh-ops` + templates/onprem-ssh-pubkey-install.ps1 | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 
 ---
 
@@ -123,7 +124,7 @@ Deprecated   → 废弃但未被取代
 | **安全鉴权** | 007 | 鉴权 4 条刚性 |
 | **子应用集成** | 011·012·038 | BP门户边界 / 接入SOP / 主数据走API |
 | **前端工程标准** | 020·023·032 | i18n范围 / 4基建标准 / UI V2 Atlas |
-| **AI工程工作流** | 003·035·037 | 编码路由 / LSP网关 / 契约锁归属 |
+| **AI工程工作流** | 003·035·037·043 | 编码路由 / LSP网关 / 契约锁归属 / on-prem服务器SSH运维 |
 | **工作纪律/决策授权** | 005·017·018·036·042 | 全新部署剔运维 / 批次节奏 / 授权三档 / CR门禁 / 推前必同步禁裸force |
 
 ---
