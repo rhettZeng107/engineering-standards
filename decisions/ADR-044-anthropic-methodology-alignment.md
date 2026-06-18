@@ -28,6 +28,7 @@
 ### 立项(中大,走 spec+plan)
 
 - **G4 progressive disclosure(CLAUDE.md 薄 + skill 厚)**:`standards/` 17 个程序标准仅 2 个(onprem-ssh-ops / workspace-bootstrap)做成可自动触发 skill,其余靠 CLAUDE.md/ADR 指针(部分 always-loaded)。立项评估哪些 standards/程序流程包装成带 description 触发器的 skill,CLAUDE.md 只留触发指针。依据 = 官方 skills 方法论(description 为模型触发写、folder 作 progressive disclosure)+ context engineering。
+  - **第一批落地(2026-06-18)**:2 个高 ROI 已 skill 化 —— `subapp-onboarding`(标杆 MDM,SRM/MES/EAM 反复接入)+ `legacy-migration`(迁移痛点,联动 G5)。形态 = `~/.claude/skills/<name>/SKILL.md` progressive disclosure 入口(触发器 description + 主流程骨架 + 高频坑 + 指向 standards 全文真理源)。2 文件轻量,**未走独立业务 spec(G1 最简)**。验证实际触发 ROI 后再评估中 ROI 批(cicd/部署/i18n/memory-maintenance)。
 - **G5 迁移轨重构(参考 dynamic-workflows 6 模式)**:迁移轨(ADR-014)历史踩坑密集(涛哥点名痛点)。引入官方 6 组合模式(classify-and-act / fan-out-synthesize / adversarial-verification / generate-filter / tournament / loop-until-dry)+ Workflow 工具编排,把迁移轨从"线性 plan"升级为"带独立 verifier 投票的 workflow harness",针对迁移特有失败模式(退化页误采信、等价性漏验、跨契约失真)设独立 verifier。
 
 ## Alternatives considered
