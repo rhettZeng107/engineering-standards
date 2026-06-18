@@ -14,7 +14,7 @@
 
     <!-- NuGet 元数据 -->
     <PackageId>SYSV2.Analyzers</PackageId>
-    <Version>0.1.0-spike</Version>
+    <Version>0.2.0-spike</Version>
     <Authors>SYSV2 Team</Authors>
     <Company>SYSV2</Company>
     <Description>Build-time Roslyn analyzer enforcing SYSV2 engineering standards (ADR-007 / ADR-008 / ADR-021).</Description>
@@ -29,6 +29,12 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- analyzer 发布跟踪表(RS2008 要求,Roslyn 官方机制) -->
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
   </ItemGroup>
 
   <ItemGroup>

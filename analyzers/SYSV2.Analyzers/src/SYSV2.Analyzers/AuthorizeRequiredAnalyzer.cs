@@ -30,7 +30,7 @@ public class AuthorizeRequiredAnalyzer : DiagnosticAnalyzer
         category: Category,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "SYSV2 工程标准 L1: Controller 类必须显式标记 [Authorize] 或 [AllowAnonymous]。落盘前撞墙,免回 reviewer 反馈环。",
+        description: "SYSV2 工程标准 L1: Controller 类必须显式标记 [Authorize] 或 [AllowAnonymous]。落盘前撞墙,免回 reviewer 反馈环.",
         helpLinkUri: "https://github.com/rhettZeng107/engineering-standards/blob/master/decisions/ADR-007-auth-4-rigidity.md"
     );
 

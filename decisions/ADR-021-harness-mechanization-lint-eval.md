@@ -137,6 +137,27 @@
   - ADR-018(决策授权三档)→ E4 检验载体
   - ADR-017(批次任务扩大版)→ Eval 跑题不打断
 
+## 修订(2026-06-18,P3 A 阶段 — L4 砍除,降级 E2E 兜底)
+
+> 触发:P3 A 阶段扩量(L2/L3/L4 + MDM 接入)实证现状时,**L4 既定前提反转 + 技术阻塞**(ADR-015 实证反转,涛哥拍板 A 案)。
+
+**实证发现**(SYSV2 代码级):
+
+| 来源 | 真实返回形态 | 合规 `items/totalCount/current/pageSize`? | return-type analyzer 可见? |
+|---|---|---|---|
+| SYS `Pagination<T>`(16 处,HR 全家) | `Data` / `Total` | ❌(缺 current/pageSize,用 Data) | ✅ 命名类型 → 会误报 16 处 |
+| SYS `PagedResult<T>`(7 处) | `Items`/`Total`/`Page`/`PageSize` | ❌(Total/Page ≠ totalCount/current) | ✅ → 误报 7 处 |
+| SYS `AuthAccountPagedResult`(1,最新) | `Items`/`TotalCount`/`Current`/`PageSize` | ✅ | ✅ |
+| MDM(`CustomerController.cs:494/613` 等) | `Ok(new { items, totalCount, current, pageSize })` 匿名对象 | ✅ 已合规 | ❌ 声明类型=`IActionResult`,字段在方法体匿名对象内 |
+
+**两个硬伤**:
+1. **前提反转** — spec §6.1 假设「新 SYS 合规(error)/ MDM legacy 不合规(warning)」;实况相反:MDM 列表接口**已合规**,SYS 主力分页类型 `Pagination<T>`(16 处)**不合规**。按 spec 字面写 L4 会误报 SYS 23+ 处正常接口。
+2. **技术错配** — L4 = return-type symbol 分析:只看得见 SYS 命名类型(不合规那批),完全看不见 MDM 真正合规的匿名对象 `Ok(new {...})`。能看的不合规,合规的看不见。
+
+**决策**:**L4 砍除**(不实现 `SYSV2_CONTRACT_002`,常量保留为 deferred)。真实分页契约 = 每个接口前后端**逐接口各自约定**(前端按 `res.total`/`res.items`/`res.data` 适配),非单一绝对字段名集合 → 属**契约锁 + E2E 8 项核对 #2(真实 UI)**职责,非静态 analyzer 能干净覆盖。
+
+**影响**:本 ADR §二 L4 行(:50)语义降级为「E2E #2 + contract-lock 兜底,不上 analyzer」;§三 Eval 不变(E2/E5 仍验分页契约一致);P3 A 阶段仅落 L2 + L3 + MDM 接入(L1-L3)。
+
 ## Alternatives Considered(其他选项)
 
 ### A. 维持现状(仅 markdown 规则 + 人工 code-reviewer)
