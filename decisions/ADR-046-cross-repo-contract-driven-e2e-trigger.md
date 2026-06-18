@@ -55,14 +55,24 @@ ADR-045 Decision §3 定了「后端契约改 → 触发消费前端 pipeline �
 - 精化(后续可选,非本期阻塞):per-契约 → per-module 精确映射(diff 哪个 Controller → 哪个 module),减少过度触发。
 - 人读镜像:workspace contract-lock.md 加 `## Consumers` 段引用本 manifest(ADR-037 契约锁补充),机器源以后端仓 json 为准。
 
-### 凭据 + 权限
+### 凭据 + 权限(实证修订:enforceJobAuthScope=true → 优先 PAT)
 
-- 复用现成 PAT 存 Variable Group `SYSV2-Deploy-Secrets`(`ADO_QUEUE_PAT`,Build R&Execute);或 `System.AccessToken` + 给 build 服务账号目标前端 pipeline 的 Queue 权限。**优先 PAT**(避免跨 project token-scope org 设置)。
+**实证(2026-06-18,SYSV2)**:`build/generalsettings.enforceJobAuthScope = true`(project 级)→ **`System.AccessToken` 被限制到当前 project,跨 project queue 不通**(即使授 Queue ACL)。要用 AccessToken 须关掉此设置 = 降低 project 隔离安全性,不划算。
+
+- **优先 PAT**(不受 enforceJobAuthScope 约束,不动任何安全设置):
+  - 建专用 PAT(scope **Build: Read & Execute**,该账号对目标前端 pipeline 有 Queue 权限——管理员账号默认有)。
+  - 存 Variable Group `SYSV2-Deploy-Secrets` 的 secret 变量 `ADO_QUEUE_PAT`。
+  - 后端 TriggerConsumers 用 `Authorization: Basic base64(":$(ADO_QUEUE_PAT)")` 调 REST queue。
+  - 代价:secret 管理 + 90 天轮换(同现有部署 PAT 节律)。
+- **备选 System.AccessToken**(零新密钥,但需 ADO 管理员):关 collection/project 级 `enforceJobAuthScope`(OFF)+ 授 Project Collection Build Service 对目标前端 pipeline 的 Queue builds 权限。**因降低隔离安全性,非首选**。
+- 不可复用:Web Deploy `cicd-deploy`(IIS NTLM 账号非 ADO 令牌)/ 本地监控 PAT(个人,不入 CI)。
+- 过渡:PAT 配好前,TriggerConsumers 用 System.AccessToken 跑 = queue 必 403/被 scope 挡 → best-effort 仅 warning(后端 deploy 仍绿),不阻塞。
 
 ### 前端 pipeline 配合
 
 - Build / DeployTest stage 加 `condition`:`and(succeeded(), ne(variables['Build.Reason'],'ResourceTrigger'), eq(variables['e2eOnly'],''))`——consumer-trigger 来的 run 跳过重新构建/部署。
-- E2E stage:收到 `affectedModules` → tier=L1 `--grep "@floor|@module:m1|@module:m2"`;**L1 实效依赖 @module 标签**(本批次同做);@module 未到位的 consumer 暂退 L2(保守)。
+- E2E stage:consumer-trigger(参数 `affectedModules` 非空)→ **跳过 tier-decide**(触发源是后端非前端 git),直接 tier=L1 + grep=`@floor|@module:<affectedModules>`。
+- **自然降级**:`--grep "@floor|@module:org"` 在 @module 标签未到位时**实跑仅 @floor**(L0 floor — 验前端↔新后端基本健康:boot/quality/i18n,无 flaky 全量);@module 到位后同一 grep 自动纳入 → 升 L1 定向。无需特判 L2,无 0-test 假绿(@floor 恒匹配)。
 
 ## Consequences(影响)
 
