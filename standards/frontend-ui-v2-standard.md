@@ -1,7 +1,7 @@
 # Frontend UI V2(Atlas)标准 — 业务页三范式
 
 > 状态:正式(2026-06-12)。来源:ADR-032(V2 Atlas 设计语言)+ HC 项目首建落地(spec `HC/docs/superpowers/specs/2026-06-11-hcv2-ui-v2-upgrade`,A/B/C 三 Phase 全量实施,~40 页改造实战沉淀)。
-> 参考实现(真理源):`engineering-standards/references/v2-components/`(SectionCard / StepAnchorNav / InlineDetailTable / V2States + v2-components.css + v2-tokens.css)。消费仓 copy 落地,CR 用 `diff -r` 比对,禁私有 npm 源。
+> 参考实现(真理源):`engineering-standards/references/v2-components/`(SectionCard / StepAnchorNav / InlineDetailTable / V2States / **FileUploader / ImportModal**(+ FileUploader.css)+ v2-components.css + v2-tokens.css)。消费仓 copy 落地,CR 用 `diff -r` 比对,禁私有 npm 源。
 > 适用栈:React 18 + antd 5 + @ant-design/pro-components 2.8.x(craco/CRA 或同类)。
 
 ## 1. Token 层(L1,全量换肤)
@@ -25,6 +25,22 @@
 | `StepAnchorNav` | sticky 编号锚点条(scroll-spy + 平滑滚动,可跳读非强制向导) | `items[{key,title,targetId}]`(**须 useMemo/模块级常量**)/ `offsetTop` |
 | `InlineDetailTable` | EditableProTable 薄封装(整宽虚线「+ 添加行」) | 透传 + `addText` / `recordCreatorProps` |
 | `V2States` | 三态(空/错误/加载骨架),禁白屏 | `type` / `title` / `description` / `action` / `rows` |
+| `FileUploader` | 统一附件上传(拖拽+点选,移植 SYSV2 MDM VUpload)— 见 §3.1 | `mode('compact'\|'dragger')` / `dataFlow('action'\|'defer'\|'base64')` / `accept` / `maxSize` / `maxCount` / `multiple` / `value` / `onChange` / `enableImagePreview` |
+| `ImportModal` | 统一 Excel 导入(下载模板→拖拽/点选上传→后端解析或前端 XLSX)— 见 §3.1 | `open` / `templateUrl` / `parseMode('backend'\|'frontend')` / `onSuccess` / `onClose` |
+
+## 3.1 附件上传 / 导入标准(强制 — 拖拽+点选,移植 SYSV2 MDM VUpload)
+
+> 来源:涛哥 2026-06-22 拍板锁定(HC 项目实战:plain `<Upload>` 只点选退化被抓)。**所有附件上传 / 文件导入入口默认走统一组件,禁退化为 HC 老栈的「只点选 input/button」。**
+
+- **铁律(拖拽+点选)**:任何附件上传 / 导入入口**必须同时支持拖拽(drag-drop)+ 点选(click)**,底座用 antd `Upload.Dragger`(原生双支持),**禁** plain `<Upload><Button>选择文件</Button></Upload>`(只点选)或裸 `<input type="file">`。视觉/交互移植参考 **SYSV2 MDM VUpload**。
+- **统一组件,禁各页自造**:
+  - 附件上传 → `FileUploader`(`components/upload/FileUploader.jsx`)。形态 `mode`:`compact`(行内,文案「点击或拖拽上传」)/ `dragger`(大拖拽区,文案「拖拽文件到此处,或 点击选择」)。
+  - Excel 导入 → `ImportModal`(`components/upload/ImportModal.jsx`,内含 Dragger「点击或拖拽 Excel 文件到此区域」+ 模板下载 + 解析预览)。
+  - 自造 plain Upload = 退化,CR 必拦(grep `<Upload\b`(非 `Upload.Dragger`)+ `type="file"` 作机器门)。
+- **三数据流(FileUploader.dataFlow)**:`action`(antd 直传 ExtendDoc)/ `defer`(暂存原始 File 交父组件提交)/ `base64`(转码交父提交)。按场景选,默认 `action`。
+- **能力基线(移植 VUpload)**:文件卡片(类型彩标 / 图片缩略图)+ 删除 + 下载预览 + 体积校验(`maxSize` MB)+ `maxCount`/`multiple` 约束 + 卸载释放本地 blob URL 防泄漏。
+- **value 形状(承 §7 坑)**:受控 `value` 项须含**顶层** `fileId`(`{uid,name,fileId,url?,status,...}`),不止 `.response.fileId`,否则已传文件下载链接失效。
+- **parity / 迁移红线**:迁移 HC 页面时,若 hcv2 已有上传增强(拖拽+点选),**保留增强不照搬 HC 退化**(详 legacy-migration-playbook「增强保留」原则)。
 
 ## 4. 表单范式(L2)— 形态判定决策树(实战沉淀,按序判定)
 
