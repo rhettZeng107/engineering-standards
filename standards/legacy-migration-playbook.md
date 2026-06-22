@@ -98,6 +98,8 @@
 
 > **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑(`migration-gate.sh AI.REACT.PROD.TPM/src "CoreTPMWebApi,tpmApi" "src/api/index.js,src/hostMap.js"`)精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处。**「一个能跑的门 > 人工记 12 条坑」**;坑库见 §5 已收敛为 3 失效模式。
 
+> **代码分析默认 LSP(锚 ADR-035)**:迁移现状实证 / 影响面 / 契约比对(symbol 级)默认走 **LSP**(C#→lsp-nav bridge / 前端 JS→typescript-lsp),grep 仅作 `migration-gate.sh` 机器门粗筛与旁证。**LSP 解决「查得准」,不解决「查得全 / 查对方向」** —— 须配 old→new 方向 + 四层覆盖 + 前端切 typescript-lsp(教训:gap 那轮用了 lsp-nav 仍漏设备手册桩,因 new→old 方向 + 只查 C# 后端层、没切前端 LSP)。
+
 ### 3.1 启动第一步:产「源工件清单」
 
 逐页 / 逐接口列对应表,**每项必须标状态**:
