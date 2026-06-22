@@ -27,7 +27,7 @@
 | **7 完结报告** | 一次性完结报告(实施 / E2E双层 / CR / 风险闭环 / 骨架等价闭环 / backlog) | ADR-014 §5 | — | — | — |
 | **8 STEP2 功能演进** | 先出现有页清点表 → 默认增强、禁造新 | ADR-028 §4-5 | §4 | — | 该模块 STEP1 已解锁 |
 
-> **坑库 vs 主线**:每阶段易踩的坑见 §5(11 条,防再犯)+ §3.2 blockquote 硬铁律 —— 那是「**为什么这么定**」的实证锚;本 §0 主线是「**按什么顺序做**」的导航。两者配合读。
+> **坑库 vs 主线**:每阶段易踩的坑见 §5(3 失效模式,防再犯)+ §3.2 blockquote 硬铁律 —— 那是「**为什么这么定**」的实证锚;本 §0 主线是「**按什么顺序做**」的导航。两者配合读。
 
 ---
 
@@ -96,7 +96,7 @@
 
 **触发**:迁移启动前置(扫存量盲区,产矩阵)/ 每模块 STEP1 验收前(复扫该模块四列)/ 完结 DoD(矩阵全绿才宣告迁完)。**机制必须是官方 Workflow,矩阵未过对抗投票不得锁基准。**
 
-> **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑(`migration-gate.sh AI.REACT.PROD.TPM/src "CoreTPMWebApi,tpmApi" "src/api/index.js,src/hostMap.js"`)精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处。**「一个能跑的门 > 人工记 12 条坑」**;坑库见 §5 已收敛为 3 失效模式。
+> **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑(`migration-gate.sh AI.REACT.PROD.TPM/src "CoreTPMWebApi,tpmApi" "src/api/index.js,src/hostMap.js"`)精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处。**「一个能跑的门 > 人工记一长串坑」**;坑库见 §5(3 失效模式)。
 
 > **代码分析默认 LSP(锚 ADR-035)**:迁移现状实证 / 影响面 / 契约比对(symbol 级)默认走 **LSP**(C#→lsp-nav bridge / 前端 JS→typescript-lsp),grep 仅作 `migration-gate.sh` 机器门粗筛与旁证。**LSP 解决「查得准」,不解决「查得全 / 查对方向」** —— 须配 old→new 方向 + 四层覆盖 + 前端切 typescript-lsp(教训:gap 那轮用了 lsp-nav 仍漏设备手册桩,因 new→old 方向 + 只查 C# 后端层、没切前端 LSP)。
 
@@ -182,27 +182,31 @@
 
 ---
 
-## 5. 历史坑(防再犯)
+## 5. 历史坑 → 3 失效模式(防再犯)
 
-| # | 坑 | 教训 |
-|---|---|---|
-| 1 | 工具链迁移冒充完整迁移(MDM CRA→Vite 只换工具链) | 迁移 = 三层等价,工具链只是其一 |
-| 2 | 等价审查的半成品盲区(`supplier/index.jsx` 半成品被「坏→坏」放过) | 迁移前先产源工件清单 + 半成品识别 |
-| 3 | 迁移未完成就做功能 → 逼出违规造新(供应商双模式 v1 自造简版 Modal + `save`) | STEP1/STEP2 解耦;迁移轨默认增强、禁造新 |
-| 4 | spec discuss 全局观不够宽(grep 只 grep 概念) | grep 历史加「同模块已实现工作页作对齐标杆」(ADR-016) |
-| 5 | 审计靠读 EF 实体推断后端 JSON 大小写(判成 PascalCase,实为全局 camelCase),据此把正确页面 `dataIndex` 改坏 | 字段契约 curl 实测接口真实响应,禁读代码推断序列化 |
-| 6 | E2E 冒烟只验「渲染通过」,列 `-` 占位(dataIndex 不匹配致整列空)漏检 | 列表页冒烟必断言关键列首行非 `-` 占位 |
-| 7 | 微前端子应用迁移到 BP:漏 G 方案 postMessage 路由同步监听(点每菜单同一页)+ 多个 service 漏 `baseURL`(production iframe 网络异常);本机 dev E2E「9/9」假通过(vite proxy 兜底 baseURL + 单应用直访掩盖路由同步缺失) | 迁移子应用必**逐条对照参考实现(MDM)**的 G 方案契约;E2E 必在真实 BP iframe + production-like 环境**逐菜单**跑(套 `subapp-onboarding-guide.md` v1.2 子应用侧自检 + ADR-012 修订段)|
-| 8 | 迁移单元代码完结 + E2E render-walk(`goto` 路由 + 注入 token)绿,但**菜单种子整组漏种**致门户点不进(SRM 外协单元1-3:外协订单本体 / 工序外协 10 叶 / 热处理 7 叶 在 `SYS_AuthInfo` 整组缺,只单元4 种了;render-walk 22/22 绿仍漏检) | 入口可达性是 DoD 一层(§3.2 ④):每单元必**扩种子 SQL + 查菜单库实证** authCode 齐全 + 权限码挂角色;**render-walk goto 路由绕过菜单,不算入口验证** —— CI E2E #5 必模拟操作员从门户菜单点进(涛哥只在 10.8 以操作用户视角验收) |
-| 9 | 菜单两套机制并存且认错生效方:实际靠**直接 SQL 种** `AppName='SRM'`,而 `generate-manifest.mjs` 生成的 `AppName='SRMBuyer'` 走 ScanMenus 的路径**从没跑通**(`SYS_AuthInfo` 0 条 SRMBuyer),易误以为 ScanMenus 在更新菜单 | 认准实际生效的种子机制;manifest 的 `AppName` 必与门户注册子应用 `AppName` 一致,否则 ScanMenus 静默不更新 —— 迁移前先实证「菜单到底怎么进门户」 |
-| 10 | 评估迁移/收编功能「现状」只看当前代码,把**历史退化产物**当设计意图(MDM 期初导入:原 5 类 MES 导入被历史演变退化成 1 卡"物料分类导入",只跟当前页差点迁错/删错;涛哥两次纠正)| 评估「现在是什么」前**必核原始版本**:`git log --all -- <path>` + `git show <first-commit>:<path>` 对照原始设计,或核内网老仓(§3.1 产源工件清单时即做);trust-but-verify 涛哥「都整合了/现在只是/已经替换了」这类断言,当前代码可能是退化产物非设计意图 |
-| 11 | 「layout 收敛」把源壳层功能整删:SRMShop 前台迁入买方门户,plan 把 layout 写成视觉任务(收敛 100vh/改路径前缀),源 ResponsiveLayout 顶栏导航(购物车入口+数量徽标+用户区+移动端 TabBar)随容器一起被删 —— **源工件清单(按页/控制器/组件)与 UI 功能清单(按页)都覆盖不到 layouts/**,且 E2E 业务闭环用 goto 在页面间拼接,「加购后从界面进购物车」无人断言,涛哥实测才暴露;gap 复盘 6 项遗漏全部 layout 级、0 项页面级 | 三层堵:① §3.1 壳层枚举铁律(layouts 单独产功能去留表,涛哥拍板)② 「layout 收敛」类任务前置去留表,视觉收敛≠功能裁剪 ③ E2E 业务闭环**段间禁 goto 拼接**:用例内页面跳转必走真实 UI 入口(按钮/导航/链接),goto 仅允许作用例起点;入口可达性含义从「菜单→页面」扩展为「含应用内功能入口」(回链 ADR-008 ⑤ / ADR-014 修订 2026-06-12) |
+> 历次迁移高代价坑归 **3 个根本失效模式 + 流程/特化两类**;可机器判的已下沉 `migration-gate.sh`(§3.0)。**本节是「为什么」的实证档案(只读锚点),执行看 §3.0 迁移矩阵 + 机器门**;每条保留原始踩坑锚,不再平铺编号(防「12 条表格 / 3 模式 / 3 Gate」三处并存)。
 
----
+### 失效模式 ①:完整性盲区(漏迁整类)
+> 门:migration-audit workflow 多维并扫 + §3.6 三方交叉 + §3.1 壳层去留表。
+- **壳层功能随 layout 整删**(SRMShop 购物车入口):plan 把 layout 写成视觉任务,源顶栏导航(购物车入口+徽标+用户区+TabBar)随容器删;源工件/UI 清单都覆盖不到 `layouts/`,E2E 用 goto 拼接漏「加购后进购物车」→ 壳层单独产功能去留表(**视觉收敛≠功能裁剪**)+ 业务闭环段间禁 goto 拼接(ADR-008 ⑤)。
+- **菜单种子整组漏种**(SRM 外协单元1-3):代码完结 + render-walk goto 绿,但 `SYS_AuthInfo` 整组缺致门户点不进;且双机制认错生效方(实际靠 SQL 种 `AppName='SRM'`,manifest 的 `SRMBuyer` 走 ScanMenus 从没跑通)→ 查菜单库实证 authCode + 权限码挂角色 + 模拟操作员从门户点进;manifest AppName 必与门户注册一致。
 
-### 坑 12 — 前端桩当「已迁」(后端✅+前端桩,2026-06-22 TPM 设备手册复盘)
+### 失效模式 ②:半迁中间态(看似迁完实则半截)
+> 门:`migration-gate.sh` Gate1(前端桩)/Gate2(后端归属)+ §3.1 源工件状态标注 + 三层等价 DoD。
+- **后端✅前端桩**(TPM 设备手册):后端三级树迁完,前端 Edit 是 HourType 复制桩(`views/Manual/components/Edit/index.jsx:4` import hourType / 字段 `typeCode/typeName` / 无三级树);根因 new→old 锚点 + general-purpose 单跑替代官方 workflow → **gate Gate1 自动抓**(service import 错配 / 字段数 vs DTO / 子表树缺失);审计方向恒 old→new。
+- **前端✅后端老系统**(TPM 计量/特种检定):前端 React 化但 api 寻址仍指老 CoreTPMWebApi → **gate Gate2 自动抓**;模块按 前端×后端 四象限,(新前端+老后端)禁算迁完。
+- **工具链冒充完整迁移**(MDM CRA→Vite):只换工具链,UI 标准+功能骨架没动 → 三层等价缺一不算迁完。
+- **半成品搬运**(`supplier/index.jsx` 被「坏→坏」放过):源工件清单标状态 + baseline-adversarial 投票防半成品盲区。
 
-**踩坑事实**:TPM 设备手册后端三级整树 1:1 迁完,前端编辑页却是从 HourType 模块复制的桩(`views/Manual/components/Edit/index.jsx:4` `import {...} from "@/service/hourType"`,表单字段 `typeCode/typeName`,零三级树 UI);`progress.md:66` 把「手册三级核对」列为 remaining 后 phase 直接标 done。**根因**:① 完整性审计锚点是 new→old(看后端有 ManualManager 就判已迁,没核前端层)② 用 general-purpose 单跑替代官方 workflow → 失真。**防再犯**:迁移矩阵「前端真实装(非桩)」列专项检测(service import 错配 / 字段数 vs DTO / 子表树缺失);审计方向恒 old→new;前期实证机制必官方 Dynamic Workflow,禁 general-purpose 替代(规则2,§1 哲学 1/2/3 + §3.0 + ADR-014 修订 2026-06-22)。
+### 失效模式 ③:误判(看了但判错)
+> 门:baseline-adversarial N 视角投票 refute + curl 实测接口。
+- **退化产物当设计意图**(MDM 期初导入 5 类→退化 1 卡,涛哥两次纠正):评估现状前必 `git log --all` + `git show <first-commit>` 核原始版本 / 核内网老仓;trust-but-verify「都整合了 / 现在只是 / 已替换」。
+- **字段大小写误判 + `-` 占位**:读 EF 实体推断 PascalCase 实为全局 camelCase,把对的 `dataIndex` 改坏;列表 `-` 占位漏检 → curl 实测真实 JSON 大小写 + 冒烟断言关键列首行非 `-`。
+
+### 流程纪律 + 特化(方法层,非失效模式)
+- **迁移未完成就做功能 → 逼出违规造新**(供应商 v1 自造简版 Modal):STEP1/2 解耦,默认增强禁造新。
+- **grep 历史不够宽**:加「同模块已实现工作页作对齐标杆」(ADR-016)。
+- **子应用迁 BP**:逐条对照参考实现(MDM)G 方案 postMessage 路由同步契约 + 全 service `baseURL`;E2E 真实 BP iframe + production-like **逐菜单**跑(套 `subapp-onboarding-guide.md` + ADR-012),禁 dev proxy 假通过。
 
 ---
 
