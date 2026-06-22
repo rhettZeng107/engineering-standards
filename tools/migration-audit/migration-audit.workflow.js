@@ -222,12 +222,15 @@ while (dry < 2 && round < MAX_ROUNDS) {
 }
 
 // 严重度分桶 + 中间态汇总
-// 漏标 severity 时按 type 兜底高危(防 backend-not-migrated / shell-feature-dropped 被静默降 MED、逃逸 DoD 阻塞)
+// 漏标 severity 时按 type 兜底高危(防 backend-not-migrated / shell-feature-dropped / 整页漏迁 被静默降 MED、逃逸 DoD 阻塞)
 const sevOf = (g) =>
   g.severity ||
   (g.type === 'backend-not-migrated' || g.type === 'shell-feature-dropped'
     ? 'CRITICAL'
-    : g.type && g.type.indexOf('tripartite') === 0
+    : (g.type &&
+        (g.type.indexOf('tripartite') === 0 ||
+          g.type === 'page-not-enumerated' ||
+          g.type === 'noncrud-missing'))
     ? 'HIGH'
     : 'MED')
 const bySeverity = { CRITICAL: [], HIGH: [], MED: [], LOW: [] }
