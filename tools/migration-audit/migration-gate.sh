@@ -66,22 +66,23 @@ if [ -z "$OLD_MARKERS" ]; then
   echo "  ⏭  跳过(未传 old_backend_markers)"
 else
   scope="$FE"
-  files=""
+  files=()                                    # M2:数组,消除路径含空格时的词分裂
   if [ -n "$API_GLOB" ]; then
     base=$(dirname "$FE")
     IFS=',' read -ra globs <<< "$API_GLOB"
     for g in "${globs[@]}"; do
-      [ -f "$base/$g" ] && files="$files $base/$g"
-      [ -f "$g" ] && files="$files $g"
+      [ -f "$base/$g" ] && files+=("$base/$g")
+      [ -f "$g" ] && files+=("$g")
     done
   fi
   IFS=',' read -ra marks <<< "$OLD_MARKERS"
   for m in "${marks[@]}"; do
     m=$(printf '%s' "$m" | xargs)
-    if [ -n "$files" ]; then
-      hits=$(grep -rEn "$m" $files 2>/dev/null | head -5)
+    # M1:marker 是老后端「字面名」,用 -F 定值匹配(防 marker 含正则元字符误报)
+    if [ "${#files[@]}" -gt 0 ]; then
+      hits=$(grep -rFn "$m" "${files[@]}" 2>/dev/null | head -5)
     else
-      hits=$(grep -rEn "$m" "$scope" --include='*.js' --include='*.jsx' 2>/dev/null | head -5)
+      hits=$(grep -rFn "$m" "$scope" --include='*.js' --include='*.jsx' 2>/dev/null | head -5)
     fi
     if [ -n "$hits" ]; then
       cnt=$(printf '%s\n' "$hits" | grep -c .)
