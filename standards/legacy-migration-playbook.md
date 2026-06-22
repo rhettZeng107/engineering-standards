@@ -96,6 +96,8 @@
 
 **触发**:迁移启动前置(扫存量盲区,产矩阵)/ 每模块 STEP1 验收前(复扫该模块四列)/ 完结 DoD(矩阵全绿才宣告迁完)。**机制必须是官方 Workflow,矩阵未过对抗投票不得锁基准。**
 
+> **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑(`migration-gate.sh AI.REACT.PROD.TPM/src "CoreTPMWebApi,tpmApi" "src/api/index.js,src/hostMap.js"`)精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处。**「一个能跑的门 > 人工记 12 条坑」**;坑库见 §5 已收敛为 3 失效模式。
+
 ### 3.1 启动第一步:产「源工件清单」
 
 逐页 / 逐接口列对应表,**每项必须标状态**:
