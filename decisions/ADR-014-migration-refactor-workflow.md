@@ -243,6 +243,29 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 
 **适用 + 节奏**:SRM/MES/WMS/EAM/TPM 全迁移系列。设计 + 流程(挂载 playbook §3.1)+ 承载脚本 `tools/migration-audit/baseline-adversarial.workflow.js`(fan-out-and-vote:每判定 3 视角独立 skeptic refute + 多数票)**均已落地**;首用复验"误判检出率"。锚点:ADR-044(G5)+ playbook §3.1/§3.2 + §5 坑 2/10。
 
+## 修订(2026-06-22)— 前期实证阶段机制定标 = 官方 Dynamic Workflow(动态编排优先)+ 迁移矩阵 + 工作流哲学沉淀(TPM 设备手册漏迁复盘)
+
+**踩坑事实**:TPM 设备手册(Manual)后端三级整树 1:1 迁完,但**前端编辑页是从 HourType 模块复制的桩**(`import {...} from "@/service/hourType"`,表单字段为 `typeCode/typeName`,零三级树 UI),`progress.md:66` 把「手册三级核对」列为 remaining 后 phase 直接标 done。**这是「后端✅+前端桩」的隐性半迁态,gap 阶段用 general-purpose agent 单跑审计而非既有 workflow → 大面积失真(`gap-analysis-verified.md:3`)放过了它。** 同时 `_legacy` 6 个源仓的 `customer/*` 活动分支(customer/kd/prd@2026-02)从未核、FW/CORE 基线靠单点假设未 diff。
+
+**根因再定性(机制存在但被绕过)**:2026-06-15 / 06-18 两次修订已把 migration-audit(查漏)+ baseline-adversarial(查误判)两个**官方 Workflow 脚本**落地,但标准把它们定位为「**可选工具/钩子**」,未禁止用 general-purpose 单 agent 替代 —— 结果实际执行时被替代,workflow 根本没跑。病根从「检查方式(人工一遍过)」再下沉一层到 **「前期实证的执行机制未定标 + 未禁劣化替代」**。
+
+**决策(即时生效,规则2)**:迁移轨**前期实证阶段的执行机制定标 = Claude 官方 Dynamic Workflow**(harness 原生 `Workflow` 工具),四条硬规则:
+1. **动态编排优先(A 方案)**:由主会话本体**据本次迁移现状 inline 动态编排**官方 Workflow(phase/agent/parallel/pipeline);预存的 `migration-audit` / `baseline-adversarial` 两脚本**降为参考实现/起点模板**(可 `scriptPath` 复用、可据现状改写增维),不是套死 args 的黑盒。理由:各项目源仓数/分支/技术栈/壳层差异大,「动态」正是官方机制的价值。
+2. **禁劣化替代(红线)**:前期实证**禁用 general-purpose / 单 agent 一遍过替代官方 Workflow**;multi-modal sweep(互盲多维)+ adversarial verify 投票(refute)+ completeness critic + loop-until-dry 四 pattern 为前期实证标配。
+3. **审计方向 old→new 全覆盖**:以老仓全量清单(模块/页面/字段/接口/菜单)为锚逐项在新平台找落点,**禁 new→old**(后者天然看不见「老仓有、新平台无」整类;`gap-analysis-verified` 即因 new→old 锚点而漏前端桩)。
+4. **强制产物 = 迁移矩阵表**:逐页面/字段/接口为行,**后端实装 · 前端真实装(非桩)· 菜单种子 · 操作员可用** 四列覆盖 + 对抗投票结论;过投票才锁为契约基准(ADR-037)。「前端真实装(非桩)」列专设检测:service import 错配 / 表单字段数 vs DTO / 子表树是否存在 → 抓设备手册类桩。
+
+**工作流哲学沉淀(跨项目根本原则,7 条 — 把多次迁移踩坑上升为可复用心智)**:
+1. **完整性是迁移第一性问题**:迁移本质风险不是「迁错」,是「漏迁/半迁而不自知」;审计方向恒为 old→new 全覆盖。
+2. **「迁完」是四层闭环非单层达标**:后端✅≠迁完;后端✅+前端桩、前端✅+后端老系统、代码✅+菜单漏种均为半迁中间态,任一层断=用户用不了。
+3. **单视角必有盲区 → 多智能体动态编排对抗/投票**:人/单 agent 线性一遍过,漏的那一维自己不会提醒;机制 > 努力。
+4. **坑在基准埋下、验收才查太晚 → 重心前移到建基准**:对抗/投票放在锁契约前,验收只赴约打钩。
+5. **动态编排 > 固化脚本**:据现状现编排,预存脚本只作起点模板。
+6. **源基线先收口再迁**:源 = master/develop 主线,customer 默认排除;多版本 diff 实证谁更全,基线不锁干净不开迁(规则1,详 ADR-028)。
+7. **移植非重写、半成品不搬运**:业务规则原样移植+适配;半成品/退化产物补完或登记欠债,禁等价搬运、禁当设计意图。
+
+**承载 + 适用**:复用现有两脚本(参考实现)+ 本体动态编排;SRM/MES/WMS/EAM/TPM 全系列。锚点:TPM `specs/2026-06-13-tpm-legacy-migration`(设备手册前端桩 `views/Manual/components/Edit/index.jsx:4`)+ playbook §1 哲学总纲/§2 分支范围/§3.0 前期实证 Dynamic Workflow + 迁移矩阵/§5 坑 12。配套 ADR-028 同日修订(规则1)+ ADR-044(官方 dynamic-workflows 对标)。
+
 ---
 
 ## History
@@ -255,3 +278,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 2026-06-14 | 修订 | 前后端归属审计 + 绞杀者中间态看板(TPM 计量/特种检定整模块后端漏迁复盘):① 迁移启动强制产前端 api endpoint 全量归属清单(指老后端=半迁必登记)② 模块按 前端×后端 四象限看板登记,(新前端+老后端)禁算迁完,DoD ④ 加「后端归属=新平台」判据。异构重写迁移(非同构升级)专属盲区,SRM/MES/WMS/EAM/TPM 复用 |
 | 2026-06-15 | 修订 | 完整性审计 workflow 化(multi-modal sweep + completeness critic + loop-until-dry):跨三次迁移根因再定性=完整性盲区,病根在检查方式(人工一遍过)非检查内容;升级为主动多维并扫+收敛循环,承载工具 `tools/migration-audit/migration-audit.workflow.js`(只读审计,与 fanout 执行互补)。SRM/MES/WMS/EAM/TPM 复用,首版待下个迁移项目复验 |
 | 2026-06-18 | 修订 | 基准建立 adversarial verification 门(ADR-044 G5):区分 migration-audit 查"漏"(completeness)vs adversarial 查"误判"(correctness);主门前移到建基准(源状态/退化判定/清单完整性 N verifier 投票 refute,多数票锁契约基准),验收变赴约打钩;承载 `baseline-adversarial.workflow.js`(已实现:fan-out-and-vote 3 视角 refute+多数票)。防坑 2 半成品盲区/坑 10 退化误判 |
+| 2026-06-22 | 修订(规则2 + 哲学) | 前期实证机制定标=官方 Dynamic Workflow(TPM 设备手册前端桩漏迁复盘):① 动态编排优先(本体据现状 inline 编排,预存 2 脚本降为参考模板)② 禁 general-purpose 单跑替代官方 Workflow ③ 审计方向 old→new 全覆盖 ④ 强制产物=迁移矩阵(逐页/字段/接口 × 后端·前端真实装非桩·菜单·可用 4 列 + 对抗投票);并沉淀「迁移轨工作流哲学」7 条总纲(跨项目)。根因:workflow 机制已落地但被劣化替代→失真放过「后端✅前端桩」半迁态。配套 ADR-028 规则1 + playbook §1/§3.0/§5 坑12 |
