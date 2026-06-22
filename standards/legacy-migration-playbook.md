@@ -96,11 +96,13 @@
 
 **触发**:迁移启动前置(扫存量盲区,产矩阵)/ 每模块 STEP1 验收前(复扫该模块四列)/ 完结 DoD(矩阵全绿才宣告迁完)。**机制必须是官方 Workflow,矩阵未过对抗投票不得锁基准。**
 
-> **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑(`migration-gate.sh AI.REACT.PROD.TPM/src "CoreTPMWebApi,tpmApi" "src/api/index.js,src/hostMap.js"`)精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处。**「一个能跑的门 > 人工记一长串坑」**;坑库见 §5(3 失效模式)。
+> **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— **Gate0 枚举完整性**(老仓 `Controllers`+`Views`+`Scripts` 三源 vs 新前端,零黑名单:暴露 `Home`/统计/看板等非 CRUD 漏页,失效模式④;传 `legacy_roots_csv` 第4参启用,传 `coverage_file` 第5参升硬 gate)+ Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩;**前缀放行为弱判据,真实装仍以迁移矩阵「前端真实装」列+本体字段数核对为准**,MED)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处;Gate0 抓出 `Home`/`LubricationStatistics` 等非 CRUD 漏页。**「一个能跑的门 > 人工记一长串坑」**;坑库见 §5(4 失效模式)。
 
 > **代码分析默认 LSP(锚 ADR-035)**:迁移现状实证 / 影响面 / 契约比对(symbol 级)默认走 **LSP**(C#→lsp-nav bridge / 前端 JS→typescript-lsp),grep 仅作 `migration-gate.sh` 机器门粗筛与旁证。**LSP 解决「查得准」,不解决「查得全 / 查对方向」** —— 须配 old→new 方向 + 四层覆盖 + 前端切 typescript-lsp(教训:gap 那轮用了 lsp-nav 仍漏设备手册桩,因 new→old 方向 + 只查 C# 后端层、没切前端 LSP)。
 
 ### 3.1 启动第一步:产「源工件清单」
+
+> **枚举范围铁律(多源并集 + 零黑名单,2026-06-22 TPMV2 复盘,失效模式④)**:源工件清单的枚举**不得单源(只看 Controller)、不得 boilerplate 黑名单预过滤**(`Home`/`Account`/`Default` 可能是 dashboard / 个人中心真功能,曾致 TPM 整页漏迁)。**枚举范围 = `Controllers` ∪ 所有 `Views/*` ∪ `Scripts/*` ∪ 菜单种子(SYS_AuthInfo)∪ 路由(routes)的多源并集,零黑名单**;任一来源出现的页都上册,改名/合并的另作「合并入 X」标注消解(不准默删)。机器把关:`migration-gate.sh` **Gate0** —— **机器枚举 = `Controllers` + 所有 `Views` + `Scripts` 三源**(零黑名单;Controllers 源专抓 MVC-only dashboard 如 `Home`),**菜单种子 + 路由 2 源因难机器化由 `migration-audit.workflow.js` `enumeration` 维兜**(合计 5 源,文档↔实装勿漂移)。**传 `coverage_file`(第 5 参)升硬 gate**:无同名新页者须 `.migration-coverage` 登记 `renamed→X / merged→Y / backlog#N / boilerplate`,**未登记=退出码硬红**(治改名误报=登记留痕、不弃强制力=真漏即红)。**完整性是机器可验事实源,不靠人手臆测过滤**。并对每页标「**页类**」(crud / dashboard / report / statistics / topology / map / workbench);非 CRUD 页在 §3.0 迁移矩阵换判据(聚合端点 + 可视化渲染 + 入口,非 CRUD 4 列)。
 
 逐页 / 逐接口列对应表,**每项必须标状态**:
 
@@ -182,9 +184,9 @@
 
 ---
 
-## 5. 历史坑 → 3 失效模式(防再犯)
+## 5. 历史坑 → 4 失效模式(防再犯)
 
-> 历次迁移高代价坑归 **3 个根本失效模式 + 流程/特化两类**;可机器判的已下沉 `migration-gate.sh`(§3.0)。**本节是「为什么」的实证档案(只读锚点),执行看 §3.0 迁移矩阵 + 机器门**;每条保留原始踩坑锚,不再平铺编号(防「12 条表格 / 3 模式 / 3 Gate」三处并存)。
+> 历次迁移高代价坑归 **4 个根本失效模式 + 流程/特化两类**;可机器判的已下沉 `migration-gate.sh`(§3.0)。**本节是「为什么」的实证档案(只读锚点),执行看 §3.0 迁移矩阵 + 机器门**;每条保留原始踩坑锚,不再平铺编号(防「12 条表格 / 3 模式 / 3 Gate」三处并存)。
 
 ### 失效模式 ①:完整性盲区(漏迁整类)
 > 门:migration-audit workflow 多维并扫 + §3.6 三方交叉 + §3.1 壳层去留表。
@@ -202,6 +204,12 @@
 > 门:baseline-adversarial N 视角投票 refute + curl 实测接口。
 - **退化产物当设计意图**(MDM 期初导入 5 类→退化 1 卡,涛哥两次纠正):评估现状前必 `git log --all` + `git show <first-commit>` 核原始版本 / 核内网老仓;trust-but-verify「都整合了 / 现在只是 / 已替换」。
 - **字段大小写误判 + `-` 占位**:读 EF 实体推断 PascalCase 实为全局 camelCase,把对的 `dataIndex` 改坏;列表 `-` 占位漏检 → curl 实测真实 JSON 大小写 + 冒烟断言关键列首行非 `-`。
+
+### 失效模式 ④:CRUD 形状盲区(枚举/判据只覆盖 CRUD,非 CRUD 整类系统性漏)
+> 门:`migration-gate.sh` **Gate0**(多源枚举完整性,零黑名单)+ 迁移矩阵加「**页类**」维(非 CRUD 换判据)。根因:链条「枚举 → 扇出查 → 对抗复核」中,扇出/复核都在枚举下游,**枚举本身裸奔**则强度=裸奔那环。
+- **枚举单源 + boilerplate 黑名单**(TPM `Home`/个人中心 dashboard 漏迁):清单从 `*Controller.cs` 单源生成、且 `grep -viE "^Home|^Account"` 当样板剔除 → 675 行设备 dashboard 整页**从不上册**,扇出/对抗复核只覆盖在册项、**无法暴露被预先排除者**(漏迁不自知)。**修(铁律见 §3.1):枚举范围 = Controllers ∪ 所有 Views ∪ Scripts ∪ 菜单种子 ∪ 路由 的多源并集 + 零黑名单**(`Home`/`Account` 未证伪前算真功能)。
+- **判据只有 CRUD 4 列**(`LubricationStatistics` 润滑统计 / `FaultReason` 关系拓扑图 / `Equipment` 地图位置 / `Task` 个人工作台 被误绿或退化):4 列(后端 AppService / 前端 Edit / 菜单 / 可用)**套不上无 Edit、无 CRUD 的页** → 看板/统计/报表/拓扑/地图/工作台 要么没上册、要么塞进某 CRUD 兄弟簇挥手放行。**修:迁移矩阵加「页类」维**(`crud` / `dashboard` / `report` / `statistics` / `topology` / `map` / `workbench`),**非 CRUD 页换判据 = 数据聚合端点 + 图表/可视化渲染 + 入口可达**(而非 CRUD 4 列)。
+- 教训:**完整性必须机器 gate 化(可验证事实源),禁人手臆测过滤**;每环对抗验证、唯独枚举裸奔 = 没意义。锚:TPMV2 2026-06-22,`Home` 个人中心 + `LubricationStatistics` 靠涛哥提醒才补回。
 
 ### 流程纪律 + 特化(方法层,非失效模式)
 - **迁移未完成就做功能 → 逼出违规造新**(供应商 v1 自造简版 Modal):STEP1/2 解耦,默认增强禁造新。

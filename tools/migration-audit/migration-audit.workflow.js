@@ -3,7 +3,7 @@ export const meta = {
   description:
     '迁移完整性审计 — multi-modal sweep + completeness critic + loop-until-dry,主动穷扫迁移盲区(只读,不改码)。ADR-014 修订 2026-06-15,跨项目通用',
   phases: [
-    { title: 'Sweep', detail: '多维并扫(各 agent 互盲):前后端归属 / 壳层功能 / 三方交叉 / 源工件退化' },
+    { title: 'Sweep', detail: '多维并扫(各 agent 互盲):枚举完整性+非CRUD页类 / 前后端归属 / 壳层功能 / 三方交叉 / 源工件退化' },
     { title: 'Critic', detail: '完整性批判收口:漏哪个维度 / 哪个模块停中间态 / 哪个声称迁完无证据' },
   ],
 }
@@ -56,8 +56,19 @@ const EVIDENCE_RULE =
   '【证据纪律】每个 gap 必标实证来源(file:line / grep -c 数字 / git ref / SQL 结果 其一);' +
   '无证据的推断标 [假设] 不混入 gap;只读审计,禁改任何文件。'
 
-// 初始 4 维(对应四类历史迁移坑;critic 可追加维度)
+// 初始 5 维(对应五类历史迁移坑;critic 可追加维度)
 const BASE_DIMENSIONS = [
+  {
+    key: 'enumeration',
+    title: '枚举完整性 + 非CRUD页类(治:CRUD 形状盲区,失效模式④)',
+    instr:
+      `先建【完整页全集】再查覆盖,杜绝"逐页"逐的是残缺清单。**枚举范围 = 老仓(${LEGACY})的 ` +
+      `Controllers ∪ 所有 Views/* ∪ Scripts/* ∪ 菜单种子(${MENU_Q})∪ 路由 的多源并集,零黑名单** —— ` +
+      `禁单源(只看 Controller)、禁过滤 Home/Account/Default 当"样板"(它们可能是 dashboard/个人中心真功能)。` +
+      `(可先跑 migration-gate.sh Gate0 拉候选漏页。)对每页标【页类】:crud / dashboard / report / statistics / topology(拓扑图)/ map(地图)/ workbench(工作台)。` +
+      `逐页核新前端(${FE})有无落点:无 = gap{type:'page-not-enumerated'};**非 CRUD 页(无 Edit/无增删改)换判据 —— 不套 CRUD 4 列,改判「数据聚合端点 + 图表/可视化渲染 + 入口可达」三点**,缺则 gap{type:'noncrud-degraded'|'noncrud-missing', pageClass, evidence}。` +
+      `锚:TPM Home 个人中心 dashboard(单源+黑名单漏)、LubricationStatistics 统计 / FaultReason 拓扑图(CRUD 判据误绿/退化)。`,
+  },
   {
     key: 'ownership',
     title: '前后端归属(治:整模块后端漏迁)',
@@ -109,6 +120,7 @@ const SWEEP_SCHEMA = {
           module: { type: 'string' },
           type: { type: 'string' },
           item: { type: 'string' },
+          pageClass: { type: 'string', description: 'crud/dashboard/report/statistics/topology/map/workbench(失效模式④:非CRUD换判据)' },
           evidence: { type: 'string', description: 'file:line / grep -c / git ref / SQL 结果' },
           severity: { type: 'string', enum: ['CRITICAL', 'HIGH', 'MED', 'LOW'] },
         },
