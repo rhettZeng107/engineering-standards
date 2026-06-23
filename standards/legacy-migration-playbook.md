@@ -98,6 +98,8 @@
 
 > **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— **Gate0 枚举完整性**(老仓 `Controllers`+`Views`+`Scripts` 三源 vs 新前端,零黑名单:暴露 `Home`/统计/看板等非 CRUD 漏页,失效模式④;传 `legacy_roots_csv` 第4参启用,传 `coverage_file` 第5参升硬 gate)+ Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩;**前缀放行为弱判据,真实装仍以迁移矩阵「前端真实装」列+本体字段数核对为准**,MED)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处;Gate0 抓出 `Home`/`LubricationStatistics` 等非 CRUD 漏页。**「一个能跑的门 > 人工记一长串坑」**;坑库见 §5(4 失效模式)。
 
+> **机器门补充·字段级(ADR-014 修订 2026-06-23,TPM 设备父子漏迁复盘)**:补现有字段维盲区——现行字段级铁律覆盖链是「老UI→新前端→新DTO」(UI 功能清单 + 桩检测 + curl 大小写),**缺「老仓后端实体/DTO 字段集 × 新仓 DTO 字段集」机械并集 diff**。设备父子掉此缝:老 `EquipmentDto.cs:270` 有 `ParentEqptNo`、新 DTO 无、前端无控件、后端孤儿列(实体有列但 DTO/Service/前端零引用)→ 三现有链都够不着,19-agent workflow 漏放。门 `tools/migration-audit/field-diff.sh`(栈中立铁律 + 实现优选 LSP):枚举双侧类型字段(**默认 LSP symbol 级最准,ADR-035;grep 兜底**)→ 归一(strip `Bas_/Fk_` 前缀 + 大小写)→ `老有−新无` = 漏候选 → 过 `.field-coverage` 登记消解(`renamed→X / merged→Y / intentional / backlog#N`),未登记=硬红退出码。**取舍:宁多报(改名靠登记)不漏报真缺**(完整性工具偏假阳优于假阴);首跑成熟迁移有一批候选要登记,之后持久化。**回归实证**:对 TPM Equipment 跑(老 DTO × 审计当时态 HEAD 新 DTO),精准抓出 `ParentEqptNo/ParentEqptName`(0 漏 + 核心字段 `EqptNo/EqptName` 不误报);补迁后复跑确认父子消失。**边界(防超额承诺)**:本门抓字段级标量 + 父类型上集合属性名漏迁;**整子类型/子表是否随父迁移**由 Gate0 类型枚举 + 迁移矩阵「子表/树」判据兜,不由本门独揽。**核心实体清单机器锚(禁靠人正向挑,否则枚举裸奔重蹈失效模式④)**= 老仓 `*Dto.cs`/`*Entity.cs` 全集 − 显式登记排除(`.field-entities` 标 `skip→边缘表`,未登记的实体默认必跑),随源工件清单(§3.1)由本体锁定;OLD 侧入参 = 老仓**实体 ∪ DTO** 并集(防实体有列/DTO 无 那层自身漏)。CI / 迁移收尾必跑。
+
 > **代码分析默认 LSP(锚 ADR-035)**:迁移现状实证 / 影响面 / 契约比对(symbol 级)默认走 **LSP**(C#→lsp-nav bridge / 前端 JS→typescript-lsp),grep 仅作 `migration-gate.sh` 机器门粗筛与旁证。**LSP 解决「查得准」,不解决「查得全 / 查对方向」** —— 须配 old→new 方向 + 四层覆盖 + 前端切 typescript-lsp(教训:gap 那轮用了 lsp-nav 仍漏设备手册桩,因 new→old 方向 + 只查 C# 后端层、没切前端 LSP)。
 
 ### 3.1 启动第一步:产「源工件清单」
@@ -189,7 +191,8 @@
 > 历次迁移高代价坑归 **4 个根本失效模式 + 流程/特化两类**;可机器判的已下沉 `migration-gate.sh`(§3.0)。**本节是「为什么」的实证档案(只读锚点),执行看 §3.0 迁移矩阵 + 机器门**;每条保留原始踩坑锚,不再平铺编号(防「12 条表格 / 3 模式 / 3 Gate」三处并存)。
 
 ### 失效模式 ①:完整性盲区(漏迁整类)
-> 门:migration-audit workflow 多维并扫 + §3.6 三方交叉 + §3.1 壳层去留表。
+> 门:migration-audit workflow 多维并扫 + **`field-diff.sh` 字段级并集 diff(后端实体/DTO 漏字段)** + §3.6 三方交叉 + §3.1 壳层去留表。
+- **后端字段/整子表漏迁**(TPM 设备父子):老 `EquipmentDto` 有 `ParentEqptNo` 自引用 + 子设备子表,新仓后端孤儿列(实体有列、DTO/Service/前端全无)、前端无控件;「老UI→新前端→新DTO」检测链够不着,矩阵「字段」维误信前端错 label(`父项设备(positionId 树选)`)判为「位置树解耦·非漏迁」→ **门 `field-diff.sh` 老仓DTO×新DTO 并集 diff 自动抓**(老有新无必出,不靠 agent 想到);根因:字段维只锚新前端、未做后端实体/DTO 机械并集 + 误信单源前端 label(违 old→new 多源)。
 - **壳层功能随 layout 整删**(SRMShop 购物车入口):plan 把 layout 写成视觉任务,源顶栏导航(购物车入口+徽标+用户区+TabBar)随容器删;源工件/UI 清单都覆盖不到 `layouts/`,E2E 用 goto 拼接漏「加购后进购物车」→ 壳层单独产功能去留表(**视觉收敛≠功能裁剪**)+ 业务闭环段间禁 goto 拼接(ADR-008 ⑤)。
 - **菜单种子整组漏种**(SRM 外协单元1-3):代码完结 + render-walk goto 绿,但 `SYS_AuthInfo` 整组缺致门户点不进;且双机制认错生效方(实际靠 SQL 种 `AppName='SRM'`,manifest 的 `SRMBuyer` 走 ScanMenus 从没跑通)→ 查菜单库实证 authCode + 权限码挂角色 + 模拟操作员从门户点进;manifest AppName 必与门户注册一致。
 
@@ -223,6 +226,7 @@
 迁移一个模块,按序走:
 
 0. [ ] **前期实证**:官方 Dynamic Workflow 动态编排(multi-modal sweep + adversarial 投票 + critic + loop-until-dry,**禁 general-purpose 单跑**),**产迁移矩阵表**(逐页/字段/接口 × 后端·**前端真实装非桩**·菜单·可用 4 列),old→new 全覆盖,过对抗投票锁基准(§3.0,规则2)
+0b. [ ] **确定性机器门必跑**(退出码非0即红,补 workflow 漏跑风险):`migration-gate.sh`(Gate0 枚举完整性 / Gate1 前端桩 / Gate2 后端归属)+ `field-diff.sh`(核心实体 老DTO×新DTO **字段并集 diff**,抓后端字段漏迁如设备父子;`.field-coverage` 登记消解)。CI / 迁移收尾必跑(§3.0 机器门补充)
 1. [ ] 产源工件清单,逐项标状态(完好 / 半成品 / 坏)
 2. [ ] 老视图(cshtml 等)源工件**逐行提取 UI 功能清单**(每列/每按钮/每弹窗/每必填)作契约锁基准,贯穿提取→派单实现 1:1 对照→验收打钩全程(Claude 本体锁定,§3.2 铁律)
 3. [ ] 半成品 / 坏工件定处置(补完 / 登记欠债 / 拍板新建)

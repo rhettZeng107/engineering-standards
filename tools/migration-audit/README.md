@@ -41,6 +41,18 @@ args 见 workflow 文件头注释。关键:`apiAddrFiles` / `oldBackendMarkers` 
 
 建基准时**两者都跑**:audit 查漏 + adversarial 查误判。adversarial 的 `disputed`(多数 refute)= 基准不得锁定,交主会话复核。args:`artifacts`(待裁决判定清单)+ `frontendDir/backendDir/legacyRepo`。
 
+## 确定性机器门(与 workflow 互补,CI/收尾必跑)
+
+workflow(agent 编排)解「查得全 / 查对方向」,但 agent 仍可能漏跑或失真;同目录两个**确定性 shell 门**作机器兜底(退出码非0即红,无 LLM):
+
+| 门 | 抓什么 | 粒度 | 入参 |
+|---|---|---|---|
+| `migration-gate.sh` | Gate0 枚举完整性(老仓 Controllers∪Views∪Scripts 零黑名单)/ Gate1 前端桩 / Gate2 后端归属 / Gate3 路由孤儿 | 页/目录级 | 前端 src 目录 + 老仓 roots + `.migration-coverage` |
+| `field-diff.sh` | **后端字段漏迁**:核心实体 老DTO/实体 × 新DTO 字段并集 diff,`老有−新无`=候选(抓 TPM 设备父子那类「老有·新前端/DTO全无·后端孤儿列」)| 字段级 | 老/新类型文件 CSV + `.field-coverage` 登记 |
+
+- `field-diff.sh`(ADR-014 修订 2026-06-23,设备父子漏迁复盘):栈中立铁律 + 实现优选 LSP(grep 兜底,v1 C#);`老有−新无` 候选过 `.field-coverage`(`renamed→X/merged→Y/intentional/backlog#N`)消解,未登记=硬红。**核心实体清单机器锚** = 老仓 `*Dto.cs`/`*Entity.cs` 全集 − 显式排除登记(禁靠人正向挑)。**回归实证**:TPM Equipment 跑(老 DTO × 审计当时态新 DTO)精准抓出 `ParentEqptNo/ParentEqptName`,补迁后复跑确认消失。
+- 两门均**只读**;候选/疑点喂回迁移矩阵对应行,过对抗投票才锁基准。
+
 ## 边界
 
 只读审计,**不改码、不拍板**。契约锁定 / 风险拍板由主会话本体做(ADR-037)。gap 清单交主会话/涛哥决策;`CRITICAL`/`HIGH` 是迁移完结 DoD 阻塞项。
