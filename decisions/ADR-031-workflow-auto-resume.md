@@ -296,3 +296,47 @@ cw 夜间模式跑 HC 批次,feeder 日志 + 屏幕快照还原出两个自动�
 - 阈值取舍:30 分钟纯无变化的 thinking 极罕见(正常 turn 工具输出会滚屏),误打断代价小(Escape+go 会从 progress 接续);对照黑洞 6 小时,收益显著。
 - 失败模式 A(进程崩溃)条目作废;若未来真遇崩溃,tmux 会话留尸现场可人工查,不自动重启。
 - 判据日志:`~/.claude/logs/feeder.log` 中 `STUCK-RUN 判定` / `AUTH-STUCK` / `FEED` 三类锚点 + feeder-snaps/ 快照。
+
+---
+
+## 修订(2026-06-26)— context-handoff 接续防杜撰验证 gate(D9,涛哥拍板)
+
+### 触发 / Context
+
+多次「context-handoff 自动接续打开的新窗」复发**杜撰工具输出 / 主题偏离**:上窗乐观或杜撰的「已完成」声明,经接续提示词遗传给新窗后被当既成事实,新窗在错误地基上继续推进。实测案例(2026-06-26 TPMV2):某 CI 优化整段工作(编辑 / self-test / yaml / 读写文件)被杜撰,**双 CR agent 独立 git 核实**才戳破。
+
+根因(代码实证 `~/.claude/bin/context-handoff.js`):
+
+| 环节 | 缺陷 |
+|---|---|
+| 接续提示词由上窗自由书写 | 原仅校验 file:line 锚点,**不区分 / 不校验「已完成」声明真伪** → 上窗乐观 / 杜撰遗传下窗当事实 |
+| 兜底 prompt 含「直接开干」措辞(`directly`) | 鼓励不复核直接推进 |
+| 验证覆盖不均 | `git push` 撞 `core-git-push-verify` hook(故 push 类断言可信);但**编辑文件 / 跑 test / 读文件无强制验证点** → 杜撰重灾区 |
+
+**一句话根因**:哪里有强制验证 gate,哪里就不塌;靠「人在场」是拐杖,真正缺的是「对自己产出的强制独立验证」——可机制化,不靠人。
+
+### 决策(涛哥 2026-06-26 拍板,三方向)
+
+1. **触发器与「人是否在场」脱钩**:交接触发纯看 context 阈值,按 plan 自动跑完;可靠性归**验证 gate** 不归人。**否决**旧「在线时不自动交接」提案。
+2. **新窗第一动作 = 独立复核 ✅区**:`git log -1 / git status -sb / grep` 复核继承的「已完成」声明,与事实不符以 git 为准、记 progress 后**继续不阻塞**(异步浮报,夜间勿停等拍板),复核通过再动未验证项。
+3. **接续提示词结构化 + 凭证化**:强制分区 `✅ 已验证完成`(每条带 commit / curl / test 证据)vs `⬜ 计划 / 未验证`;promptcheck 在原 file:line 锚点外**加查 ✅ 段头标记**,缺则退回补写(一次性,防死循环)。
+
+### 实现 / Implementation(D9)
+
+`~/.claude/bin/context-handoff.js` 五处(均加法,复用既有一次性 promptcheck 范式,未触碰开窗 O_EXCL 锁 / 去重 / 触发逻辑):① 触发器脱钩决策固化为注释 ② 兜底 initPrompt 在「开干」前插入「先 git log/status/grep 复核继承声明」(删 `directly`、**保留** `Do not pause to ask which mainline` 绕多主线确认门语义)③④ 软 / 硬阈值给上窗的写作指令追加分区 + 复核要求 ⑤ promptcheck 合并「缺锚点 OR 缺 ✅ 段头」到同一一次性标记。配套:兄弟 hook `context-handoff-early-warn.js` 写作引导同步 ✅ 要求;新增 `context-handoff.test.js`(26 断言:软 / 硬 / promptcheck block + 合规放行 + 一次性放行不变量 + docExempt + initPrompt 静态)。
+
+落点:`claude-governance` commit `edabfe8`。
+
+### 实证 vs 假设(诚实标注,ADR-015)
+
+- **[实证]** `node --check` 三文件语法过 / 单测 26 passed 0 failed(spawnSync 喂真 stdin 跑真实脚本,非 mock)/ initPrompt 程序化确认纯 ASCII 单行(send-keys 安全)/ architect + code-reviewer 双 CR **APPROVE 0 HIGH**(独立 git diff + 跑单测核实)。注:双 CR 审的是 18 断言初版;最终落盘的段头正则收紧(`/✅/` → `/✅\s*已验证/`)、early-warn 同步、测试扩至 26 断言 = **CR 后回修自审增量**(落实 reviewer LOW/MED 反馈、与决策方向一致,未重新 CR)。
+- **[假设 / 残留]** promptcheck 的 `/✅\s*已验证/` 只验**段头结构存在**、不验声明真伪;最终戳破「继承的假声明」仍依赖新窗**真去执行**第一动作复核——这一步是**提示词指令、非机械 gate**,与原失效同型。**未闭环**(见 backlog),但本次为真实净改进(分区是复核的必要脚手架 + 复核指令更靠前显著)且不回退。
+
+### Backlog(下一步闭环,双 CR 提出)
+
+1. **机械化复核闭环(MED,推荐做)**:利用新窗已带的 `CLAUDE_HANDOFF_CONTINUATION=1` 环境变量,在 **SessionStart hook 确定性注入**「必先独立复核继承 ✅ 声明」强制 `additionalContext` —— 把复核从「上窗 prompt 写得好不好」解耦为机制保证,才算真闭环。
+2. **绕门启发式描述同步(LOW)**:`core-progress-resume-inject.js` 多主线确认门例外项描述补「`Do not pause to ask which mainline` 亦视为绕门信号」。
+
+### 否决「人在场探测」依据
+
+「在线时不交接 / 探测人是否在场再决定可靠性」被否决:① 触发是否安全应由 context 阈值客观决定,不由「人在不在」主观决定 ② 把接续可靠性寄托于「人会盯着」= 拐杖,长 context 自治正是人不盯着的场景 ③ 正解 = 对自己产出的强制独立验证(可做成 gate / test / 复核指令),与人是否在场正交。
