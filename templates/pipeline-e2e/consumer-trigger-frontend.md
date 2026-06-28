@@ -45,7 +45,9 @@ parameters:
               $mods = if ($affected) { (($affected -split ',') | ForEach-Object { "@module:$($_.Trim())" }) -join '|' } else { '' }
               $grep = if ($mods) { "@floor|$mods" } else { '@floor' }
               Write-Host "--- consumer-trigger(后端契约改): grep='$grep' affected='$affected' target=$env:E2E_TARGET ---"
-              npx playwright test --grep "$grep" --reporter=line
+              # grep 经 env 传入(playwright.config.ts 读 E2E_GREP),禁 CLI --grep:含 `|` 在 PowerShell→npx 泄漏成 shell 管道符 → reporter EPIPE(标准 §2#6)
+              $env:E2E_GREP = $grep
+              npx playwright test --reporter=line
               if ($LASTEXITCODE -ne 0) { throw "E2E test failed $LASTEXITCODE" }
               exit 0
             }

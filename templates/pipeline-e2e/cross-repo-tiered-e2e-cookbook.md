@@ -22,7 +22,7 @@
 2. **拷 `tier-decide.mjs`**:本目录 `tier-decide.mjs` → 各前端 `pipeline-e2e/`。`node tier-decide.mjs --self-test` 应 17/17。
 3. **E2E stage 接线**(`azure-pipelines.yml`):
    - E2E job 的 `checkout: self` 把 `fetchDepth: 1` → `fetchDepth: 2`(tier-decide 要 HEAD~1)。
-   - 「Run E2E」步换成分层块(`$E2E_TIER`/`$E2E_GREP` 由 tier-decide 出):L0 跑 `--grep @floor` / L1 跑 `--grep "@floor|$grep"` / L2 全量。
+   - 「Run E2E」步换成分层块(`$E2E_TIER`/`$E2E_GREP` 由 tier-decide 出):grep **必经 `$env:E2E_GREP` 注入**(playwright.config.ts 读 `process.env.E2E_GREP`)再 `npx playwright test`,**禁 CLI `--grep "@floor|$grep"`** —— 含 `|` 在 PowerShell→npx 泄漏成 shell 管道符 → reporter EPIPE 假崩(见标准 §2#6)。L0 设 `$env:E2E_GREP='@floor'` / L1 设 `$env:E2E_GREP="@floor|$grep"`(双引号才插值)/ L2 设 `$env:E2E_GREP=''`(空=全量)。
 
 ### 1.1 门户登录 wujie 子应用 floor 的稳定化(TPMV2 实证,3 个真坑,务必照做)
 

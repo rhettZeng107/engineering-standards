@@ -24,6 +24,7 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 | 3 | **共享 Table dataSource 无数组守卫 → 单点崩全站** | 前端编码标准:Table/列表 dataSource 必 `Array.isArray(x)?x:[]`(见 `react-ui-guidelines.md`);E2E render-walk 兜底拦截。 |
 | 4 | **POST 被 IIS 降级 / 端点 5xx** | 部署后验关键 POST verb 不被重定向降级;E2E 捕获业务 5xx。 |
 | 5 | **render-walk `goto` 路由 + 注入 token 绕过菜单 ≠ 入口可达** | 验收方(涛哥)只在部署环境以**操作用户视角**验收(登录门户 → 点菜单 → 进页面)。CI E2E 必**全检 ADR-008 #5 入口可达性全链**(路由→菜单种子→权限码→登录看到→渲染)**并确保绿**:有菜单的应用必加 **critical-menu-walk**(从门户菜单树**点进**目标页断言可达),**禁只** `goto` 路由 + 注入 token(漏菜单种子 / 权限码 —— SRM 外协单元1-3 代码迁完、render-walk 22/22 绿,却因菜单种子整组漏种门户点不进,即此漏)。 |
+| 6 | **分层 grep 含 `\|` 经 CLI `--grep` 在 PowerShell→npx 泄漏成管道符 → reporter EPIPE 假崩** | tier L1 多模块 grep(`@floor\|@module:A\|@module:B`)经 CLI `--grep "…"` 传 npx,Windows PowerShell 把 `\|` 当 shell 管道符 → `ListReporter.onBegin` `EPIPE broken pipe`(用例没跑就崩;Deploy stage 已绿=deliverable 已上,仅验证 stage 假红易误判)。**规则:grep 必经 `$env:E2E_GREP` 注入(playwright.config.ts 读 `process.env.E2E_GREP`→`new RegExp`),禁 CLI `--grep` 带 `\|`**(SYSV2 2026-06-28 实证:#1182/1183 EPIPE 崩 → env 化后 #1186 同多模块场景绿)。 |
 
 ## 3. 验证 SOP(E2E_Verify stage 内)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 部署后 E2E 分层定级引擎(ADR-045 P1)
-// 输入改动文件清单 → 判定 tier(L0/L1/L2)+ playwright --grep 过滤 + 定级理由
+// 输入改动文件清单 → 判定 tier(L0/L1/L2)+ E2E_GREP 过滤(下游经 $env:E2E_GREP 注入,非 CLI --grep,见标准 §2#6)+ 定级理由
 //
 // 用法:
 //   node tier-decide.mjs --base <ref> --head <ref> [--first-publish] [--config <path>]
@@ -150,7 +150,7 @@ function main() {
   console.log(`[tier-decide] tier=${r.tier} | ${r.reason}`);
   if (r.modules.length) console.log(`[tier-decide] modules=${r.modules.join(', ')} grep="${r.grep}"`);
   console.log(JSON.stringify(r));
-  // ADO 变量(下游 step 用:L1 跑 --grep "$E2E_GREP" + 核心 floor;L2 全量;L0 仅 floor)
+  // ADO 变量(下游 step:设 $env:E2E_GREP 再 npx playwright test,禁 CLI --grep,见标准 §2#6;L1=floor+模块 / L2 全量 / L0 仅 floor)
   console.log(`##vso[task.setvariable variable=E2E_TIER]${r.tier}`);
   console.log(`##vso[task.setvariable variable=E2E_GREP]${r.grep}`);
 }

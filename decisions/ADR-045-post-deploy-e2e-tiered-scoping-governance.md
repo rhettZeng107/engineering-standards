@@ -123,3 +123,13 @@ TPM 前端 `feature/vite` 先落地(dev/feature 分支,未上 master/生产,跨�
 - `<前端仓>/pipeline-e2e/tier-decide.mjs`(`--max-tier` 封顶 + `forceFull` 豁免 + git-diff 兜底应用 maxTier)
 - `<前端仓>/azure-pipelines.yml`(`schedules` + Build/Deploy 跳 Schedule + E2E 模式分流 + `forceFullE2E`)
 - `<前端仓>/pipeline-e2e/playwright.config.js`(`retries` 读 `E2E_RETRIES`)
+
+## 修订(2026-06-28)— grep 必经 E2E_GREP env 注入(EPIPE post-mortem,SYSV2 实证)
+
+**问题**:tier L1 多模块 grep(`@floor|@module:A|@module:B`)经 CLI `npx playwright test --grep "@floor|$grep"`,在 Windows PowerShell→npx 传参时 `|` 泄漏成 shell 管道符 → Playwright `ListReporter.onBegin` `EPIPE broken pipe`,**用例没跑就崩**。Deploy stage 已绿(deliverable 已上 10.8),仅 E2E 验证 stage 假红,易误判成代码 bug。SYSV2 SYS.3 #1182/#1183 实证(一次只改 Company+HRDept 两模块,首次触发带 `|` 的 L1 grep)。单模块/L2 全量(无 `|`)不触发,故此前未暴露。
+
+**修复**:grep 改经 `$env:E2E_GREP` 环境变量注入 —— `playwright.config.ts` 读 `process.env.E2E_GREP` → `new RegExp` 应用 `grep` 字段;`azure-pipelines.yml` 两条 grep 路径(tiered L0/L1/L2 + consumer-trigger e2eOnly)去掉 CLI `--grep`,改 `$env:E2E_GREP=...` 前置再 `npx playwright test`。`$env:X=` 是 PowerShell 字符串赋值,`|` 安全;L2 设空串=全量。
+
+**实证(ADR-015)**:[实证] env 化后 #1186(e2eOnly + affectedModules=Company,HRDept,定向复现多模块 L1)同场景**绿**(对比 #1182/1183 EPIPE)+ 本机 `E2E_GREP="@floor|@module:Company|@module:HRDept" npx playwright test --list` 正确解析 + code-reviewer APPROVE 0 HIGH。
+
+**落点**:标准 §2#6 + 模板 `templates/pipeline-e2e/playwright.config.ts` / `cross-repo-tiered-e2e-cookbook.md` / `consumer-trigger-frontend.md` 已同步;SYSV2 4 前端仓(SYS.3/BP/AP/MDM)`azure-pipelines.yml` + `playwright.config.ts` 已铺。**新仓拷模板即含修复。**
