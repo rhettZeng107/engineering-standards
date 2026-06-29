@@ -356,14 +356,14 @@ D9(2026-06-26)加「接续提示词分区 + 锚点 / ✅ 校验 + 复核指令�
 1. **回归「模拟手动开窗」**:交接 = 等在途后台任务跑完 → 刷 progress.md → 开新窗读最新 `status=in_progress` 的 progress.md 按全局工作流继续。**真理源唯一 = progress.md**(SessionStart `core-progress-resume-inject` 自动注入),**新窗零状态继承**。
 2. **删 D9 全套**:不再写 `.prompt` 接续提示词、不做 file:line 锚点 / ✅ 分区 promptcheck 校验。feeder 注入**固定 `FEED_TEXT`**(英文纯 ASCII 单行,经 send-keys;含「take the most recently updated in_progress one」绕 D7 多主线确认门)。
 3. **防漂移 / 防杜撰新机理 = 零继承**:新窗**碰不到**上窗的后台 task id / Agent 死句柄 → `60c1fc` 类伪造**从机制上不可能**;不靠「层层校验」(那是 D9 越补越脆的根)。
-4. **阈值**:软 `70`(不变,达到提示准备交接)/ 硬 `79→95`(超此才强制切换)。**在途后台任务绝不砍断**(收尾 gate「等 run_in_background 跑完才 `touch ready`」+ 新窗零继承双保险:即便上窗漏等,下窗也碰不到死句柄)。
+4. **阈值**:软 `70`(不变,达到提示准备交接)/ 硬 `79→80`(超此才强制切换)。**在途后台任务绝不砍断**(收尾 gate「等 run_in_background 跑完才 `touch ready`」+ 新窗零继承双保险:即便上窗漏等,下窗也碰不到死句柄)。
 
 ### 实现 / Implementation(D10)
 
-- `~/.claude/bin/context-handoff.js`:净删 ≈95 行(178 删 / 83 增)—— 删 initPrompt 兜底 + 读 `.prompt` + promptcheck 整块;`FEED_TEXT` 常量化;软 / 硬阈值收尾 reason 简化为「等后台→刷 progress→touch ready」;硬阈值默认 79→95。
-- `~/.claude/bin/context-handoff-early-warn.js`:硬阈值 79→95;reason 同步删 `.prompt` 写作;软档加「近阈值不要再起新 `run_in_background` 后台任务」(M3,丢结果风险的真正控制点)。
+- `~/.claude/bin/context-handoff.js`:净删 ≈95 行(178 删 / 83 增)—— 删 initPrompt 兜底 + 读 `.prompt` + promptcheck 整块;`FEED_TEXT` 常量化;软 / 硬阈值收尾 reason 简化为「等后台→刷 progress→touch ready」;硬阈值默认 79→80。
+- `~/.claude/bin/context-handoff-early-warn.js`:硬阈值 79→80;reason 同步删 `.prompt` 写作;软档加「近阈值不要再起新 `run_in_background` 后台任务」(M3,丢结果风险的真正控制点)。
 - `~/.claude/hooks/core-progress-resume-inject.js`:D7 多主线确认门例外项描述对齐新 `FEED_TEXT`,自动交接窗不卡门(H1)——**闭合 D9 backlog #2**。
-- `~/.claude/bin/context-handoff.test.js`:重写,22 断言(软 / 硬=95 block + ready 三态机放行【无 .prompt 也放行=零继承不卡死】+ FEED_TEXT 内容 + 旧 prompt/锚点逻辑已删静态断言),`node` 跑真实脚本 22 passed 0 failed。
+- `~/.claude/bin/context-handoff.test.js`:重写,22 断言(软 / 硬=80 block + ready 三态机放行【无 .prompt 也放行=零继承不卡死】+ FEED_TEXT 内容 + 旧 prompt/锚点逻辑已删静态断言),`node` 跑真实脚本 22 passed 0 failed。
 
 落点:`claude-governance`(机器级,跨工作区)。
 
@@ -376,12 +376,12 @@ D9(2026-06-26)加「接续提示词分区 + 锚点 / ✅ 校验 + 复核指令�
 | **M1** spawn 前加「progress.md 不存在就别开窗」门 | **否决** | 又一道校验门 = 打补丁;最坏=新窗裸奔,属可接受「无碍」,不值一道门 |
 | **H1** ≥2 主线确认门措辞未对齐 FEED_TEXT,夜间可能停下问 | **采纳** | 守「保证能交接」底线;非加门,是把**已有 D7 门**的一句话改准让它对自动窗让位,零新逻辑 |
 | **M3** early-warn 软档提醒别再起新后台任务 | **采纳** | 纯一行文案,服务「不丢后台结果」,零逻辑 |
-| **M2** 硬 95 离 autocompact 触发线仅 ~42k token | **保留 95** | 涛哥拍板值;真正给余量的是软 70,95 仅 backstop。留观察,若实测「autocompact 先于交接」再回拉 ~90 |
+| **M2** 硬阈值离 autocompact 触发线的余量 | **调低 95→80** | 初定 95 仅剩 ~42k token 偏薄;涛哥拍板降到 80(≈raw used 66%,距 autocompact 充足),消解该担忧 |
 
 ### 实证 vs 假设(诚实标注,ADR-015)
 
 - **[实证]** 工具层异常铁证 = `a552ec88` 伪造 `60c1fc` → `No task found`(transcript 逐条 + `60c1fc` 母会话 grep 0 命中 + 本窗无 compaction);手动「继续」窗 `83aa2bf8` 0 伪造对照;母会话 13× `run_in_background:true`。三文件 `node --check` 过 / 单测 22 passed 0 failed / 双 CR APPROVE。
-- **[假设 / 残留]** ① 「绝不砍后台任务」对进程内 `run_in_background` 句柄 Stop hook 无可见性,做不出硬门,仍是「收尾 reason 软约束 + 25 点 gap + 新窗零继承」三层软防(可接受,非过度工程天花板)② 硬 95 的 autocompact 薄垫(M2,留观察)③ ≥2 主线时 FEED_TEXT 绕门靠模型遵从用户级指令(H1 已对齐门描述降险,但非机械保证)—— 这三项涛哥明确接受(「仍存在开双窗 / 小毛病无碍,只要能正常交接」)。
+- **[假设 / 残留]** ① 「绝不砍后台任务」对进程内 `run_in_background` 句柄 Stop hook 无可见性,做不出硬门,仍是「收尾 reason 软约束 + 25 点 gap + 新窗零继承」三层软防(可接受,非过度工程天花板)② 硬阈值 80(初定 95 偏薄,已调低,M2 消解)③ ≥2 主线时 FEED_TEXT 绕门靠模型遵从用户级指令(H1 已对齐门描述降险,但非机械保证)—— 这三项涛哥明确接受(「仍存在开双窗 / 小毛病无碍,只要能正常交接」)。
 
 ### 推翻 D9 依据
 
