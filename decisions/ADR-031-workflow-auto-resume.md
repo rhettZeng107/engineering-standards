@@ -340,3 +340,49 @@ cw 夜间模式跑 HC 批次,feeder 日志 + 屏幕快照还原出两个自动�
 ### 否决「人在场探测」依据
 
 「在线时不交接 / 探测人是否在场再决定可靠性」被否决:① 触发是否安全应由 context 阈值客观决定,不由「人在不在」主观决定 ② 把接续可靠性寄托于「人会盯着」= 拐杖,长 context 自治正是人不盯着的场景 ③ 正解 = 对自己产出的强制独立验证(可做成 gate / test / 复核指令),与人是否在场正交。
+
+---
+
+## 修订(2026-06-29)— 推翻 D9 验证 gate 路线,回归极简「模拟手动开窗 + 新窗零状态继承」(D10,涛哥拍板大砍)
+
+### 触发 / Context
+
+D9(2026-06-26)加「接续提示词分区 + 锚点 / ✅ 校验 + 复核指令」验证 gate 后,自动接续窗**仍复发工具层异常 / 幻觉**。实证铁证(SRMV2 2026-06-29,session `a552ec88` 自动接续窗):模型断言「后端 build 后台任务已完成」并调 `TaskOutput task_id=60c1fc` → 工具层报 **`No task found with ID: 60c1fc`**;该 id 在母会话(`7fcdbd36`,交接时有 13 个 `run_in_background` 在途)出现 **0 次**、本窗无 compaction = **纯臆造的工具句柄**。对照:同期**手动**开窗输入「继续」的窗(`83aa2bf8`)零伪造、干净接续。
+
+**根因升级认知**:D9 把问题理解为「上窗假『已完成』声明遗传」——只对了一半。更深层是 **进程边界丢运行时状态**:一个「窗口」= 一个新 OS 进程,后台 `run_in_background` 的 task id / Agent 句柄 / BashOutput 流活在**旧进程内存**、活不过进程边界;而 D9 用 `.prompt` + 层层校验把上窗**叙事**精确传给下窗,新窗继承了「后台 build 在跑」的叙事却拿不到**真句柄** → 用续写先验**伪造**一个格式合理的句柄(`60c1fc`)。**D9 的验证 gate 只校验静态产物(commit/文件),覆盖不到「在途运行时句柄」这一维,且每补一层都在加大「新窗继承上窗叙事」的面 = 越补越脆。**
+
+### 决策(涛哥 2026-06-29 拍板:大道至简,推翻 D9 加法路线)
+
+1. **回归「模拟手动开窗」**:交接 = 等在途后台任务跑完 → 刷 progress.md → 开新窗读最新 `status=in_progress` 的 progress.md 按全局工作流继续。**真理源唯一 = progress.md**(SessionStart `core-progress-resume-inject` 自动注入),**新窗零状态继承**。
+2. **删 D9 全套**:不再写 `.prompt` 接续提示词、不做 file:line 锚点 / ✅ 分区 promptcheck 校验。feeder 注入**固定 `FEED_TEXT`**(英文纯 ASCII 单行,经 send-keys;含「take the most recently updated in_progress one」绕 D7 多主线确认门)。
+3. **防漂移 / 防杜撰新机理 = 零继承**:新窗**碰不到**上窗的后台 task id / Agent 死句柄 → `60c1fc` 类伪造**从机制上不可能**;不靠「层层校验」(那是 D9 越补越脆的根)。
+4. **阈值**:软 `70`(不变,达到提示准备交接)/ 硬 `79→95`(超此才强制切换)。**在途后台任务绝不砍断**(收尾 gate「等 run_in_background 跑完才 `touch ready`」+ 新窗零继承双保险:即便上窗漏等,下窗也碰不到死句柄)。
+
+### 实现 / Implementation(D10)
+
+- `~/.claude/bin/context-handoff.js`:净删 ≈95 行(178 删 / 83 增)—— 删 initPrompt 兜底 + 读 `.prompt` + promptcheck 整块;`FEED_TEXT` 常量化;软 / 硬阈值收尾 reason 简化为「等后台→刷 progress→touch ready」;硬阈值默认 79→95。
+- `~/.claude/bin/context-handoff-early-warn.js`:硬阈值 79→95;reason 同步删 `.prompt` 写作;软档加「近阈值不要再起新 `run_in_background` 后台任务」(M3,丢结果风险的真正控制点)。
+- `~/.claude/hooks/core-progress-resume-inject.js`:D7 多主线确认门例外项描述对齐新 `FEED_TEXT`,自动交接窗不卡门(H1)——**闭合 D9 backlog #2**。
+- `~/.claude/bin/context-handoff.test.js`:重写,22 断言(软 / 硬=95 block + ready 三态机放行【无 .prompt 也放行=零继承不卡死】+ FEED_TEXT 内容 + 旧 prompt/锚点逻辑已删静态断言),`node` 跑真实脚本 22 passed 0 failed。
+
+落点:`claude-governance`(机器级,跨工作区)。
+
+### CR + 取舍(涛哥「大道至简」标尺过滤 architect 四条)
+
+双 CR:**code-reviewer APPROVE(0 HIGH)** / **architect APPROVE-WITH-FIXES**(独立读 diff + 跑单测核实)。architect 四条按「能交接即可、别再加门」标尺过滤:
+
+| 条目 | 处置 | 依据 |
+|---|---|---|
+| **M1** spawn 前加「progress.md 不存在就别开窗」门 | **否决** | 又一道校验门 = 打补丁;最坏=新窗裸奔,属可接受「无碍」,不值一道门 |
+| **H1** ≥2 主线确认门措辞未对齐 FEED_TEXT,夜间可能停下问 | **采纳** | 守「保证能交接」底线;非加门,是把**已有 D7 门**的一句话改准让它对自动窗让位,零新逻辑 |
+| **M3** early-warn 软档提醒别再起新后台任务 | **采纳** | 纯一行文案,服务「不丢后台结果」,零逻辑 |
+| **M2** 硬 95 离 autocompact 触发线仅 ~42k token | **保留 95** | 涛哥拍板值;真正给余量的是软 70,95 仅 backstop。留观察,若实测「autocompact 先于交接」再回拉 ~90 |
+
+### 实证 vs 假设(诚实标注,ADR-015)
+
+- **[实证]** 工具层异常铁证 = `a552ec88` 伪造 `60c1fc` → `No task found`(transcript 逐条 + `60c1fc` 母会话 grep 0 命中 + 本窗无 compaction);手动「继续」窗 `83aa2bf8` 0 伪造对照;母会话 13× `run_in_background:true`。三文件 `node --check` 过 / 单测 22 passed 0 failed / 双 CR APPROVE。
+- **[假设 / 残留]** ① 「绝不砍后台任务」对进程内 `run_in_background` 句柄 Stop hook 无可见性,做不出硬门,仍是「收尾 reason 软约束 + 25 点 gap + 新窗零继承」三层软防(可接受,非过度工程天花板)② 硬 95 的 autocompact 薄垫(M2,留观察)③ ≥2 主线时 FEED_TEXT 绕门靠模型遵从用户级指令(H1 已对齐门描述降险,但非机械保证)—— 这三项涛哥明确接受(「仍存在开双窗 / 小毛病无碍,只要能正常交接」)。
+
+### 推翻 D9 依据
+
+D9 的「分区 + 锚点 / ✅ 校验」**不删反留会与本修订冲突**(继续诱导上窗写接续提示词 = 继续传叙事 = 继续制造伪造温床),故**整套移除**,非叠加。一句话:**防漂移的正解不是给「传状态」加更多校验,而是把「传的状态」砍到零**(新窗 = 干净会话,真理源只剩 progress.md)。D9 方向(靠验证 gate)在「运行时句柄伪造」维度被实证证伪,以本 D10 supersede。
