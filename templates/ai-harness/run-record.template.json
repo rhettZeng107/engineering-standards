@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "0.1",
+  "task": {
+    "id": "",
+    "title": "",
+    "track": "simple|standard|migration",
+    "riskFlags": [],
+    "tier": "1|2|3",
+    "startedAt": "",
+    "endedAt": ""
+  },
+  "sourcesRead": [],
+  "evidence": [
+    {
+      "claim": "",
+      "method": "file_line|text_search|lsp|build|test|api|db|git|browser|e2e",
+      "anchor": "",
+      "result": ""
+    }
+  ],
+  "changes": [],
+  "gates": {},
+  "decisions": [],
+  "debt": [],
+  "recovery": {
+    "progressPath": "",
+    "nextAction": ""
+  },
+  "outcome": {
+    "blocked": [],
+    "fixed": [],
+    "leftover": [],
+    "verificationSummary": "",
+    "reportSummary": ""
+  }
+}

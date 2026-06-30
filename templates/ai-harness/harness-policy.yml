@@ -1,0 +1,80 @@
+version: 0.1
+status: template
+scope:
+  provider_neutral: true
+  project: "<project-name>"
+
+truth_sources:
+  priority:
+    - "current_user_instruction"
+    - "system_and_safety"
+    - "nearest_project_instruction"
+    - "global_instruction"
+    - "adr_and_standards"
+    - "memory_and_backlog"
+    - "agent_report_after_verification"
+
+tracks:
+  simple:
+    triggers:
+      - "small_reversible_edit"
+      - "no_contract"
+      - "no_db_schema"
+      - "no_auth_or_security"
+      - "no_production"
+    required_outputs:
+      - "evidence_anchor"
+      - "minimal_verification"
+  standard:
+    triggers:
+      - "contract"
+      - "db_schema"
+      - "auth"
+      - "multi_file"
+      - "business_feature"
+    required_outputs:
+      - "plan"
+      - "evidence"
+      - "review"
+      - "verification"
+  migration:
+    triggers:
+      - "legacy_modernization"
+      - "functional_equivalence"
+    required_outputs:
+      - "source_inventory"
+      - "equivalence_review"
+      - "migration_plan"
+      - "verification"
+
+evidence:
+  required_for_key_claims: true
+  accepted_methods:
+    - "file_line"
+    - "api_response"
+    - "db_query"
+    - "git_result"
+    - "build"
+    - "test"
+    - "browser"
+    - "e2e"
+    - "lsp"
+    - "text_search"
+
+gates:
+  pre_commit:
+    code_review_required_for_code_changes: true
+    secret_scan_required: true
+    verification_required: true
+  production:
+    destructive_write_requires_human_approval: true
+  recovery:
+    progress_required_for_multi_turn: true
+
+evaluation:
+  golden_tasks_minimum: 10
+  metrics:
+    - "completion_rate"
+    - "first_pass_review_rate"
+    - "evidence_completeness"
+    - "e2e_pass_rate"

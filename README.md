@@ -51,11 +51,12 @@ engineering-standards/
 | **项目地图 / codebase** | ADR-025 / 026 | (gsd `/gsd-map-codebase`) | — |
 | **新建工作区** | ADR-029 | workspace-bootstrap-guide | templates/bootstrap-workspace.sh · workspace-CLAUDE.md/QWEN.md · MEMORY.md.template |
 | **LSP 符号导航** | ADR-035 | tools/lsp-nav/SKILL.md | tools/lsp-nav |
+| **AI coding harness** | ADR-015 / 018 / 031 / 035 | provider-neutral-ai-coding-harness-standard | templates/ai-harness |
 | **治理 / 精简规则** | ADR-009 / 033 / 021 | memory-maintenance-standard · governance-reduction-audit(一次性审计记录) | — |
 | **文档目录规范** | ADR-002 | doc-conventions | — |
 | **工作纪律 / 决策授权** | ADR-005 / 015 / 016 / 017 / 018 / 019 / 027 / 031 | — | — |
 
-### standards/ 全清单(16 篇)
+### standards/ 全清单(17 篇)
 
 | 文档 | 是什么 |
 |---|---|
@@ -74,6 +75,7 @@ engineering-standards/
 | workspace-bootstrap-guide | 新工作区 Bootstrap 指南 |
 | doc-conventions | 文档目录规范(spec/plan/ADR 命名) |
 | memory-maintenance-standard | Memory 维护标准 |
+| provider-neutral-ai-coding-harness-standard | Provider-neutral AI coding harness 标准(Policy / Evidence / Gates / Recovery / Eval) |
 | governance-reduction-audit-2026-05-21 | 治理减法审计记录(一次性快照,非长期标准) |
 
 ---
