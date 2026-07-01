@@ -1,0 +1,17 @@
+{
+  "artifacts": [
+    {
+      "id": "baseline-claim-1",
+      "subject": "",
+      "votes": [
+        {
+          "lens": "source-completeness",
+          "refuted": false,
+          "counterEvidence": "",
+          "confidence": "low",
+          "note": "placeholder"
+        }
+      ]
+    }
+  ]
+}

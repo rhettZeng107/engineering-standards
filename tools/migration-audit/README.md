@@ -41,6 +41,65 @@ args 见 workflow 文件头注释。关键:`apiAddrFiles` / `oldBackendMarkers` 
 
 建基准时**两者都跑**:audit 查漏 + adversarial 查误判。adversarial 的 `disputed`(多数 refute)= 基准不得锁定,交主会话复核。args:`artifacts`(待裁决判定清单)+ `frontendDir/backendDir/legacyRepo`。
 
+## Codex wrapper:标准批次 + 硬交付链
+
+Codex 不直接运行 Claude `Workflow({ parallel, agent, schema })`;迁移轨在 Codex 中用标准批次模板 + 确定性机器门 + 投票合并 wrapper 承接。
+
+### 初始化批次
+
+```bash
+tools/migration-audit/codex-migration-audit.js init \
+  --target docs/superpowers/specs/2026-07-xx-xxx-migration \
+  --batch-id 2026-07-xx-xxx-migration \
+  --title "XXX Migration"
+```
+
+生成文件:
+
+| 文件 | 作用 |
+|---|---|
+| `migration.yaml` | 批次配置,声明源仓/目标仓/gate 输入/报告输出 |
+| `source-inventory.json` | 老系统源工件清单 |
+| `migration-matrix.json` | old-to-new 映射和 gap 状态 |
+| `field-diffs.json` | 字段 diff 任务列表 |
+| `.migration-coverage` | Gate0 无同名页的消解登记 |
+| `.field-coverage` | 字段差异消解登记 |
+| `votes.json` | subagent/codex-exec 反证投票输入 |
+| `audit-report.*` | 机器审计结果 |
+
+### 本机硬验证
+
+```bash
+tools/migration-audit/codex-migration-audit.js gate   --config <batch>/migration.yaml
+tools/migration-audit/codex-migration-audit.js fields --config <batch>/migration.yaml
+tools/migration-audit/codex-migration-audit.js vote   --config <batch>/migration.yaml
+tools/migration-audit/codex-migration-audit.js local  --config <batch>/migration.yaml
+tools/migration-audit/codex-migration-audit.js report --config <batch>/migration.yaml
+```
+
+提交前必须一次跑硬门:
+
+```bash
+tools/migration-audit/codex-migration-audit.js verify --config <batch>/migration.yaml
+```
+
+- V0 = `gate + fields`:不依赖 LLM,包装 `migration-gate.sh` / `field-diff.sh`。
+- V1 = `vote + report`:合并多 subagent/codex-exec 的反证票,少于 2 个有效票或半数以上反证则 `disputed`。
+- 本机硬验证 = `verify`:依次跑 `gate + fields + vote + local + report`;任一未跑/失败即非零退出。
+- `local` 执行 `local-verify.commands` 中的项目命令(build/test/E2E 等),命令列表为空也阻断,防假绿灯。
+- wrapper 只读业务代码,只写批次目录内的审计状态/报告。
+
+### Hook / CI 硬门
+
+迁移轨不采用 warning 软门禁。推荐顺序:
+
+1. 本机:填好 `local-verify.commands`,执行 `codex-migration-audit.js verify --config <batch>/migration.yaml`。
+2. commit:安装 `templates/hooks/migration-audit-precommit.sh`,或在既有 pre-commit 中调用;`verify` 不绿则 commit 失败。
+3. CI:接 `templates/azure-pipelines-migration-audit-stage.snippet.yml`;push 后 CI 再跑同一批次 audit。
+4. 部署后:前端继续接 `E2EVerify` stage;CI E2E 失败按 `docs/ops/cicd-self-heal-sop.md` 自愈。
+
+提交/交付条件:本机 `verify` 绿 + CR 过 + commit 后 CI/E2E 绿;任一红灯不宣告迁移完成。
+
 ## 确定性机器门(与 workflow 互补,CI/收尾必跑)
 
 workflow(agent 编排)解「查得全 / 查对方向」,但 agent 仍可能漏跑或失真;同目录两个**确定性 shell 门**作机器兜底(退出码非0即红,无 LLM):

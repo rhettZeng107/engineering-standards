@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "0.1",
+  "batchId": "",
+  "legacySource": {
+    "repo": "",
+    "branchOrRef": "",
+    "evidence": ""
+  },
+  "artifacts": [
+    {
+      "id": "",
+      "module": "",
+      "type": "controller|service|dto|entity|view|script|route|menu|permission|layout|other",
+      "path": "",
+      "pageClass": "crud|dashboard|report|statistics|topology|map|workbench|other",
+      "status": "complete|half-finished|broken|unknown",
+      "evidence": "",
+      "notes": ""
+    }
+  ]
+}

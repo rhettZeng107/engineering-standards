@@ -1,0 +1,44 @@
+# ========== MigrationAudit:迁移批次硬门禁 ==========
+# 接到 Build/Test 之后、Deploy/E2E 之前。迁移批次必须本机 verify 绿灯后 commit;
+# CI 再跑一次 audit + local commands,防本地绕过或跨机差异。
+#
+# 前置:
+#   1. 仓内可访问 engineering-standards/tools/migration-audit/codex-migration-audit.js
+#      推荐通过 checkout 或脚本复制到 $(Build.SourcesDirectory)/engineering-standards。
+#   2. MIGRATION_CONFIG 指向本次批次 migration.yaml。
+#   3. local-verify.commands 中的命令在 CI agent 上可执行。
+#
+# 失败即阻断:continueOnError=false。
+
+- stage: MigrationAudit
+  displayName: 'Migration Audit Hard Gate'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+    - job: MigrationAuditVerify
+      displayName: 'codex-migration-audit verify'
+      timeoutInMinutes: 60
+      steps:
+        - checkout: self
+          fetchDepth: 2
+
+        - bash: |
+            set -euo pipefail
+            TOOL="$(Build.SourcesDirectory)/engineering-standards/tools/migration-audit/codex-migration-audit.js"
+            if [ ! -x "$TOOL" ]; then
+              echo "##vso[task.logissue type=error]codex-migration-audit.js not found/executable: $TOOL"
+              exit 1
+            fi
+            if [ -z "${MIGRATION_CONFIG:-}" ]; then
+              echo "##vso[task.logissue type=error]MIGRATION_CONFIG is required for migration audit stage"
+              exit 1
+            fi
+            "$TOOL" verify --config "$(Build.SourcesDirectory)/$MIGRATION_CONFIG"
+          displayName: 'Run migration audit verify'
+          env:
+            MIGRATION_CONFIG: $(MIGRATION_CONFIG)
+          continueOnError: false
+
+        - publish: '$(Build.SourcesDirectory)'
+          artifact: migration-audit-source
+          condition: failed()

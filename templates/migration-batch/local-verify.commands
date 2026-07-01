@@ -1,0 +1,7 @@
+# One shell command per line. Commands run from workspaceRoot.
+# Fill this file for the touched repos before commit. Empty active command list blocks `verify`.
+#
+# Examples:
+# dotnet build AI.Extend.SRM.Buyer.2/AI.Extend.SRM.Buyer.2.sln
+# npm --prefix AI.REACT.SRM.Buyer.2 run build
+# npx --prefix AI.REACT.SRM.Buyer.2 playwright test --config pipeline-e2e/playwright.config.ts

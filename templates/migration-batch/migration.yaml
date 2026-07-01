@@ -1,0 +1,28 @@
+# Codex migration batch config.
+# This file intentionally uses a flat YAML subset so tools can parse it without third-party packages.
+
+schemaVersion: "0.1"
+batchId: "<yyyy-mm-dd-topic>"
+workspaceRoot: "."
+
+# Existing deterministic gates.
+frontendSrcDir: "<target-frontend>/src"
+oldBackendMarkersCsv: ""
+apiAddrGlobCsv: ""
+legacyRootsCsv: ""
+migrationCoverageFile: ".migration-coverage"
+
+# Field diff definitions are JSON to keep the per-module list machine-stable.
+fieldDiffsFile: "field-diffs.json"
+
+# V1 adversarial vote aggregation. Fill this file with subagent or codex-exec vote outputs.
+votesFile: "votes.json"
+voteResultJson: "audit-votes.json"
+
+# Local hard verification. Fill commands before commit; empty command list blocks verify.
+localVerifyCommandsFile: "local-verify.commands"
+
+# Report outputs.
+auditStateFile: ".codex-migration-audit-state.json"
+auditReportJson: "audit-report.json"
+auditReportMd: "audit-report.md"

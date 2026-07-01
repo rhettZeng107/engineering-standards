@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "0.1",
+  "batchId": "",
+  "rows": [
+    {
+      "id": "",
+      "legacyArtifactId": "",
+      "module": "",
+      "legacyBehavior": "",
+      "targetFrontend": "",
+      "targetBackend": "",
+      "menuPermission": "",
+      "operatorVisible": false,
+      "status": "not_started|in_progress|migrated|disputed|deferred|out_of_scope",
+      "severity": "CRITICAL|HIGH|MED|LOW",
+      "evidence": [],
+      "openGaps": [],
+      "decision": ""
+    }
+  ]
+}

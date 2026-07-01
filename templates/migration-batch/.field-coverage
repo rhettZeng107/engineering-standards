@@ -1,0 +1,2 @@
+# Field coverage exceptions for field-diff.sh.
+# Format: <OldFieldName> <renamed->NewField|merged->Target|intentional|backlog#N>

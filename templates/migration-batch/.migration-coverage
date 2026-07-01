@@ -1,0 +1,2 @@
+# Page coverage exceptions for migration-gate.sh Gate 0.
+# Format: <LegacyPageName> <renamed->NewPage|merged->Page|backlog#N|boilerplate|intentional>

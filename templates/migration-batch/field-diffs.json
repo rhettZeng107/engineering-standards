@@ -1,0 +1,9 @@
+[
+  {
+    "id": "module-name",
+    "oldFilesCsv": "<legacy dto/entity files csv>",
+    "newFilesCsv": "<target dto files csv>",
+    "coverageFile": ".field-coverage",
+    "stripPrefixesCsv": "Bas_,Fk_"
+  }
+]
