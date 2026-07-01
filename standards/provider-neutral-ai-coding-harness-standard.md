@@ -77,6 +77,35 @@ flowchart TD
 | CI | Must map policy to deterministic checks and artifacts; start with dry-run before hard gates. |
 | MCP / tools | Must expose narrow, auditable actions and clear outputs. |
 
+## Codex Surface Model
+
+Codex baselines should follow the official surface split. Repeated workflow should move to the narrowest durable surface that matches its scope instead of accumulating in chat or a single global instruction file.
+
+| Surface | Use for | Avoid |
+|---|---|---|
+| Prompt/thread | One-off constraints, current task goals, temporary assumptions | Long-lived team rules |
+| `AGENTS.md` | Durable repo/team conventions, commands, verification, review expectations, local overrides | Long SOPs, historical debates, generated logs |
+| `~/.codex/config.toml` / project `.codex/config.toml` | Personal or project defaults: model, sandbox, MCP, features, instruction fallback, trusted repo behavior | Business rules or task-specific process |
+| Skill | Repeated multi-step workflows, procedural standards, reusable scripts/references | Rules that must always load before every task |
+| MCP / connector | Live external data/actions, private workspace systems, DB/API access with auditable outputs | Static knowledge that belongs in docs |
+| Hook | Mechanical lifecycle gates: secret scan, commit guard, force-push block, production write guard | Complex judgment, noisy reminders, broad policy prose |
+| Automation | Scheduled audits, recurring checks, long polling, stale-state reminders | High-risk unattended writes without sandbox/rules |
+| `codex exec` | CI/scripted runs, JSONL/schema output, log summarization, repeatable audit reports | Interactive product decisions needing user context |
+| Review | Diff/PR/commit review and regression risk finding | Implementation work or unverified agent assertions |
+| Memory | Stable preferences and local recall | Required team rules, current external facts, secrets |
+
+**Baseline rule**:when the same instruction or workflow repeats twice, decide whether it belongs in `AGENTS`, config, skill, MCP, hook, automation, `codex exec`, review, or memory. Promote it there, then remove duplicated prose from chat-era rules.
+
+## Codex Official-Practice Audit
+
+Run an official-practice audit before changing global Codex workflow or at least monthly:
+
+1. Refresh the Codex manual through the official OpenAI docs route.
+2. Compare current `~/.codex/AGENTS.md`, `~/.codex/config.toml`, hooks, skills, plugins, memory bridges, and project `AGENTS.md` against the surface model above.
+3. Report official evidence, current drift, recommended surface, changes made, and intentionally retained deviations.
+4. Put long-lived decisions in ADR/standards; put executable recurring audit steps in a skill or automation.
+5. Use `codex exec --json` or an output schema when the audit must feed CI, dashboards, or monthly trend reports.
+
 ## Run Record
 
 Standard and migration work should produce a run record when the work spans multiple steps, agents, or gates.
