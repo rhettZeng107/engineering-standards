@@ -8,6 +8,7 @@
 
 - 基线 = `v2-tokens.css`(CSS 变量:品牌靛蓝 `--v2-brand #1e4d8c` / 画布 `--v2-canvas #f5f6f8` / 语义色 ok·warn·err·info / 圆角 r-s·m·l / 阴影 sh-1·2·pop / 字族)。入口 import,层叠到 `:root`。
 - antd 5 `ConfigProvider` token 映射(两端字段级一致):`colorPrimary/colorLink #1e4d8c`、`colorSuccess #0f9d6e`、`colorWarning #c2740c`、`colorError #d14343`、`colorInfo #2563eb`、`borderRadius 7`、`colorBgLayout #f5f6f8`、`colorText #14233b`、`fontFamily`(见 §2)。
+- **按钮语义色(强制)**:以 V2 token 驱动 antd `Button`,不得页面级 hardcode 操作按钮颜色。新增 / 保存 / 提交 / 发布 / 批量发起等主动作统一 `type="primary"`;删除 / 作废 / 关闭 / 驳回 / 移出等破坏性或高风险动作统一 `danger` 或 `color="danger"`;导出 / 查看 / 编辑 / 取消 / 重置 / 查询等普通动作使用默认按钮、`type="link"` 或文本链接,只吃 `ConfigProvider` token。操作列不按业务含义随意上多色,确需强调时优先用语义 `Tag`/`StatusPill`,不要给每个行内按钮单独染色。
 - **回滚开关**:theme 文件保留 LEGACY 常量 + 单变量(`V2_ENABLED`)切换;注意 less modifyVars 经构建期注入,**翻开关后需 rebuild**(token 层 runtime 即时)— 回滚 SOP 必须写明。
 - 品牌色派生进 `rgba()` 用 `--v2-brand-rgb: 30, 77, 140`;hover 变体 `--v2-brand-soft-2`。禁页面级 hardcode 色值,既有 hardcode 在换肤批清剿(`grep` 旧主色 0 残留作机器门)。
 
