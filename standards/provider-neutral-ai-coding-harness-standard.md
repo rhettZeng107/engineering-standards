@@ -78,6 +78,30 @@ Standard, migration, cross-repo, DB, auth, production, deployment, and long-runn
 
 Do not claim commit, push, sync, deployment, or CI closure from the action command itself. Use independent verification commands.
 
+## Project Map / Codebase
+
+Keep `.planning/codebase/` when a workspace already uses it. It is a navigation and mechanism map, not the final source of current truth.
+
+| Rule | Requirement |
+|---|---|
+| Role | Use the project map to understand topology, major mechanisms, risks, and likely source-of-truth files before standard, migration, or spec/plan work. |
+| Boundary | Do not use stale project-map text as final evidence for key claims; verify against code, DB, API, build, browser, E2E, git, or LSP. |
+| Staleness | Session-start time staleness reminder threshold is 15 days. If the map is stale or drifted and the current task touches that scope, refresh the affected map sections or explicitly record the staleness and residual risk. |
+| Refresh | After substantial plan/spec/migration work, update affected maps only, preserve unrelated domains, update `MECHANISMS.md` for new mechanism knowledge, and stamp per-repo mapped heads in multi-repo workspaces. Do not rewrite the whole codebase map just because a reminder fired. |
+
+## Code Navigation
+
+Symbol-level code claims must use a semantic navigation adapter when the task risk warrants it.
+
+| Query type | Default |
+|---|---|
+| C# class/method/property references, definitions, implementations, call chains, rename impact | Use an LSP adapter such as `lsp-nav` against the specific solution. |
+| Cross-repository contract or migration analysis | Use bounded child execution or subagents per repository, with LSP where available and main-session synthesis. |
+| Text, config, route strings, docs, SQL, JSON, comments, file discovery | Use text search. |
+| Compiler correctness | Use the language build/test command, not LSP alone. |
+
+If LSP is unavailable, use text search plus line reads and mark the evidence as `text_search`, not `lsp`; high-risk work should continue to a build/test or another semantic proof before claiming completion.
+
 ## Track Model
 
 | Track | Trigger | Required Output |

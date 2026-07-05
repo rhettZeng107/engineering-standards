@@ -45,7 +45,7 @@ ADR-013(2026-05-09)确立 codebase 画像作前置事实基础,维护机制为�
 2. **新增自适应触发** —— 工作区结构发生实质变化时即时触发扫描,不等日历:
    - 工作区新增项目 / 子应用(新 nested repo / 新顶层项目目录)
    - 项目下线 / 归档(地图需移除过时项)
-3. **启动软兜底**(替代硬月度)—— 新 session 启动时 hook 自动检测项目地图 git mtime;若 > 30 天未更新且当前项目使用 GSD codebase map,则提示涛哥;**仅提示不强制**,涛哥按实际判断是否重扫
+3. **启动软兜底**(替代硬月度)—— 新 session 启动时 hook 自动检测项目地图 git mtime;若 > 15 天未更新且当前项目使用 GSD codebase map,则提示涛哥;**仅提示不强制**,涛哥按实际判断是否刷新
 4. **术语更名** —— 所有文档「codebase 画像」→「**项目地图**」;`.planning/codebase/` **目录名不变**(GSD `/gsd-map-codebase` 产出物,改目录名会破坏工具链)
 
 ### 触发机制全景
@@ -55,7 +55,7 @@ ADR-013(2026-05-09)确立 codebase 画像作前置事实基础,维护机制为�
 | 启动必扫 | spec / plan / 重大调研启动 | 读项目地图作前置事实(6 类必扫) |
 | 事件触发(增量) | spec 完结 + 强触发命中 | 三档增量更新 |
 | **自适应触发(新增)** | 工作区加 / 减项目 | 即时扫该项目地图 |
-| **启动软兜底** | 每次 session 启动 | hook 检测 > 30 天 → 提示涛哥 |
+| **启动软兜底** | 每次 session 启动 | hook 检测 > 15 天 → 提示涛哥 |
 
 ---
 
@@ -70,7 +70,7 @@ ADR-013(2026-05-09)确立 codebase 画像作前置事实基础,维护机制为�
 ### 负向 / 代价
 
 - 「工作区新增项目」的识别仍需 Claude / 涛哥判断(hook 可辅助但不全自动)
-- 失去固定日历兜底 —— 若长期无 spec 完结且无项目增减,仅靠软兜底的 30 天提示
+- 失去固定日历兜底 —— 若长期无 spec 完结且无项目增减,仅靠软兜底的 15 天提示
 
 ### 影响范围
 
@@ -147,6 +147,24 @@ YAGNI:机制未验证先固化成 skill 有 over-engineer 风险;跑 2-3 个迁�
 - 失配点③(gsd drift gate 挂 `/gsd:execute-phase` 用不上)由此 hook 补齐:不依赖 GSD execute,直接挂 progress.md 落盘事件,任何工作流通用。
 - 「约定层起步不写 wrapper skill」(YAGNI)判断保留 —— hook ≠ wrapper skill,只做**提醒**不接管刷新流程(刷新仍走本 ADR 的 merge-aware 人工/agent 步骤);固化的是「不忘触发」,非「自动执行刷新」。
 
+## 修订(2026-07-05)— 启动软兜底改 15 天 + 漂移提醒后只做增量刷新
+
+### 触发
+
+Codex 接管全局工作流后,涛哥拍板保留 `.planning/codebase/` 项目地图,并进一步要求:codebase 检查提醒更新设置为 **15 天**;有提醒或漂移时按要求更新 codebase,**不要全量写 codebase**。
+
+### 决策
+
+- `project-map-staleness-check.js` 的时效阈值从 30 天改为 **15 天**。
+- 提醒触发后,若当前任务触及提醒 scope,默认执行 **scoped refresh**:按 nested repo / 受影响机制 / 受影响章节增量刷新。
+- 禁止因为 SessionStart 提醒就全量重写 `.planning/codebase/`。全量重扫只在工作区结构大变、地图整体失真、或涛哥明确拍板时使用。
+- multi-repo 刷新必须保留未触及域,补 `MECHANISMS.md`,并盖受影响 nested repo 的 `mapped_head_*`。
+- 若本轮任务不触及 stale scope,只记录 stale risk 或忽略提醒,不为了清提醒制造无关 codebase 变更。
+
+### 影响
+
+- 全局 hook、Codex 全局规则、provider-neutral harness 标准、harness policy/run-record、enterprise skill 同步记录 15 天阈值和“增量不全量”红线。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -156,3 +174,4 @@ YAGNI:机制未验证先固化成 skill 有 over-engineer 风险;跑 2-3 个迁�
 | 2026-05-22 | 修订(multi-repo 适配) | 实证 gsd 原生 3 失配点(MECHANISMS 非原生 / multi-repo 漂移失明 / 触发点挂 GSD execute);约定层适配 = `--paths` 增量复用 + MECHANISMS 必补 + plan 完结即刷 + per-repo HEAD;不改 gsd 原生 skill;约定层起步(YAGNI) |
 | 2026-05-22 | SRMV2 验证 + 第 4 失配点 | SRMV2(6 nested repo)dogfood 验证机制跑通(增量只扫 scope / 8 图齐含 MECHANISMS / per-repo HEAD 非根 HEAD 84935dc / 他域零丢失);新发现失配点④(mapper `Write` 整篇覆盖冲聚合图他域,数据丢失)→ 解法 merge-aware spawn(带 required_reading 现有图 + 保留他域指令) |
 | 2026-05-29 | 修订(hook 化 + 泛化) | 涛哥明确「任何 plan 完结即刷地图」不限 GSD;触发面泛化到任何 `progress.md status:done`;约定层(recall)升级为 hook(inject/warn)`core-plan-done-codebase-sync-reminder.js`;补齐失配点③;hook 只提醒不接管刷新流程 |
+| 2026-07-05 | 修订(15 天提醒 + 增量刷新红线) | Codex 接管后保留 codebase;SessionStart 时效提醒阈值 30→15 天;提醒/漂移触发后只按受影响 scope 增量刷新,禁止为清提醒全量重写 codebase |

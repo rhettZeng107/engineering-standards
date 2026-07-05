@@ -438,6 +438,33 @@ hook **无法语义判断**「这次 grep 该不该走 LSP」,只能启发式 �
 
 机器级全局,所有 `~/Projects` 下工作区(SYSV2/SRMV2/HC/未来 MES/WMS/EAM/TPM)生效。纯提醒,不改任何工具行为。
 
+## 修订(2026-07-05)— Codex-native LSP 适配 + codebase 保留边界
+
+### 触发
+
+Codex 接管原 Claude 工作流后,涛哥拍板:保留 `.planning/codebase/` 项目地图;Codex LSP 路线按评估建议落地。
+
+### 决策
+
+- 复用底层 `~/Projects/engineering-standards/tools/lsp-nav/lsp-nav.js`;不直接复制 Claude 的 sub-Claude gateway、`.claude` LSP hooks 或 Claude 会话生命周期机制。
+- Codex 同 sln C# symbol 查询默认走 `lsp-nav`: `find` / `callers` / `references` + `--project <sln>`;能拿到真实 language server / lsp-nav 结果时才标 `method=lsp`。
+- 跨 nested repo / 大上下文隔离分析用 Codex subagent 或 `codex exec -C <nested-repo> --json`;主会话负责综合、风险判断和最终证据链。
+- `rg` 保留为文本、配置、路由、SQL、JSON、文档、文件发现工具;symbol 影响面不能把 `rg` 证据标成 LSP。
+- C# 编译正确性仍以 `dotnet build` 为唯一裁定,LSP 不替代 build/test。
+- `.planning/codebase/` 保留为导航层 / 机制地图,不是实时事实终审。15 天时效提醒或 per-repo 漂移触发后,只按受影响 scope 增量刷新 codebase,保留未触及域、补 `MECHANISMS.md`、盖 per-repo HEAD;禁止为清提醒全量重写 codebase。
+
+### 本轮实证
+
+- `lsp-nav doctor`:Roslyn backend ready。
+- `lsp-nav status`:SYS `AL.Extend.SYS.sln` 与 MDM `MDMWebApi.sln` loaded。
+- `lsp-nav find SysContext --project ...AL.Extend.SYS.sln`:返回 `SysContext.cs` 定义与构造函数命中。
+- `lsp-nav callers SysContext --project ...AL.Extend.SYS.sln --json`:返回语义引用。
+- `project-map-staleness-check.js`:SYSV2 项目地图提示 44 天未更新,验证 SessionStart 检查机制有效。
+
+### 影响
+
+- 全局 Codex `AGENTS.md`、provider-neutral harness 标准、harness policy/run-record、enterprise harness skill、`lsp-nav-codex` skill 同步落地。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -451,3 +478,4 @@ hook **无法语义判断**「这次 grep 该不该走 LSP」,只能启发式 �
 | 2026-06-15 | 修订(会话引用计数自动关停 bridge,2026-06-15b)| Roslyn 冷启实测 2s → 常驻改「随会话关」;涛哥拍板 B + 并发约束(多会话不一刀切关);引用计数(session_id 配对 + transcript-mtime 8h 幽灵兜底,实证放弃 ppid/lsof/祖先链);core-lsp-session/autostop hook + settings SessionEnd;CR 2 HIGH 回修 + 17 测试过;真实 SessionEnd 触发待重启验证 |
 | 2026-06-15 | 修订(真实会话验证 + 补 .handoff 存活信号,2026-06-15c)| 涛哥配合真实 CLI 会话实证:register/SessionEnd autostop/注销/非末位保留/末位停 全 ✅;**但当前版 claude 不写 `<sid>.jsonl` → transcript 主信号系统性失效 → 只剩静态 registry → >8h 活会话误停(破红线)**;涛哥拍板 A:reconcile 三信号取 max 补 `.handoff/ctx-<sid>.json`(会话期刷新),纯只增不减判活;落盘回归 core-lsp-session.test.js 15/15 + 真实冒烟过 |
 | 2026-06-17 | 修订(symbol 查询默认 LSP 升级为 PreToolUse 软提醒 hook)| 翻车:TPM BP 发布排查时 symbol 查询(AuthInfoQueryService 引用 / AuthInfo.cs 定义)用 grep 没走 LSP;涛哥拍板 warn 档新增 `core-lsp-symbol-grep-guard.js`(启发式检测疑似符号 grep → 喂 lsp-nav 现成命令,非阻断);warn 不 block 因「证伪某词是否符号」的合法 grep 不能误伤;配套文件查找走 Glob 工具 |
+| 2026-07-05 | 修订(Codex-native LSP + codebase 保留边界)| Codex 接管后复用 lsp-nav 底层,不复制 Claude gateway/hooks;同 sln C# symbol 走 lsp-nav,跨 repo 用 Codex subagent/`codex exec -C`;保留 `.planning/codebase/` 为导航层,15 天/漂移提醒后只做 scoped refresh,禁止全量重写 |

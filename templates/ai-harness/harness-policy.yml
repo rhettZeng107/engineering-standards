@@ -1,4 +1,4 @@
-version: 0.2
+version: 0.3
 status: template
 scope:
   provider_neutral: true
@@ -72,6 +72,43 @@ preflight:
     - "sync"
     - "deployment"
     - "ci"
+
+project_map:
+  retain_when_present: true
+  default_path: ".planning/codebase"
+  role: "navigation_and_mechanism_map_not_final_truth"
+  staleness_reminder_days: 15
+  read_for:
+    - "standard"
+    - "migration"
+    - "spec_plan"
+    - "major_research"
+  stale_relevant_action: "scoped_refresh_or_record_stale_risk"
+  refresh_scope: "affected_sections_only_no_full_rewrite"
+  refresh_after:
+    - "substantial_plan_done"
+    - "migration_done"
+    - "major_mechanism_change"
+  refresh_requirements:
+    - "preserve_unrelated_domains"
+    - "update_MECHANISMS_when_mechanism_changes"
+    - "stamp_per_repo_heads_for_multi_repo"
+
+code_navigation:
+  symbol_queries_default: "lsp"
+  csharp_preferred_adapter: "lsp_nav_bridge"
+  cross_repo_analysis_adapter: "bounded_child_execution"
+  text_search_allowed_for:
+    - "copy"
+    - "route_strings"
+    - "config"
+    - "docs"
+    - "sql"
+    - "json"
+    - "comments"
+    - "file_discovery"
+  fallback_when_lsp_unavailable: "text_search_with_limitations_and_followup_build_or_semantic_proof"
+  compiler_correctness_gate: "build"
 
 evidence:
   required_for_key_claims: true

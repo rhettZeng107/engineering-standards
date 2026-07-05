@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.2",
+  "schemaVersion": "0.3",
   "task": {
     "id": "",
     "title": "",
@@ -26,6 +26,15 @@
       }
     ],
     "completionClaimsRequireIndependentVerification": true
+  },
+  "projectMap": {
+    "path": "",
+    "status": "current|stale|absent|not_relevant",
+    "lastMappedAt": "",
+    "stalenessReminderDays": 15,
+    "relevantToTask": false,
+    "action": "read|scoped_refresh|recorded_stale_risk|skipped",
+    "evidence": []
   },
   "sourcesRead": [],
   "evidence": [
