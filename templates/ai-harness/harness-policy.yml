@@ -1,4 +1,4 @@
-version: 0.1
+version: 0.2
 status: template
 scope:
   provider_neutral: true
@@ -47,6 +47,32 @@ tracks:
       - "migration_plan"
       - "verification"
 
+preflight:
+  required_for:
+    - "standard"
+    - "migration"
+    - "cross_repo"
+    - "db"
+    - "auth"
+    - "production"
+    - "deployment"
+    - "long_running"
+  checks:
+    - "pwd"
+    - "git_root"
+    - "repo_role"
+    - "git_remote"
+    - "git_branch"
+    - "dirty_state"
+    - "instruction_chain"
+    - "verification_plan"
+  completion_claims_require_independent_verification:
+    - "commit"
+    - "push"
+    - "sync"
+    - "deployment"
+    - "ci"
+
 evidence:
   required_for_key_claims: true
   accepted_methods:
@@ -62,14 +88,55 @@ evidence:
     - "text_search"
 
 gates:
+  preflight:
+    required_for: "preflight.required_for"
   pre_commit:
     code_review_required_for_code_changes: true
     secret_scan_required: true
     verification_required: true
+  migration:
+    source_inventory_required: true
+    equivalence_review_required: true
+    local_verify_before_commit: true
+  multi_repo:
+    verify_each_touched_repo: true
+    root_workspace_and_nested_repo_must_not_be_mixed: true
+  git:
+    pull_rebase_before_push: true
+    independent_status_after_push: true
   production:
     destructive_write_requires_human_approval: true
   recovery:
     progress_required_for_multi_turn: true
+
+run_record:
+  mandatory_for:
+    - "migration"
+    - "cross_repo"
+    - "db"
+    - "db_schema"
+    - "auth"
+    - "production"
+    - "deployment"
+    - "ci_self_heal"
+    - "multi_agent"
+    - "multi_turn"
+  human_readable_progress: "progress.md"
+  machine_readable_template: "templates/ai-harness/run-record.template.json"
+
+runtime_adapters:
+  coordinator_owns:
+    - "requirements"
+    - "spec_plan"
+    - "risk_decision"
+    - "review_synthesis"
+    - "acceptance"
+  child_execution_surfaces:
+    - "cli"
+    - "codex_exec_json"
+    - "bounded_subagents"
+    - "ci"
+  provider_specific_surfaces_are_adapters: true
 
 evaluation:
   golden_tasks_minimum: 10

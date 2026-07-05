@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.1",
+  "schemaVersion": "0.2",
   "task": {
     "id": "",
     "title": "",
@@ -9,22 +9,138 @@
     "startedAt": "",
     "endedAt": ""
   },
+  "preflight": {
+    "workspaceRoot": "",
+    "repos": [
+      {
+        "path": "",
+        "role": "root-workspace|nested-app|standards|reference|other",
+        "gitRoot": "",
+        "remotes": [],
+        "branch": "",
+        "statusShort": "",
+        "dirtyState": "",
+        "dirtyClassification": "clean|user|agent|generated|unknown|mixed",
+        "instructionSources": [],
+        "verificationPlan": []
+      }
+    ],
+    "completionClaimsRequireIndependentVerification": true
+  },
   "sourcesRead": [],
   "evidence": [
     {
       "claim": "",
-      "method": "file_line|text_search|lsp|build|test|api|db|git|browser|e2e",
+      "method": "file_line|api_response|db_query|git_result|build|test|browser|e2e|lsp|text_search",
       "anchor": "",
       "result": ""
     }
   ],
   "changes": [],
-  "gates": {},
+  "gates": {
+    "preflight": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "review": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "secretScan": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "verification": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "dbReview": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "productionGuard": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "e2e": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "migration": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "multiRepo": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "git": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "ci": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    },
+    "recovery": {
+      "status": "pass|fail|skipped",
+      "evidence": [],
+      "skipReason": "",
+      "skipOwner": "",
+      "residualRisk": ""
+    }
+  },
+  "childRuns": [
+    {
+      "surface": "codex_exec|cli|subagent|ci|mcp|other",
+      "id": "",
+      "purpose": "",
+      "inputs": [],
+      "outputs": [],
+      "status": "pass|fail|partial|cancelled"
+    }
+  ],
   "decisions": [],
+  "approvals": [],
   "debt": [],
   "recovery": {
     "progressPath": "",
-    "nextAction": ""
+    "nextAction": "",
+    "hint": "",
+    "owner": ""
   },
   "outcome": {
     "blocked": [],

@@ -48,6 +48,36 @@ flowchart TD
 | Evaluation | Golden tasks and graders must measure harness quality over time. |
 | Adapter | Runtime-specific automation must be thin and traceable to policy. |
 
+## Operating Baseline v1
+
+This baseline is the cross-workspace default for enterprise AI coding work. Project-level `AGENTS.md` files may specialize commands, repositories, credentials, and validation surfaces, but should not redefine the core model.
+
+| Layer | Default |
+|---|---|
+| Main session | Owns requirement framing, source-of-truth decisions, plan/spec approval, risk escalation, review synthesis, and final acceptance. |
+| Child execution | Uses CLI, `codex exec`, CI jobs, or bounded agents for implementation, logs, builds, tests, and structured audits. |
+| Project instructions | Keep repo layout, commands, verification, and do-not rules near the code in `AGENTS.md`; avoid long SOPs. |
+| Standards | Keep cross-project principles, reusable gates, templates, and evaluation rules in `engineering-standards`. |
+| Skills | Keep repeated procedural workflows, especially migration, onboarding, BP auth/menu, CI triage, and harness audits. |
+| Hooks/rules/CI | Enforce mechanical checks: secret scan, destructive command guard, pull-before-push, production write guard, migration verify, and review gates. |
+| Memory | Helps recall preferences and pitfalls; it is never the only source for required policy or current facts. |
+
+## Multi-Repo Preflight
+
+Standard, migration, cross-repo, DB, auth, production, deployment, and long-running tasks must start with a workspace preflight before edits:
+
+| Check | Evidence |
+|---|---|
+| Workspace root | `pwd` and expected workspace path. |
+| Active repo | `git rev-parse --show-toplevel` from the target directory. |
+| Repository role | root workspace, nested application repo, docs/standards repo, or external reference repo. |
+| Remote and branch | `git remote -v`, `git status -sb`, and target branch. |
+| Dirty state | local changes classified as user/Codex/generated/unknown before edits. |
+| Instruction chain | nearest `AGENTS.md` plus relevant global/project standards. |
+| Verification plan | build/test/E2E/DB/API/browser/CI commands that match the risk track. |
+
+Do not claim commit, push, sync, deployment, or CI closure from the action command itself. Use independent verification commands.
+
 ## Track Model
 
 | Track | Trigger | Required Output |
@@ -60,6 +90,7 @@ flowchart TD
 
 | Gate | Trigger |
 |---|---|
+| Preflight | Standard, migration, cross-repo, DB, auth, production, deployment, or long-running task |
 | Code review | Code or executable config changes before commit |
 | Secret scan | Any staged change before commit |
 | DB review | Schema, migration, SQL, data correction, or DB contract |
@@ -67,6 +98,8 @@ flowchart TD
 | E2E | Cross-frontend/backend, auth, menu, deployment, or UI workflow |
 | Git verify | After commit and after push |
 | Recovery | Multi-turn work, interruption, or resume command |
+
+Gate results should be evidence records, not prose assertions. If a gate is intentionally skipped, record the reason, owner, and residual risk.
 
 ## Runtime Adapter Requirements
 
@@ -108,11 +141,20 @@ Run an official-practice audit before changing global Codex workflow or at least
 
 ## Run Record
 
-Standard and migration work should produce a run record when the work spans multiple steps, agents, or gates.
+Standard and migration work should produce a run record when the work spans multiple steps, agents, repositories, or gates.
+
+Run record is mandatory for:
+
+- Migration track.
+- Cross-repository implementation or verification.
+- DB schema, auth, production, deployment, or CI self-heal risk.
+- Work expected to span multiple turns or require resume.
+- Work involving multiple agents or `codex exec` child runs.
 
 Minimum fields:
 
 - Task id, track, risk flags, tier.
+- Preflight facts for each touched repository.
 - Sources read.
 - Evidence list with method and anchor.
 - Changes.
@@ -120,6 +162,8 @@ Minimum fields:
 - Decisions and approvals.
 - Debt and recovery hint.
 - Outcome summary.
+
+Use `progress.md` for human-readable continuation and `run-record.template.json` when the task needs machine-readable audit or downstream reporting.
 
 ## Evaluation Loop
 
