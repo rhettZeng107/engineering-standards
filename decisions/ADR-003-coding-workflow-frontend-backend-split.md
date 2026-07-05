@@ -1,4 +1,4 @@
-# ADR-003: 编码工作流前后端硬切分(qwen 纯前端默认 + Claude/dotnet/dba 后端 DB 路由)
+# ADR-003: 编码工作流前后端路由(Codex 本体/前端 agent + dotnet/dba 后端 DB 路由)
 
 - **Status**: Accepted
 - **Date**: 2026-05-02 涛哥重新校准 → 2026-05-05 ADR 化回溯落地
@@ -28,13 +28,13 @@
 
 ## Decision
 
-**一句话**:按**代码类型**硬切分,无文件数阈值;纯前端走 qwen 默认,后端 / DB / 跨契约 / 配置走 Claude本体或专项 agent。
+**一句话**:按**代码类型**分流,无文件数阈值;纯前端走 Codex 本体或可用前端 agent,后端 / DB / 跨契约 / 配置走 Codex 本体或专项 agent。
 
 ### 详细路由表
 
 | Task 特征 | 走哪条 | 落盘方 |
 |---|---|---|
-| 纯前端(`.tsx`/`.ts`/`.less`/`.css`/前端配置)任意文件数 | qwen 默认 | `qwen -y -p "..."` |
+| 纯前端(`.tsx`/`.ts`/`.less`/`.css`/前端配置)任意文件数 | Codex 本体优先;大批量机械 UI 可选前端 agent | 本体 / frontend agent |
 | 后端小改(单模块/不跨契约/单层/字段补漏/小重构) | Claude 本体 | Write / Edit |
 | 后端中大型/跨模块(≥2 层/新建模块/状态机/鉴权/数据迁移) | teams 模式 → `dotnet-developer` | subagent |
 | 跨前后端契约(同 task 改 DTO/接口签名) | **Claude 本体先锁契约 → 契约锁文件 → 派 subagent 落盘**(2026-06-01 升级,见下修订 + ADR-037) | 本体 + subagent |
@@ -42,7 +42,7 @@
 | 配置/文档/plan/spec/memory/规则/微调 | Claude 本体 | Write / Edit |
 | E2E | Claude 本体 / `frontend-developer` / 其他合适 agent(**禁 qwen**) | Bash `npx playwright test` |
 
-### Qwen 硬约束(必带 prompt)
+### 历史 Qwen 约束(已停用,仅追溯)
 
 1. 文件路径全列出 + 改动范围 + 验收标准
 2. 加中文注释(业务约束 / 跨子应用同步点 / schema 依赖)
@@ -51,11 +51,11 @@
 5. 禁碰前端构建配置安全字段(CORS / proxy 鉴权)
 6. 跨契约 task 必须读 team-lead 提供的契约锁文件作输入
 
-### Qwen 兜底触发(任一即 Claude本体或 frontend-developer 接管)
+### 历史 Qwen 兜底触发(已停用,仅追溯)
 
 - qwen 冒烟失败 / 落盘越界 / 自审 2 轮不收敛 / 验收 CR ≥ 3 或 1 CRITICAL / 跨契约不一致
 
-**兜底优先级**:qwen 失败 → ① Claude 本体 Edit(小改) → ② `frontend-developer`(中大型 / 复杂 UI 重构)
+**历史兜底优先级**:qwen 失败 → ① Claude 本体 Edit(小改) → ② `frontend-developer`(中大型 / 复杂 UI 重构)。当前不再默认派 qwen。
 
 ---
 
@@ -84,11 +84,25 @@
 **背景**:① 动态 workflow fan-out 试点(迁移轨批量页面迁移,ADR-014 增强)需 `frontend-developer` 并行落盘;② 实践中复杂业务页 qwen 不擅长(plan P1/P2 教训),`frontend-developer` 才是合适落盘方。原 hook 硬 block `frontend-developer`(要 `# qwen-exception:` 豁免)成为日常摩擦。
 
 **决策**:`qwen-default-frontend-guard.js` 从 **block(exit 2)→ warn(exit 0 + stderr 软提醒)**(涛哥拍板)。
-- 前端默认 qwen **仍是推荐**(成本优化,简单 CRUD qwen 胜任)——hook 仍软提醒。
+- 当时仍推荐 qwen 处理简单 CRUD 前端任务;该策略已被 2026-07-05 修订停用。
 - **不再硬拦 `frontend-developer`**:复杂业务页 / workflow fan-out / 跨组件重构用它,无需豁免注释。
 - 落盘方判断回归语义:简单 CRUD → qwen;复杂 / fan-out → `frontend-developer`。
 
-**影响**:路由表(line 37「qwen 默认」)+ 兜底优先级语义不变(qwen 仍默认),只是 `frontend-developer` 不再被 hook 硬拦;「Qwen 硬约束/兜底」中"强制"语义弱化为"默认推荐"。配套全局 CLAUDE.md「编码工作流路由」段同步(强制→软提醒)。**未变**:`qwen-yolo-flag-guard`(qwen 调用仍强制 -y)、E2E 禁 qwen、qwen 6 条硬约束(用 qwen 时仍适用)。
+**影响**:该修订已被 2026-07-05 修订替代;当前不再保留 qwen 默认或 qwen 相关 active hook。
+
+---
+
+## 修订(2026-07-05)— 取消 qwen 订阅相关默认路由与硬约束
+
+**背景**:qwen 订阅即将到期,继续把 qwen 作为纯前端默认落盘方会制造无效路由和 hook 噪声。
+
+**决策**:
+- 当前默认前端落盘方改为 Codex 本体;大批量机械 UI 可选本会话可用的前端 agent。
+- 停用 `qwen-default-frontend-guard.js` active 注册,不再硬拦 `frontend-developer`。
+- 停用 `sysv2-qwen-yolo-flag-guard.js` active 注册,不再为 qwen CLI 维护 `-y` 硬约束。
+- 历史 qwen prompt 约束仅作为旧策略追溯;除非涛哥重新启用 qwen,不作为当前执行规则。
+
+**影响**:全局 `~/.codex/AGENTS.md` 与 SYSV2 `AGENTS.md` 已同步取消 qwen 默认措辞;保留 CR、E2E、鉴权、DB 等非 qwen 门禁不变。
 
 ---
 
@@ -154,4 +168,4 @@
 | 2026-04-21 | teams 模式雏形 | 三路之一 |
 | 2026-05-02 | 重新校准为前后端硬切分 | 涛哥拍板 |
 | 2026-05-05 | ADR-003 回溯落地 | 上提全局 |
-| 2026-06-14 | 修订 | qwen-default-frontend-guard 取消强制(block→warn):前端默认 qwen 仍推荐,但复杂业务页/workflow fan-out 用 frontend-developer 不再硬拦。触发=workflow fan-out 试点 + 复杂页 qwen 不擅长(P1/P2 教训) |
+| 2026-06-14 | 修订 | qwen-default-frontend-guard 取消强制(block→warn):当时仍推荐 qwen 处理简单前端任务,但复杂业务页/workflow fan-out 用 frontend-developer 不再硬拦。该策略已被 2026-07-05 修订停用。 |

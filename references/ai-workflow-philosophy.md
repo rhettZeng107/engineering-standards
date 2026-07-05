@@ -48,7 +48,7 @@ flowchart TD
     S2 --> D[四层文档<br/>ADR/Spec/Plan/Tasks<br/>ADR-002]
     S3 --> D
     D --> E{编码路由<br/>ADR-003}
-    E -->|纯前端| E1[qwen -y]
+    E -->|纯前端| E1[Codex 本体/前端 agent]
     E -->|后端中大型| E2[dotnet-developer]
     E -->|DB/Schema| E3[dba subagent]
     E -->|后端小改/文档| E4[Claude 本体]
@@ -101,7 +101,7 @@ flowchart LR
 | **事实驱动 4 步** | 实证现状 → 基于事实给方案 → 沟通拍板 → 严按执行;claim 必标来源;假设/实证分区 | ADR-015 / ADR-030 A3 |
 | **三轨工作流** | 标准 / 简单 / 迁移改造,触发词自动确认走哪轨 | ADR-014 |
 | **四层文档** | ADR(为什么)/ Spec(做什么)/ Plan(怎么做)/ Tasks(内嵌 plan 底部) | ADR-002 |
-| **编码工作流路由** | 纯前端→qwen / 后端中大型→dotnet-developer / DB→dba / 小改+文档→Claude 本体 | ADR-003 |
+| **编码工作流路由** | 纯前端→Codex 本体/前端 agent / 后端中大型→dotnet-developer / DB→dba / 小改+文档→Codex 本体 | ADR-003 |
 | **决策授权三档** | Tier 1 自主 / Tier 2 简洁拍板 / Tier 3 多选项落 ADR;不确定升一档 | ADR-018 |
 | **批次提交节奏** | Y 一次跑完整批;Phase 完成立刻续下一 Phase;代码落盘自动双推;中断白名单 4 类 | ADR-017 |
 | **交付 8 项核对** | 技术契约 4(API↔前端 / 分页结构 / 动词+Policy / DTO 同步)+ 业务连通 4(入口可达 / Service实装 / CRUD闭环 / 错误反馈) | ADR-008 |
@@ -161,13 +161,13 @@ flowchart LR
 | `core-prod-sql-guard.js` | 生产库 MCP | 拦截生产库破坏性 SQL | 风险分级 |
 | `core-secret-scan-commit-guard.js` | Bash | commit 前扫描密钥/密码不入库 | 安全 |
 | `sysv2-multi-repo-push-guard.js` | Bash | 多仓双推分支正确性校验 | 风险分级 |
-| `sysv2-qwen-yolo-flag-guard.js` | Bash | 强制 qwen 带 `-y` 标志 | 编码路由 |
+| `sysv2-qwen-yolo-flag-guard.js` | Bash | 已停用:原强制 qwen 带 `-y` 标志 | 历史编码路由 |
 | `core-commit-message-style-guard.js` | Bash | commit message 风格校验 | 约定一致 |
 | `sysv2-testlib-conn-guard.js` | Edit/Write | 迁移项目默认连测试库(26)防误连 | 安全 |
 | `core-authorize-attribute-guard.js` | Write | Controller 必带 `[Authorize]` | 鉴权 4 条 |
 | `sysv2-migration-new-page-guard.js` | Write | 迁移轨拦新建页(只增强现有页) | 迁移规则 |
 | `sysv2-frontend-deploy-config-guard.js` | Edit/Write | 拦前端部署配置安全字段(CORS/proxy) | 安全 |
-| `qwen-default-frontend-guard.js` | Agent | 前端任务强制走 qwen | 编码路由 |
+| `qwen-default-frontend-guard.js` | Agent | 已停用:原前端任务强制走 qwen | 历史编码路由 |
 | `core-git-log-limit-guard.js` | Bash | git log 限流防 context 爆 | Context 管理 |
 | `gsd-prompt-guard.js` / `gsd-read-guard.js` / `gsd-workflow-guard.js` | Write/Edit | GSD 工作流约束 | 机制化 |
 | `gsd-validate-commit.sh` | Bash | GSD commit 校验 | 机制化 |
