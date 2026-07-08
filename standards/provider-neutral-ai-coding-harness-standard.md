@@ -134,6 +134,21 @@ Gate results should be evidence records, not prose assertions. If a gate is inte
 | CI | Must map policy to deterministic checks and artifacts; start with dry-run before hard gates. |
 | MCP / tools | Must expose narrow, auditable actions and clear outputs. |
 
+## CI Background Monitoring
+
+After a push starts CI, monitor the pipeline to a terminal state without occupying the interactive session.
+
+| Rule | Requirement |
+|---|---|
+| Default mode | Start the CI watcher in a detached/background process or project automation, then keep the main session available for new user prompts. |
+| Evidence | Record the repo, branch, build/run id, background PID or automation id, log path, and command used to start monitoring. |
+| Output policy | Stay silent for `queued`, `pending`, and `inProgress` states. Report only `FINAL: succeeded/failed`, failed-step log summaries, self-heal actions, or decisions requiring human input. |
+| Foreground waits | Use blocking `wait` only for short CI checks or when the user explicitly asks to wait in the foreground. If it starts affecting interaction, stop the foreground wait and restart it in the background. |
+| Log handling | Write watcher logs outside source trees unless the project has an approved run-record/log directory; do not commit generated CI logs. |
+| Failure path | On failure, fetch the failed-job logs, classify whether self-heal is safe, apply the normal review/verification gates before repush, and restart background monitoring after the fix. |
+
+Examples include `nohup <ci-watch-command> > /tmp/<project>-ci/<run>.log 2>&1 &`, a shell job under `tmux`, a platform-native CI watcher, or a Codex thread/project automation when the monitor should wake the same conversation.
+
 ## Codex Surface Model
 
 Codex baselines should follow the official surface split. Repeated workflow should move to the narrowest durable surface that matches its scope instead of accumulating in chat or a single global instruction file.
