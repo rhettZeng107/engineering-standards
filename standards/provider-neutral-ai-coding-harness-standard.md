@@ -147,7 +147,14 @@ After a push starts CI, monitor the pipeline to a terminal state without occupyi
 | Log handling | Write watcher logs outside source trees unless the project has an approved run-record/log directory; do not commit generated CI logs. |
 | Failure path | On failure, fetch the failed-job logs, classify whether self-heal is safe, apply the normal review/verification gates before repush, and restart background monitoring after the fix. |
 
-Examples include `nohup <ci-watch-command> > /tmp/<project>-ci/<run>.log 2>&1 &`, a shell job under `tmux`, a platform-native CI watcher, or a Codex thread/project automation when the monitor should wake the same conversation.
+Preferred implementation order:
+
+1. Project-provided `background` subcommand that starts the watcher with a detached process and records PID/log/meta state, e.g. `node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id>`.
+2. Codex thread/project automation when the monitor should wake the same conversation or run on a schedule.
+3. Shell job under `tmux`/platform-native watcher when already standard for the project.
+4. `nohup <ci-watch-command> ... &` only as a fallback after verifying in the current tool environment that the child process survives the parent command/session.
+
+Do not treat a foreground `watch`/`wait` command wrapped in chat as background monitoring. The mechanism must be tested once per workspace/runtime family, because tool sessions may terminate process groups differently from an ordinary terminal.
 
 ## Codex Surface Model
 

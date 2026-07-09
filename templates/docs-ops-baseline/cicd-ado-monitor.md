@@ -17,6 +17,7 @@
 | 连续 push 后留最新一个,cancel 前面冗余 | `node docs/ops/cicd-ado-monitor.js cancel-old AI.REACT.MDM.1` |
 | 等某 build 跑完(已知 buildId) | `node docs/ops/cicd-ado-monitor.js wait AI.REACT.MDM.1 130` |
 | 双推后盯最新 build 直到完成(无需 buildId) | `node docs/ops/cicd-ado-monitor.js watch AI.REACT.MDM.1` |
+| 后台盯某 build 或最新 build | `node docs/ops/cicd-ado-monitor.js background AI.REACT.MDM.1 --build-id 130 --branch main` |
 
 ## 运行环境
 
@@ -24,7 +25,7 @@
 
 ## 凭据
 
-PAT 文件 `~/.claude/sysv2-ado-pat`(脚本用 `os.homedir()` 自动定位,跨平台),内容为 ADO Personal Access Token(单行,无引号)。
+PAT 文件 `~/.claude/ado-pat`(脚本用 `os.homedir()` 自动定位,跨平台),内容为 ADO Personal Access Token(单行,无引号)。历史 `~/.claude/sysv2-ado-pat` 只作旧别名。
 权限:Build (Read & Execute) — 用于查询 + cancel。
 轮换:每 90 天涛哥更新一次(参见 `cicd-agent-vm-setup.md`)。
 
@@ -48,6 +49,7 @@ PAT 文件 `~/.claude/sysv2-ado-pat`(脚本用 `os.homedir()` 自动定位,跨�
 | `cancel-old` | `<repo>` | 留最新一个排队 build,cancel 其余 |
 | `wait` | `<repo> <buildId> [--timeout 1800]` | 轮询已知 build 到完成;succeeded → exit 0,否则 exit 1 |
 | `watch` | `<repo> [--timeout 1800]` | 轮询最新 build 到完成;输出 `FINAL: succeeded/failed`,exit 0/1 |
+| `background` | `<repo> [--build-id <id>] [--branch <branch>] [--timeout 1800] [--log-dir docs/ops/ci-watch]` | detached 后台启动 `wait/watch`;父命令立即返回,生成 `.pid/.out/.json/current` |
 
 ## 典型工作流
 
@@ -60,15 +62,24 @@ node docs/ops/cicd-ado-monitor.js cancel-old AI.REACT.MDM.1
 # 输出:保留最新:#132 (...) / 已取消:#130 (...) #131 (...)
 ```
 
-### 2. Claude 自主监听 build 结果
+### 2. Claude/Codex 自主监听 build 结果
 
-双推后(post-push hook 会自动提示此命令,需 `run_in_background`):
+双推后默认后台监控,不要占住主会话。模板脚本已内置 `background`:
+
+```bash
+node docs/ops/cicd-ado-monitor.js background AI.REACT.MDM.1 --build-id <buildId> --branch <branch>
+# 父命令立即返回;PID/log/meta/current state 写入 gitignored 的 docs/ops/ci-watch/
+```
+
+若该工作区尚未提供 `background` wrapper,可临时用前台命令确认状态,但不得把长时间 `watch` 当作默认主会话等待:
 
 ```bash
 node docs/ops/cicd-ado-monitor.js watch AI.REACT.MDM.1
 # 逐行输出 [Ns] #id status/result,直到 FINAL: succeeded/failed
 # exit 0 = 绿,exit 1 = 红
 ```
+
+`nohup ... &` 只能作为兜底,且必须先在当前 Codex/终端环境实测子进程能脱离父会话继续写到终态。
 
 ### 3. 涛哥手动查 build 失败原因
 

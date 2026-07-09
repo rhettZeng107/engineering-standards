@@ -9,6 +9,8 @@
  *   node docs/ops/cicd-ado-monitor.js logs <repo> <buildId> [--failed]
  *   node docs/ops/cicd-ado-monitor.js cancel-old <repo>
  *   node docs/ops/cicd-ado-monitor.js wait <repo> <buildId> [--timeout 1800]
+ *   node docs/ops/cicd-ado-monitor.js watch <repo> [--timeout 1800]
+ *   node docs/ops/cicd-ado-monitor.js background <repo> [--build-id <id>] [--branch <branch>] [--timeout 1800] [--log-dir docs/ops/ci-watch]
  *
  * Repo 名:工作区各 nested 仓名,按 ADO 项目实际填。
  * 配置:ADO_BASE / PAT 文件可按 org 与工作区调整(下方常量,支持环境变量覆盖)。
@@ -21,6 +23,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { spawn } = require('child_process');
 
 // 同 org ADO 通常一致;不同 org 改这里或用 ADO_BASE 环境变量覆盖
 const ADO_BASE = process.env.ADO_BASE || 'http://172.21.10.30:8090/JYDevOps/JYPrdCollection';
@@ -28,6 +31,7 @@ const ADO_BASE = process.env.ADO_BASE || 'http://172.21.10.30:8090/JYDevOps/JYPr
 const PAT_FILE = process.env.ADO_PAT_FILE || path.join(os.homedir(), '.claude', 'ado-pat');
 const POLL_SEC = 15;        // wait(已知 buildId)轮询间隔
 const WATCH_POLL_SEC = 30;  // watch(盯最新 build)轮询间隔
+const DEFAULT_LOG_DIR = path.join('docs', 'ops', 'ci-watch');
 
 // 读 PAT 文件生成 Basic 认证头
 function authHeader() {
@@ -69,6 +73,30 @@ function request(method, url, body) {
 
 const apiGet = (url) => request('GET', url);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function sanitizeFilePart(value) {
+  return String(value || '-').replace(/[^A-Za-z0-9._-]/g, '_');
+}
+
+function appendJsonLine(file, value) {
+  fs.appendFileSync(file, `${JSON.stringify({ ts: new Date().toISOString(), ...value })}\n`);
+}
+
+function currentBranch(repo) {
+  try {
+    const { execFileSync } = require('child_process');
+    if (repo && fs.existsSync(path.join(repo, '.git'))) {
+      return execFileSync('git', ['-C', repo, 'branch', '--show-current'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null;
+    }
+    return execFileSync('git', ['branch', '--show-current'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null;
+  } catch (_) {
+    return null;
+  }
+}
 
 // 打印 build 列表(含耗时)
 function printBuilds(builds) {
@@ -125,7 +153,7 @@ async function cmdWait(repo, buildId, opts) {
     console.log(`[${el}s] #${b.id} status=${b.status} result=${b.result || '-'}`);
     if (b.status === 'completed') {
       process.exitCode = b.result === 'succeeded' ? 0 : 1;
-      return;
+      return b;
     }
     if (el > timeout) throw new Error(`等待超时 ${timeout}s — build ${buildId} 仍 ${b.status}`);
     await sleep(POLL_SEC * 1000);
@@ -148,7 +176,7 @@ async function cmdWatch(repo, opts) {
       if (b.status === 'completed') {
         console.log(`FINAL: ${b.result}`);
         process.exitCode = b.result === 'succeeded' ? 0 : 1;
-        return;
+        return b;
       }
     }
     if (el > timeout) throw new Error(`监控超时 ${timeout}s`);
@@ -156,7 +184,94 @@ async function cmdWatch(repo, opts) {
   }
 }
 
-// 解析 flag(--top / --state / --failed / --timeout)与位置参数
+function cmdBackground(repo, opts) {
+  if (!repo) throw new Error('用法: background <repo> [--build-id <id>] [--branch <branch>] [--timeout N] [--log-dir DIR]');
+  const logDir = opts.logDir || DEFAULT_LOG_DIR;
+  ensureDir(logDir);
+  const target = opts.buildId || 'latest';
+  const baseName = `${sanitizeFilePart(repo)}-${sanitizeFilePart(target)}`;
+  const stdoutPath = path.join(logDir, `${baseName}.out`);
+  const pidPath = path.join(logDir, `${baseName}.pid`);
+  const metaPath = path.join(logDir, `${baseName}.json`);
+  const currentPath = path.join(logDir, 'ci-watch-current.json');
+  const eventPath = path.join(logDir, `ci-watch-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.jsonl`);
+
+  const childArgs = [path.resolve(__filename), 'background-child', repo, '--log-dir', logDir];
+  if (opts.buildId) childArgs.push('--build-id', String(opts.buildId));
+  if (opts.branch) childArgs.push('--branch', String(opts.branch));
+  if (opts.timeout) childArgs.push('--timeout', String(opts.timeout));
+
+  const outFd = fs.openSync(stdoutPath, 'a');
+  const child = spawn(process.execPath, childArgs, {
+    cwd: process.cwd(),
+    detached: true,
+    env: process.env,
+    stdio: ['ignore', outFd, outFd],
+  });
+  child.unref();
+  fs.closeSync(outFd);
+
+  const meta = {
+    type: 'background-start',
+    repo,
+    branch: opts.branch || currentBranch(repo),
+    buildId: opts.buildId || null,
+    pid: child.pid,
+    logPath: stdoutPath,
+    pidPath,
+    metaPath,
+    command: [process.execPath, ...childArgs].join(' '),
+  };
+  fs.writeFileSync(pidPath, `${child.pid}\n`);
+  fs.writeFileSync(metaPath, JSON.stringify({ ts: new Date().toISOString(), ...meta }, null, 2));
+  fs.writeFileSync(currentPath, JSON.stringify({ ts: new Date().toISOString(), ...meta }, null, 2));
+  appendJsonLine(eventPath, meta);
+  console.log(`BACKGROUND: repo=${repo} pid=${child.pid} log=${stdoutPath}`);
+}
+
+async function cmdBackgroundChild(repo, opts) {
+  const logDir = opts.logDir || DEFAULT_LOG_DIR;
+  const target = opts.buildId || 'latest';
+  const baseName = `${sanitizeFilePart(repo)}-${sanitizeFilePart(target)}`;
+  const currentPath = path.join(logDir, 'ci-watch-current.json');
+  const eventPath = path.join(logDir, `ci-watch-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.jsonl`);
+  const branch = opts.branch || currentBranch(repo);
+  const logPath = path.join(logDir, `${baseName}.out`);
+  ensureDir(logDir);
+  try {
+    const build = opts.buildId
+      ? await cmdWait(repo, opts.buildId, opts)
+      : await cmdWatch(repo, opts);
+    const event = {
+      type: 'build-status',
+      repo,
+      branch,
+      buildId: build?.id || opts.buildId || null,
+      buildNumber: build?.buildNumber || null,
+      status: build?.status || null,
+      result: build?.result || null,
+      logPath,
+    };
+    fs.writeFileSync(currentPath, JSON.stringify({ ts: new Date().toISOString(), ...event }, null, 2));
+    appendJsonLine(eventPath, event);
+  } catch (error) {
+    const event = {
+      type: 'build-status-error',
+      repo,
+      branch,
+      buildId: opts.buildId || null,
+      status: 'error',
+      result: 'failed',
+      error: error.message,
+      logPath,
+    };
+    fs.writeFileSync(currentPath, JSON.stringify({ ts: new Date().toISOString(), ...event }, null, 2));
+    appendJsonLine(eventPath, event);
+    process.exitCode = 1;
+  }
+}
+
+// 解析 flag(--top / --state / --failed / --timeout / --build-id / --branch / --log-dir)与位置参数
 function parseArgs(args) {
   const opts = {};
   const positional = [];
@@ -166,6 +281,9 @@ function parseArgs(args) {
     else if (a === '--top') opts.top = parseInt(args[++i], 10);
     else if (a === '--state') opts.state = args[++i];
     else if (a === '--timeout') opts.timeout = parseInt(args[++i], 10);
+    else if (a === '--build-id') opts.buildId = args[++i];
+    else if (a === '--branch') opts.branch = args[++i];
+    else if (a === '--log-dir') opts.logDir = args[++i];
     else positional.push(a);
   }
   return { opts, positional };
@@ -190,9 +308,15 @@ async function main() {
     case 'watch':
       if (!positional[0]) throw new Error('用法: watch <repo> [--timeout N]');
       return cmdWatch(positional[0], opts);
+    case 'background':
+      if (!positional[0]) throw new Error('用法: background <repo> [--build-id <id>] [--branch <branch>] [--timeout N] [--log-dir DIR]');
+      return cmdBackground(positional[0], opts);
+    case 'background-child':
+      if (!positional[0]) throw new Error('用法: background-child <repo> [--build-id <id>] [--timeout N] [--log-dir DIR]');
+      return cmdBackgroundChild(positional[0], opts);
     default:
       console.log('SYSV2 ADO Build Monitor (Node.js)');
-      console.log('子命令: status | logs | cancel-old | wait | watch');
+      console.log('子命令: status | logs | cancel-old | wait | watch | background');
       console.log('详见 docs/ops/cicd-ado-monitor.md');
       process.exitCode = 1;
   }

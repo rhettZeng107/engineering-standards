@@ -28,7 +28,7 @@ ADO build 红 → Claude 自治 → 绿,涛哥少看红邮件,少打断 PM 工�
 ```
 CI 红
  ↓
-Claude 拉 fail log(ADO API / artifact)
+Claude/Codex 拉 fail log(ADO API / artifact)
  ↓
 分类(L1 / L2 / L3)
  ↓ L1                ↓ L2                ↓ L3
@@ -38,7 +38,7 @@ Claude 复审 diff      Claude commit
  ↓
 Claude commit + 双推
  ↓
-后台 wait build
+后台 detached/background watcher
  ↓
 绿了 → 报告;红了 → 重复(轮次+1)
  ↓
@@ -82,7 +82,7 @@ Claude commit + 双推
 - [ ] L1 → 派 subagent;L2 → 本体修;L3 → 报涛哥
 - [ ] L1 修完 → Claude 复审 diff(不能扩范围 / 不能跨契约 / 不能影响安全)
 - [ ] commit(message 简洁 ≤ 40 字符 + body ≤ 3 行)+ 双推
-- [ ] 后台 wait build(`run_in_background` + `node docs/ops/cicd-ado-monitor.js watch <repo>`)
+- [ ] 后台监控 build(优先 `node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id>` 或项目等价 detached wrapper;没有 wrapper 时先补 wrapper,`nohup` 只作实测可存活后的兜底)
 - [ ] 绿了短报告;红了 ++ 轮次,回到第 1 步
 
 ## 批次任务遵守
@@ -94,6 +94,7 @@ CI 自治闭环属于"修复中"动作 — 按 ADR-017 批次任务,**不打断�
 ## 与已有 SOP 关联
 
 - `cicd-ado-monitor.js`:提供 `status` / `logs` / `cancel-old` / `wait` / `watch` 子命令(Node.js,跨平台)
+- `cicd-ado-monitor.js background` 或项目等价脚本:提供低噪声后台监控,记录 PID/log/meta/current state
 - `cicd-ado-monitor.md`:用法手册
 - `cicd-ado-failure-notification.md`:ADO 邮件订阅(L3 触发时涛哥收到通知)
 

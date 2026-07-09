@@ -42,7 +42,7 @@ SYSV2 CI/CD Phase 1 闭环过程中(SYS / SYS.3 / BP / AuditPortal / MDM 前后�
 | `Cancel-AdoOldBuilds -Repo <name>` | 留最新 inProgress/notStarted,cancel 其余冗余 |
 | `Wait-AdoBuildComplete -Repo <name> -BuildId <id>` | 脚本化等待 build 完成,作 Claude 批次决策依赖 |
 
-凭据:`$HOME\.claude\sysv2-ado-pat`(Build Read & Execute 权限,90 天轮换)。
+凭据:`$HOME\.claude\ado-pat`(Build Read & Execute 权限,90 天轮换;历史 `$HOME\.claude\sysv2-ado-pat` 只作旧别名)。
 访问 Endpoint:`http://172.21.10.30:8090/JYDevOps/JYPrdCollection/<repo>/_apis/build/builds/...`
 
 ### 被动接收侧 — ADO 邮件订阅
@@ -75,7 +75,7 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 
 ### 负向 / 代价
 
-- PAT 凭据管理:`$HOME\.claude\sysv2-ado-pat` 文件需保护(权限读限制,90 天轮换)
+- PAT 凭据管理:`$HOME\.claude\ado-pat` 文件需保护(权限读限制,90 天轮换)
 - PowerShell helper 维护:ADO Server 升级时 REST API 版本可能变(当前 api-version=7.0)
 - 邮件订阅依赖 ADO Server SMTP 可用性(SMTP 挂 → 邮件断,但 PowerShell 主动查询仍可用,双轨互补)
 
@@ -157,6 +157,17 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 3. **范围**:所有 ADO self-hosted 单/少 worker pipeline —— SYSV2 / SRMV2 / MES / TPM / 未来工作区一致。
 4. **落地**:操作指引同步进 [`standards/cicd-onprem-iis-deploy-standard.md`](../standards/cicd-onprem-iis-deploy-standard.md) §队列卫生,各工作区 Claude 干部署时读。
 
+## 修订(2026-07-09)
+
+**背景**:SRMV2 前端修复后启动 ADO build watcher 时,用普通 shell `nohup ... wait ... &` 的子进程在 Codex 工具会话下只完成首轮轮询即退出,没有持续监控到终态。后续实测 Node `spawn(..., { detached: true }) + unref()` 可以在父命令退出后继续写日志并记录 `FINAL`。同日官方 Codex manual 已刷新为 current:官方 surface 区分中,`AGENTS.md` 承载持久工作约定,Automations 承载后台/定时任务,Hooks 承载生命周期机械检查,Rules 承载命令权限约束;因此 CI watcher 标准应落在工程标准 + 项目脚本/automation,而不是仅靠聊天提醒或前台 wait。
+
+**修订决策**:
+
+1. **默认后台监控改为可验证的 detached/background 机制**:各工作区优先提供 `background` 子命令或等价 wrapper,内部启动 detached watcher,并记录 `repo/branch/buildId/PID/logPath/command/meta`。模板默认落在 `docs/ops/cicd-ado-monitor.js background <repo> --build-id <id>`;SRMV2 现有 `codex-ci-heartbeat.js background` 属等价实现。
+2. **`nohup` 降级为兜底**:只有在当前 Codex/终端运行环境实测子进程能脱离父会话继续运行时才可用;不得把 `nohup` 模板当成跨工作区默认。
+3. **前台 `wait/watch` 只用于短检查或涛哥明确要求前台等待**。默认交互会话保持可响应;queued/inProgress 静默,终态绿汇报一次,红拉失败日志并按 self-heal SOP 自愈。
+4. **模板同步**:新工作区 bootstrap/CI SOP 文档引用本规则;老工作区遇到 watcher 不稳定时,先补 `background` wrapper,再继续 CI 自愈。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
@@ -164,3 +175,4 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 | 2026-05-14 | Proposed → Accepted | 涛哥拍板,Phase 1 闭环 task #7/#8/#10 一并落地 |
 | 2026-05-28 | 修订(不改编号) | PAT 路径统一 `~/.claude/ado-pat` + monitor `.ps1→.js` 迁移对照 + build≠部署判定 + 自主查 CI 强制(涛哥拍板) |
 | 2026-06-17 | 修订(不改编号) | build 去重铁律升格 — push 后必 `cancel-old` 留最新、取消其余在途(含 inProgress)+ 扩至全工作区(涛哥拍板) |
+| 2026-07-09 | 修订(不改编号) | CI watcher 默认后台机制改为实测 detached/background 或 Codex automation;`nohup` 仅作验证后兜底 |

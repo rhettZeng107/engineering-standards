@@ -65,6 +65,8 @@ fi
 cat > "$WS/.gitignore" <<'EOF'
 # MCP 配置含密码,永不入库
 .mcp.json
+# CI watcher 运行态日志 / PID / current state,由 docs/ops/cicd-ado-monitor.js background 生成
+docs/ops/ci-watch/
 # nested 项目仓各自独立 git,在此逐个排除(bootstrap 后按实际补):
 # <nested-repo-1>/
 # <nested-repo-2>/
