@@ -149,7 +149,7 @@ After a push starts CI, monitor the pipeline to a terminal state without occupyi
 
 Preferred implementation order:
 
-1. Project-provided `background` subcommand that starts the watcher with a detached process and records PID/log/meta state, e.g. `node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id>`.
+1. Project-provided `background` subcommand that starts the watcher with a detached process and records PID/log/meta state, e.g. `node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id>` or SRMV2's `node docs/ops/codex-ci-heartbeat.js background <repo> --build-id <id>`.
 2. Codex thread/project automation when the monitor should wake the same conversation or run on a schedule.
 3. Shell job under `tmux`/platform-native watcher when already standard for the project.
 4. `nohup <ci-watch-command> ... &` only as a fallback after verifying in the current tool environment that the child process survives the parent command/session.
