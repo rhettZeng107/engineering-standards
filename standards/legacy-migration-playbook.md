@@ -9,7 +9,7 @@
 ## 0. 标准迁移轨工作流(总入口 — 单一真理源导航)
 
 > 本节是迁移轨**唯一总入口**:任何老项目迁移改造从这里开始,按主线走;每阶段挂的决策(ADR)/ 操作章节 / 工具 / 门禁见下表。
-> **决策两半(互补不冲突)**:[ADR-014](../decisions/ADR-014-migration-refactor-workflow.md) 管「**怎么执行**」(Front-load 风险审查 + Back-automate 自治 + 中断纪律 + 完整性审计 workflow);[ADR-028](../decisions/ADR-028-legacy-migration-baseline-two-step.md) 管「**做什么算完**」(基线 + 三层等价 DoD + STEP1/2 解耦)。各阶段以下表「决策依据」列为准。
+> **决策两半(互补不冲突)**:[ADR-014](../decisions/ADR-014-migration-refactor-workflow.md) 管「**怎么执行**」(Front-load 风险审查 + Back-automate 自治 + 中断纪律 + 完整性审计 workflow);[ADR-028](../decisions/ADR-028-legacy-migration-baseline-two-step.md) 管「**做什么算完**」(基线 + 四层等价 DoD + STEP1/2 解耦)。各阶段以下表「决策依据」列为准。
 > **工具两件**:[`tools/migration-fanout`](../tools/migration-fanout/)(执行 = 批量同构页落盘)/ [`tools/migration-audit`](../tools/migration-audit/)(查漏 = 完整性多维并扫)。
 > **特化**:BP 微前端子应用接入另套 [subapp-migration-checklist](../templates/subapp-migration-checklist.md) + [subapp-onboarding-guide](subapp-onboarding-guide.md)。
 
@@ -17,12 +17,12 @@
 
 | 阶段 | 做什么 | 决策依据 | 操作 | 工具 | 过关门禁(DoD) |
 |---|---|---|---|---|---|
-| **0 立项·基线声明** | spec 声明三层基线(后端运行时 / 前端工具链 / 工程标准) | ADR-028 §1 | §2 | — | 基线三项已声明 |
-| **1 源工件盘点** | 产源工件清单(逐页/逐接口标 完好/半成品/坏)+ 老视图逐行提 UI 功能清单(本体锁定作契约锁基准)+ **壳层 layouts 功能去留表** | ADR-028 §3 · ADR-037 | §3.1 | — | 清单全标状态;UI 功能清单 + 壳层去留表齐 |
-| **2 前期实证·完整性审计** | **官方 Dynamic Workflow 动态编排**(禁 general-purpose 单跑):multi-modal sweep(模块/页面/字段/接口/菜单 old→new 全覆盖)+ adversarial 投票 + critic + loop-until-dry;**产迁移矩阵表**(逐页/字段/接口 × 后端·前端真实装非桩·菜单·可用 4 列) | ADR-014(修订 2026-06-22) | **§3.0** / §3.6 | **Dynamic Workflow**(migration-audit + baseline-adversarial 作模板) | 迁移矩阵过对抗投票锁基准;CRITICAL/HIGH gap 全登记 |
+| **0 立项·基线声明** | spec 声明四项基线(后端运行时 / 前端工具链 / 工程标准 / 源仓分支范围) | ADR-028 §1 | §2 | — | 基线四项已声明 |
+| **1 源工件盘点** | 产 old 源工件清单(逐页/逐接口标 完好/半成品/坏)+ 老视图逐行提 UI 功能清单(本体锁定作契约锁基准)+ **壳层 layouts 功能去留表**；另产 `current-new-only` 清单，登记没有 old 对应行的 new 页面/字段/自动化/工程增强 | ADR-028 §3 · ADR-037 | §3.1 | — | old 清单全标状态;UI 功能清单 + 壳层去留表 + current-new-only 清单齐 |
+| **2 前期实证·完整性审计** | **官方 Dynamic Workflow 动态编排**(禁 general-purpose 单跑):主完整性方向保持 old→new 全覆盖，并增加只用于增强保留的 current-new-only delta sweep；adversarial 投票 + critic + loop-until-dry；**产迁移矩阵表**(允许 `old=N/A` 的 new-only 行) | ADR-014(修订 2026-06-22) | **§3.0** / §3.6 | **Dynamic Workflow**(migration-audit + baseline-adversarial 作模板) | 迁移矩阵过对抗投票锁基准;CRITICAL/HIGH gap 全登记 |
 | **3 Front-load 风险审查** | E2E 双层风险审查 + 功能骨架等价审查(spec 内嵌) | ADR-014 §1 | — | — | 涛哥校验整体策略(非逐条) |
 | **4 STEP1 分模块迁移** | 按契约锁 + 范式 1:1 等价移植落盘(批量同构页并行) | ADR-028 §2/§6 · ADR-037 | §3.2 | **migration-fanout** | Back-automate 自治(中断白名单 3 类,ADR-014 §2) |
-| **5 三层等价 DoD 门** | ①工具链 ②UI工程标准 ③功能骨架(对 UI 功能清单逐项打钩)④入口可达 — 四层逐项核 | ADR-028 §2 | §3.2 | — | 四层全过 |
+| **5 四层等价 DoD 门** | ①工具链 ②UI工程标准 ③功能骨架(对 UI 功能清单逐项打钩)④入口可达 — 四层逐项核 | ADR-028 §2 | §3.2 | — | 四层全过 |
 | **6 STEP1 模块验收** | 三方交叉(菜单↔页面↔后端 4 类异常清零)+ 4 道质量闸 + 完整性审计复扫(后端归属清零) | ADR-028 §3.6 · ADR-014 §3-4 | §3.4-3.6 | migration-audit | 零异常 + 后端归属 = 新平台 → 解锁 STEP2 |
 | **7 完结报告** | 一次性完结报告(实施 / E2E双层 / CR / 风险闭环 / 骨架等价闭环 / backlog) | ADR-014 §5 | — | — | — |
 | **8 STEP2 功能演进** | 先出现有页清点表 → 默认增强、禁造新 | ADR-028 §4-5 | §4 | — | 该模块 STEP1 已解锁 |
@@ -37,24 +37,25 @@
 
 ### 迁移轨工作流哲学(跨项目根本原则 — 为什么这么做,ADR-014 修订 2026-06-22)
 
-> 把 MDM→SRM→TPM 多次迁移踩坑上升为可复用心智。**机制层细节随项目变,这 7 条不变**;每条都有血的锚点。
+> 把 MDM→SRM→TPM→HC 多次迁移踩坑上升为可复用心智。**机制层细节随项目变,这 8 条不变**;每条都有血的锚点。
 
 1. **完整性是迁移第一性问题** —— 本质风险不是「迁错」,是「漏迁/半迁而不自知」;故审计方向恒为 **old→new 全覆盖**(老仓全量清单逐项在新平台找落点),**禁 new→old**(逐文件确认来源天然看不见「老仓有、新平台无」整类)。
 2. **「迁完」是四层闭环,非单层达标** —— 后端✅≠迁完;后端✅+前端桩 / 前端✅+后端老系统 / 代码✅+菜单漏种 均为半迁中间态,任一层断 = 用户用不了 = 没迁完。
 3. **单视角必有盲区 → 多智能体动态编排对抗/投票** —— 人/单 agent 线性一遍过,漏的那一维自己不会提醒;前期实证用官方 Dynamic Workflow(多维互盲并扫 + refute 投票 + 完整性 critic + loop-until-dry)。**机制 > 努力**。
 4. **坑在基准埋下、验收才查太晚 → 重心前移到建基准** —— 对抗/投票放在锁契约前,验收只赴约打钩。
 5. **动态编排 > 固化脚本** —— 据本次现状 inline 编排 Workflow,预存脚本只作起点模板,不套死 args 黑盒。
-6. **源基线先收口再迁** —— 源 = master/develop 主线,customer 默认排除;多版本仓 diff 实证谁更全;基线不锁干净不开迁(§2 + ADR-028)。
+6. **源基线先收口再迁** —— Fork 保留全分支并展示活动度,不得自行默认排除 customer 分支;多版本仓 diff 实证谁更全,最终源范围由项目决策者拍板;基线不锁干净不开迁(§2 + ADR-028)。
 7. **移植非重写、半成品不搬运** —— 业务规则原样移植+适配;半成品/退化产物补完或登记欠债,禁等价搬运、禁当设计意图。
+8. **old 能力取并集、new 非冲突增强不删** —— 目标能力集 = `old 已实证有效能力 ∪ new 已有非冲突增强 − 已实证无业务价值的死行为/错误分支`。发生冲突时仅以 old 业务语义覆盖冲突局部,不得借 parity 整页、整模块回退;new 已有且不改变 old 业务语义的页面、字段、交互、校验、自动化与工程增强必须保留。含 Bug 但仍有业务入口/消费者的工件必须迁移有效语义并修复缺陷,不能整项剔除。
 
 | 原则 | 含义 |
 |---|---|
 | 两步走解耦 | STEP 1 基线迁移 → STEP 2 功能演进;STEP 1 未完成的模块禁止 STEP 2 |
-| 三层等价 | 迁移完成 = 工具链 + UI 工程标准 + 功能骨架 三层都等价 |
+| 四层等价 | 迁移完成 = 工具链 + UI 工程标准 + 功能骨架 + 入口可达 四层都等价 |
 | 迁移=移植非重写 | 业务逻辑移植到新基线 + 适配,业务规则原样保留;禁从零重写 |
 | 半成品不搬运 | 源工件是半成品/坏的 → 补完或登记欠债,禁止等价搬运 |
 | 默认增强、禁造新 | 迁移轨在现有页/组件上增强;新建 page/组件 = 卡点须说明理由 |
-| **保留既有增强不退化** | 新基线若已对老系统有**正向增强**(交互/校验/批量/预览/拖拽上传等),parity 回归**只针对真 CONFLICT(新基线改坏了老业务)**,**不照搬老系统把增强退化掉**(实现方法不唯一,灵活保留)。典型:附件上传/导入须拖拽+点选(见 frontend-ui-v2-standard §3.1),禁回退为老栈只点选。与坑#10 互补(#10 防把老系统退化产物当设计意图迁错;本条防把新基线增强退化回老系统)。 |
+| **old 能力取并集、new 非冲突增强不删** | 目标能力集 = `old 已实证有效能力 ∪ new 已有非冲突增强 − 已实证无业务价值的死行为/错误分支`。冲突时 old 业务语义优先,但只覆盖冲突局部;new 已有且不改变 old 业务语义的交互/校验/批量/预览/拖拽上传/自动化等增强强制保留,禁整页或整模块回退。含 Bug 的活动业务走“净化后迁移”,不得整项 skip。 |
 | 模块级解锁 | STEP 1 按模块切片验收,某模块达标即解锁该模块 STEP 2 |
 
 ---
@@ -85,12 +86,22 @@
 
 **四条硬规则**:
 1. **动态编排优先**:主会话本体**据本次迁移现状 inline 编排**官方 Workflow(`phase/agent/parallel/pipeline`),内含官方四 pattern —— **multi-modal sweep**(N agent 各扫一维互盲:模块/页面/字段/接口/菜单)+ **adversarial verify 投票**(每「已迁」判定派 N 独立 skeptic refute,多数票才确认)+ **completeness critic**(每轮收口「还漏哪维/哪模块停中间态/哪声称迁完无证据」)+ **loop-until-dry**(连续 2 轮无新发现才停)。预存的 `tools/migration-audit/{migration-audit,baseline-adversarial}.workflow.js` 降为**参考实现/起点模板**(可 `scriptPath` 复用、可据现状改写增维),不是套死 args 黑盒。
-2. **审计方向 old→new 全覆盖**:以**老仓全量清单为锚**逐项在新平台找落点,**禁 new→old**(逐文件确认来源天然漏「老仓有、新平台无」整类)。
-3. **强制产物 = 迁移矩阵表**:逐**页面/字段/接口**为行,四列覆盖 + 投票结论,过对抗投票才锁为契约基准(ADR-037):
+2. **审计方向以 old→new 全覆盖为主,辅以 current-new-only 保留扫描**:以**老仓全量清单为锚**逐项在新平台找落点,禁止用 new→old 替代主完整性审计；同时独立枚举当前 new 的页面/字段/自动化/工程能力,对没有 old 对应项的 delta 建 `old=N/A` 行,防止 new-only 增强在迁移中被误删。
+3. **强制产物 = 迁移矩阵表**:逐**页面/字段/接口**为行,除四层覆盖与投票外,必须同时记录 new 现有能力、冲突分类与最终目标;过对抗投票才锁为契约基准(ADR-037):
 
-| 源工件(页/字段/接口) | 后端实装 | **前端真实装(非桩)** | 菜单种子 | 操作员可用 | 对抗投票 |
-|---|---|---|---|---|---|
-| `老仓/.../ManualEdit` 三级树 | ✅ ManualAppService | 🔴 桩(import hourType/字段≠DTO/无子表树) | ✅ routes | 🔴 不可用 | 3:0 确认漏 |
+| old 源工件(页/字段/接口) | new 现有能力 | 分类 | 最终目标 | 后端实装 | **前端真实装(非桩)** | 菜单种子 | 操作员可用 | 对抗投票 |
+|---|---|---|---|---|---|---|---|---|
+| `老仓/.../ManualEdit` 三级树 | 新仓已有批量预览 | `merge-union`（可合并-取并集） | 三级树 + 批量预览 | ✅ ManualAppService | 🔴 桩(import hourType/字段≠DTO/无子表树) | ✅ routes | 🔴 不可用 | 3:0 确认漏 |
+
+**机器枚举固定为五类**（中文仅作展示标签,不得另造枚举值）:
+
+- `conflict-old-wins`（冲突-old覆盖）:new 与 old 的业务规则、状态机、财务口径或字段语义冲突;old 优先,只替换冲突局部。
+- `merge-union`（可合并-取并集）:old 与 new 能力可同时成立;去重后合并,任一侧有效能力不得丢失。
+- `keep-new-enhancement`（new增强保留）:new 独有且不改变 old 业务语义;强制保留,允许 `old=N/A`,不得以 parity 为由删除。
+- `fix-source-defect`（源缺陷净化后迁移）:工件仍有菜单/路由/配置/调用方或业务价值,但含 Bug、半成品或异常分支;迁移有效语义并修复,或登记欠债且 STEP1 不得判绿。
+- `exclude-proven-dead`（源死行为剔除）:仅限已实证无业务价值的死端点/不可达分支/错误行为;剔除的是死行为,不是整个含 Bug 的有效业务工件。
+
+`exclude-proven-dead` 证据门:至少完成仓内调用、路由、菜单与配置的反向检索；运行日志/访问日志可得时必须补查；错误行为或异常路径须有可复现测试或运行证据。任何 skip 都必须经过 adversarial vote,单次 `rg` 0 命中或单纯 build 结果不足以证明可剔除。
 
 4. **「前端真实装(非桩)」专项检测**(治设备手册类桩):① service import 是否错配自身模块 ② 表单字段数 vs 后端 DTO ③ 子表/树形结构是否存在。任一异常 = 桩 = 未迁。
 
@@ -119,13 +130,13 @@
 
 > **基准 adversarial 投票门铁律(2026-06-18,ADR-014 修订 + ADR-044 G5)**:源工件清单 + UI 功能清单 + 退化判定产出后**不由单视角直接锁定** —— 过 adversarial verification 投票门(`tools/migration-audit/baseline-adversarial.workflow.js`,N 个独立 verifier 各被 prompt 去 refute,投票判:① 工件状态对不对 ② 是不是退化产物当设计意图 ③ 清单有无遗漏),多数票通过才锁为契约基准(ADR-037)。**与 migration-audit 分工**:audit 查「漏」(哪些没枚举),adversarial 查「误判」(枚举了但判错)。原则:**坑在基准埋下、验收才查太晚 → 投票前移到建基准;STEP1 验收只按已确认 checklist 赴约打钩**。防坑 2(半成品盲区)/坑 10(退化产物误判)。
 
-### 3.2 三层等价 DoD —— 逐项核对
+### 3.2 四层等价 DoD —— 逐项核对
 
-迁移一个模块,三层全过才算「迁移完成」:
+迁移一个模块,四层全过才算「迁移完成」:
 
 - [ ] **① 工具链等价**:迁到项目声明的目标构建栈 / 运行时完成(SYSV2 系列 = CRA→Vite / 旧 .NET→.NET 8),`build` 0 error。
 - [ ] **② UI 工程标准等价**:套用项目声明的前端工程标准(SYSV2 系列 = 前端统一 4 标准 ADR-023;列表页 ListPage 四段式;新前端不引私有库 `@jy/jy-antd-components`)。**迁移过程前端 UI 默认套用 UI V2(Atlas)标准同步更新**(`frontend-ui-v2-standard.md`,SectionCard 业务页三范式,源 ADR-032)—— 迁移**不复刻老 UI 形态**,边迁边升级到 V2(2026-06-22 涛哥定)。
-- [ ] **③ 功能骨架等价**:源页面的功能 / 字段 / 交互在新页面 1:1 可用;半成品源页已补完或欠债已登记。**以等价回归测试(老↔新行为比对)为强制证据**,不靠「应该能用」的假设;已上线系统并行运行 + 等价验证后切换。
+- [ ] **③ 功能骨架等价**:源页面的功能 / 字段 / 交互在新页面 1:1 可用;活动能力中的半成品/Bug(`fix-source-defect`)已补完。仅登记欠债不能勾绿；只有经产品拍板从当前迁移单元边界移出的边缘项可记 `approved defer`,且该项不得仍计入本模块“已完成”。**以等价回归测试(老↔新行为比对)为强制证据**,不靠「应该能用」的假设;已上线系统并行运行 + 等价验证后切换。
 - [ ] **④ 入口可达性等价**:迁移单元的菜单**实种进门户菜单库 + 权限码挂到测试角色**,从门户菜单**点得进**页面(不止路由可达)。锚点 ADR-008 E2E #5 入口可达性全链(路由→菜单种子→权限码→登录看到→渲染)。
 
 > **菜单种子实证铁律(入口可达性)**:迁移单元「代码完结 + E2E render-walk(直接 `goto` 路由 + 注入 token)绿」**不等于菜单可见** —— render-walk 绕过了菜单。每单元 DoD 必**查菜单库实证**(SRMV2 = `SYS_AuthInfo` WHERE `PortalScope='bp' AND AppName='<子应用>'`)确认本单元 authCode 全在 + 权限码挂角色 + 真从门户菜单点进。锚点见 §5 坑 8/9(SRM 外协单元1-3 代码迁完、render-walk 22/22 绿,却因菜单种子整组漏种,门户点不进)。
@@ -140,13 +151,14 @@
 | 处置 | 条件 |
 |---|---|
 | 补完到基线 | 该工件是模块核心功能,STEP 2 会用 |
-| 登记欠债 | 边缘功能,可延后;登记到项目 `docs/superpowers/backlog/` |
+| `blocking debt` | 活动业务能力尚有半成品/Bug；登记到 backlog 仅用于追踪,③ 不勾绿、STEP1 不解锁 |
+| `approved defer` | 仅边缘项经产品拍板移出当前迁移单元边界；登记到 backlog,且不得把该项计入本模块“已完成” |
 | 经涛哥拍板新建替换 | 源工件无法承载基线、且补完代价过高(例外,需实证 + 拍板) |
 
 ### 3.4 验收:模块级切片解锁
 
-- STEP 1 **不要求全系统一刀切**。某模块三层等价 DoD 全过 → 该模块解锁 STEP 2。
-- 验收产物:模块的源工件清单(全部状态 = 完好 / 已登记欠债)+ 三层等价 DoD 勾选 + E2E 通过。
+- STEP 1 **不要求全系统一刀切**。某模块四层等价 DoD 全过 → 该模块解锁 STEP 2。
+- 验收产物:模块边界内源工件清单全部完好(`fix-source-defect` 已修)+ 四层等价 DoD 勾选 + E2E 通过；`blocking debt` 存在即不解锁,`approved defer` 必须有拍板与移出边界记录。
 
 ### 3.5 验收质量闸(ADR-030 GSD 融合)
 
@@ -197,10 +209,10 @@
 - **菜单种子整组漏种**(SRM 外协单元1-3):代码完结 + render-walk goto 绿,但 `SYS_AuthInfo` 整组缺致门户点不进;且双机制认错生效方(实际靠 SQL 种 `AppName='SRM'`,manifest 的 `SRMBuyer` 走 ScanMenus 从没跑通)→ 查菜单库实证 authCode + 权限码挂角色 + 模拟操作员从门户点进;manifest AppName 必与门户注册一致。
 
 ### 失效模式 ②:半迁中间态(看似迁完实则半截)
-> 门:`migration-gate.sh` Gate1(前端桩)/Gate2(后端归属)+ §3.1 源工件状态标注 + 三层等价 DoD。
+> 门:`migration-gate.sh` Gate1(前端桩)/Gate2(后端归属)+ §3.1 源工件状态标注 + 四层等价 DoD。
 - **后端✅前端桩**(TPM 设备手册):后端三级树迁完,前端 Edit 是 HourType 复制桩(`views/Manual/components/Edit/index.jsx:4` import hourType / 字段 `typeCode/typeName` / 无三级树);根因 new→old 锚点 + general-purpose 单跑替代官方 workflow → **gate Gate1 自动抓**(service import 错配 / 字段数 vs DTO / 子表树缺失);审计方向恒 old→new。
 - **前端✅后端老系统**(TPM 计量/特种检定):前端 React 化但 api 寻址仍指老 CoreTPMWebApi → **gate Gate2 自动抓**;模块按 前端×后端 四象限,(新前端+老后端)禁算迁完。
-- **工具链冒充完整迁移**(MDM CRA→Vite):只换工具链,UI 标准+功能骨架没动 → 三层等价缺一不算迁完。
+- **工具链冒充完整迁移**(MDM CRA→Vite):只换工具链,UI 标准+功能骨架没动 → 四层等价缺一不算迁完。
 - **半成品搬运**(`supplier/index.jsx` 被「坏→坏」放过):源工件清单标状态 + baseline-adversarial 投票防半成品盲区。
 
 ### 失效模式 ③:误判(看了但判错)
@@ -225,12 +237,12 @@
 
 迁移一个模块,按序走:
 
-0. [ ] **前期实证**:官方 Dynamic Workflow 动态编排(multi-modal sweep + adversarial 投票 + critic + loop-until-dry,**禁 general-purpose 单跑**),**产迁移矩阵表**(逐页/字段/接口 × 后端·**前端真实装非桩**·菜单·可用 4 列),old→new 全覆盖,过对抗投票锁基准(§3.0,规则2)
+0. [ ] **前期实证**:官方 Dynamic Workflow 动态编排(multi-modal sweep + adversarial 投票 + critic + loop-until-dry,**禁 general-purpose 单跑**),主方向 old→new 全覆盖,另做 `current-new-only` 保留扫描；**产迁移矩阵表**(允许 `old=N/A` 的 new-only 行,含后端·前端真实装非桩·菜单·可用覆盖列),过对抗投票锁基准(§3.0,规则2)
 0b. [ ] **确定性机器门必跑**(退出码非0即红,补 workflow 漏跑风险):`migration-gate.sh`(Gate0 枚举完整性 / Gate1 前端桩 / Gate2 后端归属)+ `field-diff.sh`(核心实体 老DTO×新DTO **字段并集 diff**,抓后端字段漏迁如设备父子;`.field-coverage` 登记消解)。CI / 迁移收尾必跑(§3.0 机器门补充)
-1. [ ] 产源工件清单,逐项标状态(完好 / 半成品 / 坏)
+1. [ ] 产 old 源工件清单(完好/半成品/坏)+ `current-new-only` 清单；每行用 canonical enum 分类:`conflict-old-wins / merge-union / keep-new-enhancement / fix-source-defect / exclude-proven-dead`
 2. [ ] 老视图(cshtml 等)源工件**逐行提取 UI 功能清单**(每列/每按钮/每弹窗/每必填)作契约锁基准,贯穿提取→派单实现 1:1 对照→验收打钩全程(Claude 本体锁定,§3.2 铁律)
-3. [ ] 半成品 / 坏工件定处置(补完 / 登记欠债 / 拍板新建)
-4. [ ] 三层等价 DoD 逐项核对(③ 功能骨架等价 = 对 UI 功能清单逐项打钩)
+3. [ ] 半成品/Bug 的活动能力走 `fix-source-defect` 并在 STEP1 前补完；仅登记为 `blocking debt` 不放行。只有产品拍板移出边界才可 `approved defer`。死行为走 `exclude-proven-dead` 前必须完成 calls/routes/menus/config 反查、可得日志、异常复现与 adversarial vote
+4. [ ] 四层等价 DoD 逐项核对(③ 功能骨架等价 = 对 UI 功能清单逐项打钩;④ 入口可达走真实菜单/权限链)
 4. [ ] E2E 验证功能骨架等价(列表页必查无 `-` 占位 = 关键列有真实数据;字段大小写以 curl 实测接口为准)
 5. [ ] 模块级 STEP 1 验收(套 §3.5 验收质量闸:目标导向 / 验证欠债 / 跨阶段回归 / 需求覆盖)→ 解锁 STEP 2
 6. [ ] STEP 2 功能演进:先出现有页清点表,默认增强、禁造新
