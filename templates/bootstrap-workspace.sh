@@ -7,7 +7,8 @@
 # 用法:  ./bootstrap-workspace.sh <工作区绝对路径>
 # 示例:  ./bootstrap-workspace.sh ~/Projects/SRMV2
 #
-# 搭完后仍需手动:填 CLAUDE.md 占位 / clone nested 项目仓 / 跑 /gsd-map-codebase 生成项目地图。
+# 搭完后仍需手动:填项目规则 / clone nested 项目仓。
+# QWEN.md 与项目地图仅在实际 qwen 派单或复杂改造/迁移时手动生成。
 
 set -euo pipefail
 
@@ -28,14 +29,10 @@ fi
 # 1. 目录骨架
 mkdir -p "$WS"/docs/superpowers/{specs,plans,backlog,_archive} \
          "$WS"/docs/decisions \
-         "$WS"/docs/ops \
-         "$WS"/.planning/codebase
+         "$WS"/docs/ops
 
 # 2. CLAUDE.md 模板(待填占位)
 cp "$TEMPLATES_DIR/workspace-CLAUDE.md.template" "$WS/CLAUDE.md"
-
-# 2b. QWEN.md 模板(给 qwen CLI 的项目上下文,待填占位)— ADR-029 + qwen-frontend-default 沉淀
-cp "$TEMPLATES_DIR/workspace-QWEN.md.template" "$WS/QWEN.md"
 
 # 3. CI/CD 监控脚本 + 跨项目运维基线(SYSV2 沉淀,新工作区开箱即有)
 #    含:监控(monitor/self-heal/failure-notify)+ 凭据外部化 + IP 中心表
@@ -86,16 +83,17 @@ if [ ! -f "$MEM_DIR/MEMORY.md" ]; then
 fi
 
 echo "✓ 工作区骨架已建: $WS"
-echo "  - CLAUDE.md / QWEN.md(待填占位)"
+echo "  - CLAUDE.md(待填占位)"
 echo "  - docs/ops/ 监控+凭据+IP表:{cicd-ado-monitor.js,cicd-self-heal-sop.md,credential-injection.md,cicd-ado-monitor.md,cicd-ado-failure-notification.md,deployment-ip-map.md}"
 echo "  - docs/ops/ 部署手册:{cicd-iis-server-setup.md,cicd-agent-vm-setup.md,cicd-sys-pipeline-draft.md}"
 echo "  - docs/ops/ web.config 模板:{iis-web.config-spa-root(external),iis-web.config-spa-subapp(shared_iis)}"
 echo "  - docs/ops/subapp-migration-checklist.md(子应用迁移前置自检)+ subapp-frontend-guard.js(全局 hook,机械拦 baseURL/postMessage 漏)"
 echo ""
 echo "后续手动(bootstrap 指南 §3):"
-echo "  1. 填 $WS/CLAUDE.md 与 $WS/QWEN.md 的 <占位符>(交付线 / 双推 / 构建 / CI-CD / 测试环境 / qwen 边界)"
+echo "  1. 填 $WS/CLAUDE.md 的项目特化占位(交付线 / 双推 / 构建 / CI-CD / 测试环境)"
 echo "  2. clone nested 项目仓到工作区,并写进 .gitignore"
-echo "  3. 跑 /gsd-map-codebase 生成 .planning/codebase/ 项目地图(A1/B4 hook 的数据源)"
-echo "  4. 配 CI/CD 流水线 + 接监控(docs/ops/cicd-ado-monitor.js + 自治修复 SOP 已在;ADO_BASE/PAT 按需调)"
-echo "  5. 老项目迁移工作区:按 legacy-migration-playbook 声明基线 + 产源工件清单"
-echo "  6. 后续 memory 沉淀按 standards/memory-maintenance-standard.md 规范"
+echo "  3. 仅在明确 qwen 派单时，手动实例化 QWEN.md"
+echo "  4. 仅在复杂改造、迁移或陌生域排查时，手动运行 /gsd-map-codebase"
+echo "  5. 配 CI/CD 流水线 + 接监控(docs/ops/cicd-ado-monitor.js + 自治修复 SOP 已在;ADO_BASE/PAT 按需调)"
+echo "  6. 老项目迁移工作区:按 legacy-migration-playbook 声明基线 + 产源工件清单"
+echo "  7. 后续 memory 沉淀按 standards/memory-maintenance-standard.md 规范"
