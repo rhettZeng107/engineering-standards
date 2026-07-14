@@ -55,6 +55,7 @@
 ```json
 {
   "AppName": "mdm",
+  "RootName": "主数据管理",
   "Menus": [
     { "Code": "MdmMaterialList", "Name": "物料档案", "Path": "material/list", "Icon": "DatabaseOutlined", "Children": null },
     { "Code": "MdmCustomerList", "Name": "客户档案", "Path": "customer/list", "Icon": "UserOutlined", "Children": null }
@@ -64,6 +65,8 @@
 ```
 
 - 字段语义:
+  - `AppName` → 稳定应用标识，只用于归属/路由/授权匹配，不作为根菜单展示名
+  - `RootName` → 可选的应用根菜单展示名；未提供时，显式应用根节点使用自身 `Name`，合成根节点回退应用中心名称
   - `Code` → 应用中心 `SYS_AuthInfo.AuthTag`(权限码 1:1 对应)
   - `Name` → 中文菜单名(`SYS_AuthInfo.Name`)
   - `Path` → 子应用内部路由(对应 `SYS_AuthInfo.PageUrl`)
@@ -572,6 +575,7 @@ const BACKEND_WWWROOT = resolve(FRONTEND_ROOT, '..', '<backend-name>', 'wwwroot'
 
 const manifest = {
   AppName: '<appName>',
+  RootName: '<用户可见的应用根名称>',
   Menus: ROUTES
     .filter((r) => r.authCode != null)
     .map((r) => ({
