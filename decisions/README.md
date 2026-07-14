@@ -76,7 +76,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-009](ADR-009-claude-md-cheatsheet-distillation.md) | 全局 CLAUDE.md 精简到 cheatsheet 本质 | Accepted | 2026-05-05 | 跨项目 | 本仓 |
 | [ADR-010](../../SYSV2/docs/decisions/ADR-010-platform-spec-overrides-mdm-no-touch-app-center.md) | Platform spec 不动应用中心(MDM 路径切换 /srm/ → /MDM/) | Accepted | 2026-05-06 | 项目级(SYSV2) | SYSV2 |
 | [ADR-011](ADR-011-bp-business-portal-boundary.md) | BP 业务门户边界 | Accepted | 2026-05-07 | 跨项目 | 本仓 |
-| [ADR-012](ADR-012-subapp-onboarding-sop-enforcement.md) | SubApp Onboarding SOP 强制执行 | Accepted | 2026-05-07 | 跨项目 | 本仓 |
+| [ADR-012](ADR-012-subapp-onboarding-sop-enforcement.md) | SubApp Onboarding SOP 强制执行（认证与 iframe 消息条款由 ADR-047 取代） | Accepted | 2026-05-07 | 跨项目 | 本仓 |
 | [ADR-013](ADR-013-codebase-profile-maintenance.md) | Codebase 画像维护(自动化历史扫描) | Superseded by ADR-025 | 2026-05-09 | 跨项目 | 本仓 |
 | [ADR-014](ADR-014-migration-refactor-workflow.md) | 迁移改造工作流(Front-load + Back-automate) | Accepted | 2026-05-09 | 跨项目 | 本仓 |
 | [ADR-015](ADR-015-fact-driven-no-speculation.md) | 事实驱动禁臆测 4 步硬规则 | Accepted | 2026-05-09 回溯 | 跨项目 | 本仓 |
@@ -111,12 +111,14 @@ Deprecated   → 废弃但未被取代
 | [ADR-044](ADR-044-anthropic-methodology-alignment.md) | 对标 Anthropic 官方方法论 — 工作流哲学增补(G1 最简优先+subagent 克制 / G2 context 稀缺第一原则 / G3 harness 老化审计节律;衍生立项 G4 skill 化 progressive disclosure + G5 迁移轨 6 模式重构) | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 | [ADR-045](ADR-045-post-deploy-e2e-tiered-scoping-governance.md) | 部署后 E2E 分层定级治理(替代人工测试)— 三层 L0 floor/L1 定向/L2 全量 + 改动路径自动定级 + 两个保险(L0 永远跑 / 判不准默认全量)+ 前后端全覆盖(后端 API-Health floor + 跨仓契约联动)+ E2E timeout≥60min;扩展 ADR-024 | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 | [ADR-046](ADR-046-cross-repo-contract-driven-e2e-trigger.md) | 跨仓契约驱动的部署后 E2E 触发(后端改→触发消费前端 L1 定向)— 落地 ADR-045 §3;实证 ADO 2020+ 三机制后选 B(后端 pipeline 绿后 REST queue 受影响消费前端 + 传 affectedModules);consumers manifest 落后端仓;否决 A 声明式(过度触发/无定向)/ C UI(不可审计) | Accepted | 2026-06-18 | 跨项目 | 本仓 |
+| [ADR-047](ADR-047-bp-subapp-bridge-v1.md) | BP 子应用认证桥 v1：BP 独占持久 JWT、ACK/版本化上下文、统一 401 判活与 N/N-1 迁移 | Accepted | 2026-07-14 | 跨项目 | 本仓 |
+| [ADR-048](ADR-048-app-family-multi-runtime-publishing.md) | 应用家族单身份多运行时发布：AppName 合并边界、原子聚合 manifest 与可逆回滚 | Accepted | 2026-07-14 | 跨项目 | 本仓 |
 
 ---
 
 ## 按主题簇导航(9 簇)
 
-> 35 个 ADR 是正交决策非冗余(2026-06-15 聚类审计:keep=34 / merge=0 / archive=1)。按主题快速定位:
+> ADR 按正交决策维护；2026-06-15 曾完成一次聚类审计(keep=34 / merge=0 / archive=1)，后续新增决策未纳入该次计数。按主题快速定位:
 
 | 簇 | ADR | 一句定位 |
 |---|---|---|
@@ -124,8 +126,8 @@ Deprecated   → 废弃但未被取代
 | **项目地图** | 025·026(~~013 归档~~) | 自适应维护 + MECHANISMS 第8维(013 已 Superseded by 025) |
 | **迁移轨** | 014·028 → [playbook §0](../standards/legacy-migration-playbook.md) | 014 怎么执行 / 028 做什么算完;总入口 playbook §0 |
 | **交付验证** | 008·024·022·034 | E2E 8项 / 三轨分级 / CICD监控 / APM-lite |
-| **安全鉴权** | 007 | 鉴权 4 条刚性 |
-| **子应用集成** | 011·012·038 | BP门户边界 / 接入SOP / 主数据走API |
+| **安全鉴权** | 007·047 | 鉴权 4 条刚性 / BP 子应用内存态认证桥与上下文判活 |
+| **子应用集成** | 011·012·038·047·048 | BP门户边界 / 接入SOP / 主数据走API / v1认证桥 / 单身份多运行时发布 |
 | **前端工程标准** | 020·023·032 | i18n范围 / 4基建标准 / UI V2 Atlas |
 | **AI工程工作流** | 003·035·037·043 | 编码路由 / LSP网关 / 契约锁归属 / on-prem服务器SSH运维 |
 | **工作纪律/决策授权** | 005·017·018·036·042 | 全新部署剔运维 / 批次节奏 / 授权三档 / CR门禁 / 推前必同步禁裸force |

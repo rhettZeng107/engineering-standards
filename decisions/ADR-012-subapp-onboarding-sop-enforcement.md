@@ -31,6 +31,8 @@
 
 ## Decision(决策本身)
 
+> **2026-07-14 适用性说明**：本 ADR 保持 Accepted，但以下实现条款已由 ADR-047 `BpSubAppBridge v1` 明确取代：原第 1 项的 `BrowserRouter + wujie sync` 实现限定、原第 3 项的 Wujie/localStorage token 链、原第 7 项的 “UI 经 BP wujie 加载”实现措辞、2026-05-21 修订第 9 项的旧 `subapp-router-change`/`plant-changed` 无版本消息，以及子应用直接处理 401 的做法。继续有效的是 manifest/IP allowlist、SPA 路由可达、service baseURL、构建产物、嵌入 chrome、antd 规范与真实 BP 逐菜单 E2E 目标；其现行实现以接入手册 v2 和 ADR-047 为准。历史内容保留用于解释迁移原因，不得作为新接入终态。
+
 **一句话**:**子应用接入手册 = 准入 SOP 强约束**;子应用必须用 **BrowserRouter**(配 wujie sync=true)、必须实现 manifest API、必须 IP allowlist 跨进程鉴权;**MDM 作为参考实现先按 SOP 改造**(HashRouter → BrowserRouter)。
 
 **详细**:
@@ -91,7 +93,7 @@
 - 影响 plan:[2026-05-07-mdm-browserrouter-migration/plan.md](../../SYSV2/docs/superpowers/plans/2026-05-07-mdm-browserrouter-migration/plan.md)
 - 影响代码:`AI.REACT.MDM.1/src/index.jsx:6`(HashRouter → BrowserRouter);`AI.REACT.MDM.1/src/App.jsx:42`(bus 监听保留 backward compat 注释)
 - 影响标准文档:[`standards/subapp-onboarding-guide.md`](../standards/subapp-onboarding-guide.md)(SOP 8 项检测段升级,从"建议"改"强制")
-- 影响 memory:[`feedback_subapp_onboarding_sop_enforcement.md`](../../SYSV2/.claude/projects/.../memory/...)(新增,跨项目 SOP)
+- 历史 memory：`feedback_subapp_onboarding_sop_enforcement.md`（原 Claude 资产归档，仅作背景）
 
 ---
 
@@ -138,6 +140,7 @@
 |---|---|---|
 | 2026-05-07 | Proposed → Accepted | 涛哥拍板;MDM 作参考实现先改造,SOP 8 项强约束 |
 | 2026-05-21 | Accepted（修订） | SRMV2 Contract 迁移踩坑 → 补 G 方案 postMessage 路由同步 + service baseURL 两项强约束(见下修订段) |
+| 2026-07-14 | Accepted（适用范围修订） | 明列由 ADR-047 取代的原 1/3/7、修订 9 与 401 条款；其余接入准入约束继续有效 |
 
 ---
 

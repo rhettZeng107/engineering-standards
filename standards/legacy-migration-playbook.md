@@ -11,7 +11,7 @@
 > 本节是迁移轨**唯一总入口**:任何老项目迁移改造从这里开始,按主线走;每阶段挂的决策(ADR)/ 操作章节 / 工具 / 门禁见下表。
 > **决策两半(互补不冲突)**:[ADR-014](../decisions/ADR-014-migration-refactor-workflow.md) 管「**怎么执行**」(Front-load 风险审查 + Back-automate 自治 + 中断纪律 + 完整性审计 workflow);[ADR-028](../decisions/ADR-028-legacy-migration-baseline-two-step.md) 管「**做什么算完**」(基线 + 四层等价 DoD + STEP1/2 解耦)。各阶段以下表「决策依据」列为准。
 > **工具两件**:[`tools/migration-fanout`](../tools/migration-fanout/)(执行 = 批量同构页落盘)/ [`tools/migration-audit`](../tools/migration-audit/)(查漏 = 完整性多维并扫)。
-> **特化**:BP 微前端子应用接入另套 [subapp-migration-checklist](../templates/subapp-migration-checklist.md) + [subapp-onboarding-guide](subapp-onboarding-guide.md)。
+> **特化**:BP iframe 子应用接入另套 [subapp-migration-checklist](../templates/subapp-migration-checklist.md) + [subapp-onboarding-guide](subapp-onboarding-guide.md)。
 
 ### 端到端主线(立项 → 完结)
 
@@ -229,7 +229,7 @@
 ### 流程纪律 + 特化(方法层,非失效模式)
 - **迁移未完成就做功能 → 逼出违规造新**(供应商 v1 自造简版 Modal):STEP1/2 解耦,默认增强禁造新。
 - **grep 历史不够宽**:加「同模块已实现工作页作对齐标杆」(ADR-016)。
-- **子应用迁 BP**:逐条对照参考实现(MDM)G 方案 postMessage 路由同步契约 + 全 service `baseURL`;E2E 真实 BP iframe + production-like **逐菜单**跑(套 `subapp-onboarding-guide.md` + ADR-012),禁 dev proxy 假通过。
+- **子应用迁 BP**:逐条对照 BpSubAppBridge v1 的 ready/context/ACK、精确 source/origin、内存态 JWT 与全 service `baseURL`；E2E 在真实 BP iframe + production-like 环境**逐菜单**跑(套 `subapp-onboarding-guide.md` + ADR-047)，禁 dev proxy 假通过。
 
 ---
 
@@ -246,4 +246,4 @@
 4. [ ] E2E 验证功能骨架等价(列表页必查无 `-` 占位 = 关键列有真实数据;字段大小写以 curl 实测接口为准)
 5. [ ] 模块级 STEP 1 验收(套 §3.5 验收质量闸:目标导向 / 验证欠债 / 跨阶段回归 / 需求覆盖)→ 解锁 STEP 2
 6. [ ] STEP 2 功能演进:先出现有页清点表,默认增强、禁造新
-7. [ ] 若迁移的是 **BP 微前端子应用**:套 `subapp-onboarding-guide.md` 子应用侧 G 方案自检(postMessage 路由同步桥 + 全 service `baseURL` + 嵌入隐藏 chrome + manifest/IP allowlist + production iframe 逐菜单验收),禁 dev proxy 假通过
+7. [ ] 若迁移的是 **BP iframe 子应用**:套 `subapp-onboarding-guide.md` 的 BpSubAppBridge v1 自检(ready/context/ACK + 精确 source/origin + 内存态 JWT + 全 service `baseURL` + 嵌入隐藏 chrome + manifest/IP allowlist + production iframe 逐菜单验收),禁 dev proxy 假通过
