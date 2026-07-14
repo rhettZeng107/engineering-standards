@@ -168,6 +168,19 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 3. **前台 `wait/watch` 只用于短检查或涛哥明确要求前台等待**。默认交互会话保持可响应;queued/inProgress 静默,终态绿汇报一次,红拉失败日志并按 self-heal SOP 自愈。
 4. **模板同步**:新工作区 bootstrap/CI SOP 文档引用本规则;老工作区遇到 watcher 不稳定时,先补 `background` wrapper,再继续 CI 自愈。
 
+## 修订(2026-07-14)
+
+**背景**:SYSV2 同批 10 个构建启动 detached watcher 后,内网一次 `ETIMEDOUT` 导致全部 watcher 永久退出;BP #1673 后续真实红灯,但旧实现只保留失败 task 的 URL,没有自动抓正文,也没有能唤醒消费方的逐 build 告警。进程“已启动”被误当作“后台监控已闭环”,违反本 ADR 的自主查 CI 与自愈目标。
+
+**修订决策**:
+
+1. **启动必须验收**:启动后 60 秒或两个 poll 周期内,独立验证 watcher 仍存活且 log/meta 有推进,或已落终态;启动命令输出和 PID 本身不算完成证据。
+2. **断线续监**:瞬时网络/API 错误只记 `monitor warning`,在总 timeout 内重试;`monitor_error` 与真实 CI `failed` 分开记录,不得混报。
+3. **红灯自动取证**:终态红时自动下载失败 job/task 日志正文、脱敏并保存非空的逐 build failure artifact;只存 URL 不合格。
+4. **逐 build 状态**:并发 watcher 分别维护 meta/alert;全局 `current` 只能作便利视图,不得作为并发构建的终审证据。
+5. **必须有消费方**:detached watcher 必须绑定 thread/project automation、事件桥或仍在执行的 agent follow-up,由消费方读取终态/告警并进入 self-heal。只写文件、无人读取不算闭环。
+6. **回放门禁**:每类 watcher 初次落地或机制修改后,至少验证一次已完成绿构建、一次已完成红构建(失败日志非空),并模拟或实证一次瞬时网络失败不会退出。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
@@ -176,3 +189,4 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 | 2026-05-28 | 修订(不改编号) | PAT 路径统一 `~/.claude/ado-pat` + monitor `.ps1→.js` 迁移对照 + build≠部署判定 + 自主查 CI 强制(涛哥拍板) |
 | 2026-06-17 | 修订(不改编号) | build 去重铁律升格 — push 后必 `cancel-old` 留最新、取消其余在途(含 inProgress)+ 扩至全工作区(涛哥拍板) |
 | 2026-07-09 | 修订(不改编号) | CI watcher 默认后台机制改为实测 detached/background 或 Codex automation;`nohup` 仅作验证后兜底 |
+| 2026-07-14 | 修订(不改编号) | 增加启动验收、断线续监、红灯日志正文、逐 build 告警与消费方闭环硬门禁 |

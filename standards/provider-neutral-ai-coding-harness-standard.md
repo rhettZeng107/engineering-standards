@@ -142,10 +142,14 @@ After a push starts CI, monitor the pipeline to a terminal state without occupyi
 |---|---|
 | Default mode | Start the CI watcher in a detached/background process or project automation, then keep the main session available for new user prompts. |
 | Evidence | Record the repo, branch, build/run id, background PID or automation id, log path, and command used to start monitoring. |
+| Startup acceptance | Within 60 seconds or two poll intervals, independently verify that the watcher is still alive and has advanced its log/meta state, or that it has already written a terminal result. Starting a process is not evidence that monitoring works. |
+| Transport resilience | Treat transient CI API/network errors as monitor warnings: retry and continue until the overall timeout. Record `monitor_error` separately from a real CI `failed` result; never report one as the other. |
 | Output policy | Stay silent for `queued`, `pending`, and `inProgress` states. Report only `FINAL: succeeded/failed`, failed-step log summaries, self-heal actions, or decisions requiring human input. |
 | Foreground waits | Use blocking `wait` only for short CI checks or when the user explicitly asks to wait in the foreground. If it starts affecting interaction, stop the foreground wait and restart it in the background. |
 | Log handling | Write watcher logs outside source trees unless the project has an approved run-record/log directory; do not commit generated CI logs. |
-| Failure path | On failure, fetch the failed-job logs, classify whether self-heal is safe, apply the normal review/verification gates before repush, and restart background monitoring after the fix. |
+| Failure artifacts | On a red terminal state, automatically fetch the failed job/task log body, redact secrets, and write a non-empty per-build failure artifact plus per-build alert metadata. A log URL alone is insufficient. |
+| Delivery bridge | A detached watcher must have a verified consumer: thread/project automation, event bridge, or an active agent follow-up that reads terminal/alert metadata. A file-writing child with nobody consuming the result is not closed-loop monitoring. |
+| Failure path | On failure, the consumer must inspect the captured logs, classify whether self-heal is safe, apply the normal review/verification gates before repush, and restart background monitoring after the fix. |
 
 Preferred implementation order:
 
@@ -154,7 +158,7 @@ Preferred implementation order:
 3. Shell job under `tmux`/platform-native watcher when already standard for the project.
 4. `nohup <ci-watch-command> ... &` only as a fallback after verifying in the current tool environment that the child process survives the parent command/session.
 
-Do not treat a foreground `watch`/`wait` command wrapped in chat as background monitoring. The mechanism must be tested once per workspace/runtime family, because tool sessions may terminate process groups differently from an ordinary terminal.
+Do not treat a foreground `watch`/`wait` command wrapped in chat as background monitoring. Do not mark CI monitoring complete from the launch command alone, an existing PID alone, or a global “current” file shared by concurrent builds. The mechanism must be tested once per workspace/runtime family, including a completed green replay, a completed red replay with non-empty captured logs, and one transient transport failure.
 
 ## Codex Surface Model
 
