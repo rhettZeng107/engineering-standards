@@ -340,8 +340,43 @@ try {
   run('vote', 1);
   validFixture();
 
+  const configWithEmptyAdditionalInput = fs.readFileSync(config, 'utf8');
+  fs.writeFileSync(config, configWithEmptyAdditionalInput.replace('additionalContractInputFilesCsv: ""\n', ''));
+  run('lock', 0);
+  const absentAdditionalInputPaths = JSON.parse(fs.readFileSync(path.join(batch, 'baseline-lock.json'), 'utf8')).files.map((entry) => entry.path);
+  fs.writeFileSync(config, configWithEmptyAdditionalInput);
+  run('lock', 0);
+  const emptyAdditionalInputPaths = JSON.parse(fs.readFileSync(path.join(batch, 'baseline-lock.json'), 'utf8')).files.map((entry) => entry.path);
+  assert.deepStrictEqual(absentAdditionalInputPaths, emptyAdditionalInputPaths, 'absent and empty additional input config must be equivalent');
+
+  const additionalInput = path.join(batch, 'legacy-menu-snapshot.json');
+  fs.writeFileSync(config, fs.readFileSync(config, 'utf8').replace(
+    'additionalContractInputFilesCsv: ""',
+    'additionalContractInputFilesCsv: "legacy-menu-snapshot.json,./legacy-menu-snapshot.json"',
+  ));
+  fs.writeFileSync(path.join(batch, 'baseline-lock.json'), '{"stale":true}\n');
+  run('lock', 1);
+  assert.ok(!fs.existsSync(path.join(batch, 'baseline-lock.json')), 'missing additional contract input must block the lock');
+  fs.writeFileSync(additionalInput, '{"snapshot":"v1"}\n');
   run('lock', 0);
   assert.ok(fs.existsSync(path.join(batch, 'baseline-lock.json')), 'baseline lock should be written');
+  const additionalInputEntries = JSON.parse(fs.readFileSync(path.join(batch, 'baseline-lock.json'), 'utf8')).files
+    .filter((entry) => entry.path === 'legacy-menu-snapshot.json');
+  assert.strictEqual(additionalInputEntries.length, 1, 'normalized duplicate additional inputs must be locked once');
+  fs.writeFileSync(additionalInput, '{"snapshot":"v2"}\n');
+  run('check-lock', 1);
+  fs.writeFileSync(additionalInput, '{"snapshot":"v1"}\n');
+  run('check-lock', 0);
+  const configWithAdditionalInput = fs.readFileSync(config, 'utf8');
+  fs.mkdirSync(path.join(batch, 'additional-contract-input-dir'));
+  fs.writeFileSync(config, configWithAdditionalInput.replace(
+    'legacy-menu-snapshot.json,./legacy-menu-snapshot.json',
+    'additional-contract-input-dir',
+  ));
+  run('lock', 1);
+  assert.ok(!fs.existsSync(path.join(batch, 'baseline-lock.json')), 'non-file additional contract input must block the lock');
+  fs.writeFileSync(config, configWithAdditionalInput);
+  run('lock', 0);
 
   const specFile = path.join(batch, 'spec.md');
   const validSpec = fs.readFileSync(specFile, 'utf8');

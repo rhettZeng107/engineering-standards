@@ -142,6 +142,7 @@ function readConfig(configPath) {
   cfg.baselineLockFile = cfg.baselineLockFile || 'baseline-lock.json';
   cfg.completenessFile = cfg.completenessFile || 'completeness-sweep.json';
   cfg.baselineSpecFile = cfg.baselineSpecFile || 'spec.md';
+  cfg.additionalContractInputFilesCsv = cfg.additionalContractInputFilesCsv || '';
   cfg.requiredSweepDimensionsCsv = cfg.requiredSweepDimensionsCsv || CANONICAL_SWEEP_DIMENSIONS.join(',');
   return cfg;
 }
@@ -887,6 +888,12 @@ function contractInputFiles(cfg) {
   if (!fs.existsSync(baselineSpec)) throw new Error(`baselineSpecFile not found: ${baselineSpec}`);
   if (!fs.existsSync(completenessFile)) throw new Error(`completenessFile not found: ${completenessFile}`);
   const files = [cfg.__configPath, baselineSpec, completenessFile, ...Object.values(bundle.files)];
+  for (const configured of splitCsv(cfg.additionalContractInputFilesCsv)) {
+    const file = resolveMaybe(cfg.__configDir, configured);
+    if (!fs.existsSync(file)) throw new Error(`additionalContractInputFilesCsv file not found: ${file}`);
+    if (!fs.statSync(file).isFile()) throw new Error(`additionalContractInputFilesCsv input must be a file: ${file}`);
+    files.push(file);
+  }
   const fieldDiffsFile = resolveMaybe(cfg.__configDir, cfg.fieldDiffsFile || 'field-diffs.json');
   const optional = [
     fieldDiffsFile,

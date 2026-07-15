@@ -15,6 +15,9 @@ contractIndexFile: "contract-index.json"
 baselineLockFile: "baseline-lock.json"
 baselineSpecFile: "spec.md"
 completenessFile: "completeness-sweep.json"
+# Optional comma-separated runtime snapshots or other reviewed evidence that must
+# invalidate the baseline lock when their content changes.
+additionalContractInputFilesCsv: ""
 requiredSweepDimensionsCsv: "enumeration,frontend-backend-ownership,shell-layout,menu-page-backend,source-degradation,current-new-only"
 
 # Existing deterministic gates.
