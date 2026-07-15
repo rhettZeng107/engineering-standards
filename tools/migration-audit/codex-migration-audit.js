@@ -601,12 +601,33 @@ function validateContractBundle(cfg) {
       }
       if (name === 'pages' && !allowedPageClass.has(record?.pageClass)) issues.push(`${owner}: invalid pageClass`);
       if (name === 'apiContracts') {
-        const allowedMethods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
+        const unconstrainedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+        const allowedMethods = new Set(unconstrainedMethods);
         if (!Array.isArray(record?.httpMethods) || record.httpMethods.length === 0) {
           issues.push(`${owner}: httpMethods must be a non-empty array`);
         }
         for (const method of asArray(record?.httpMethods)) {
           if (!allowedMethods.has(method)) issues.push(`${owner}: invalid HTTP method ${method}`);
+        }
+        const requireHttpConstraint = parseBoolean(cfg.requireApiHttpConstraint, false);
+        const hasHttpConstraint = record?.httpConstraint !== undefined && record?.httpConstraint !== null && record?.httpConstraint !== '';
+        if (requireHttpConstraint && !hasHttpConstraint) {
+          issues.push(`${owner}: httpConstraint is required when requireApiHttpConstraint is enabled`);
+        }
+        if (hasHttpConstraint) {
+          if (!['constrained', 'unconstrained'].includes(record.httpConstraint)) {
+            issues.push(`${owner}: httpConstraint must be constrained or unconstrained`);
+          } else if (record.httpConstraint === 'constrained' && asArray(record.httpMethods).length !== 1) {
+            issues.push(`${owner}: constrained httpConstraint requires exactly one HTTP method`);
+          } else if (record.httpConstraint === 'unconstrained') {
+            const methods = asArray(record.httpMethods);
+            const hasExactUnconstrainedSet = methods.length === unconstrainedMethods.length &&
+              new Set(methods).size === unconstrainedMethods.length &&
+              unconstrainedMethods.every((method) => methods.includes(method));
+            if (!hasExactUnconstrainedSet) {
+              issues.push(`${owner}: unconstrained httpConstraint requires the complete HTTP method set`);
+            }
+          }
         }
       }
       if (name === 'serviceLinks' && record?.fromId === record?.toArtifactId) {

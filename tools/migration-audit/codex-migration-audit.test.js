@@ -172,6 +172,51 @@ function validFixture() {
   });
 }
 
+function apiFixture(httpConstraint, httpMethods = ['GET']) {
+  validFixture();
+  const source = JSON.parse(fs.readFileSync(path.join(batch, 'source-inventory.json'), 'utf8'));
+  const matrix = JSON.parse(fs.readFileSync(path.join(batch, 'migration-matrix.json'), 'utf8'));
+  source.artifacts.push({
+    id: 'artifact.inventory-api',
+    module: 'Inventory',
+    side: 'legacy',
+    type: 'webapi-action',
+    path: 'Controllers/InventoryController.cs:List',
+    pageClass: 'other',
+    contractDimension: 'apiContracts',
+    dimensionExemptionEvidence: '',
+    status: 'complete',
+    evidence: 'Controllers/InventoryController.cs:10',
+  });
+  matrix.rows[0].legacyArtifactIds.push('artifact.inventory-api');
+  matrix.rows[0].contractIds.push('api.inventory-list');
+  matrix.rows[0].dimensionCoverage.apiContracts = {
+    status: 'covered',
+    contractIds: ['api.inventory-list'],
+    evidence: '',
+  };
+  const record = {
+    id: 'api.inventory-list',
+    module: 'Inventory',
+    migrationRowId: 'row.inventory-page',
+    contractStatus: 'ready',
+    evidence: ['Controllers/InventoryController.cs:10'],
+    sourceArtifactIds: ['artifact.inventory-api'],
+    sourceArtifactId: 'artifact.inventory-api',
+    route: 'api/inventory/list',
+    httpMethods,
+    refs: [],
+  };
+  if (httpConstraint !== undefined) record.httpConstraint = httpConstraint;
+  writeJson('source-inventory.json', source);
+  writeJson('migration-matrix.json', matrix);
+  writeJson('api-contracts.json', {
+    schemaVersion: '0.2',
+    batchId: 'test-batch',
+    records: [record],
+  });
+}
+
 try {
   run('init', 0);
   run('contract', 1);
@@ -179,6 +224,36 @@ try {
   validFixture();
   run('contract', 0);
   run('completeness', 0);
+
+  apiFixture(undefined, ['GET']);
+  run('contract', 0);
+
+  apiFixture('unconstrained', ['GET']);
+  run('contract', 1);
+
+  apiFixture('constrained', ['GET', 'POST']);
+  run('contract', 1);
+
+  apiFixture(undefined, ['GET']);
+  fs.appendFileSync(config, '\nrequireApiHttpConstraint: "true"\n');
+  run('contract', 1);
+
+  apiFixture('unconstrained', ['GET']);
+  fs.appendFileSync(config, '\nrequireApiHttpConstraint: "true"\n');
+  run('contract', 1);
+
+  apiFixture('unconstrained', ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
+  fs.appendFileSync(config, '\nrequireApiHttpConstraint: "true"\n');
+  run('contract', 0);
+
+  apiFixture('constrained', ['GET', 'POST']);
+  fs.appendFileSync(config, '\nrequireApiHttpConstraint: "true"\n');
+  run('contract', 1);
+
+  apiFixture('constrained', ['GET']);
+  fs.appendFileSync(config, '\nrequireApiHttpConstraint: "true"\n');
+  run('contract', 0);
+  validFixture();
 
   const completenessFile = path.join(batch, 'completeness-sweep.json');
   const validCompleteness = fs.readFileSync(completenessFile, 'utf8');
