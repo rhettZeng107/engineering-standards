@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "0.2",
+  "batchId": "<yyyy-mm-dd-topic>",
+  "dimensions": [
+    {
+      "id": "enumeration",
+      "status": "pending|complete",
+      "evidence": [],
+      "gapIds": []
+    },
+    {
+      "id": "frontend-backend-ownership",
+      "status": "pending|complete",
+      "evidence": [],
+      "gapIds": []
+    },
+    {
+      "id": "shell-layout",
+      "status": "pending|complete",
+      "evidence": [],
+      "gapIds": []
+    },
+    {
+      "id": "menu-page-backend",
+      "status": "pending|complete",
+      "evidence": [],
+      "gapIds": []
+    },
+    {
+      "id": "source-degradation",
+      "status": "pending|complete",
+      "evidence": [],
+      "gapIds": []
+    },
+    {
+      "id": "current-new-only",
+      "status": "pending|complete",
+      "evidence": [],
+      "gapIds": []
+    }
+  ],
+  "gaps": [],
+  "criticRounds": [
+    {
+      "round": 1,
+      "newGapIds": [],
+      "missedDimensions": [],
+      "midStateModules": [],
+      "unverifiedClaims": [],
+      "evidence": []
+    },
+    {
+      "round": 2,
+      "newGapIds": [],
+      "missedDimensions": [],
+      "midStateModules": [],
+      "unverifiedClaims": [],
+      "evidence": []
+    }
+  ]
+}

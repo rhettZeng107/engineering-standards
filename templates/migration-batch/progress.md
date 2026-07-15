@@ -27,4 +27,4 @@ updated_at: <ISO-8601>
 ## Next
 
 - Fill source inventory and migration matrix.
-- Fill normalized contracts, pass `contract`, and write the baseline lock before STEP1.
+- Fill normalized contracts and completeness sweep, pass `contract` + `completeness`, and write the baseline lock before STEP1.

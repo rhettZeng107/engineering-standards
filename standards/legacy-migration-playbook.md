@@ -19,7 +19,7 @@
 |---|---|---|---|---|---|
 | **0 立项·基线声明** | spec 声明四项基线(后端运行时 / 前端工具链 / 工程标准 / 源仓分支范围) | ADR-028 §1 | §2 | — | 基线四项已声明 |
 | **1 源工件盘点** | 产 old 源工件清单(逐页/逐接口标 完好/半成品/坏)+ 老视图逐行提 UI 功能清单(本体锁定作契约锁基准)+ **壳层 layouts 功能去留表**；另产 `current-new-only` 清单，登记没有 old 对应行的 new 页面/字段/自动化/工程增强 | ADR-028 §3 · ADR-037 | §3.1 | — | old 清单全标状态;UI 功能清单 + 壳层去留表 + current-new-only 清单齐 |
-| **2 前期实证·完整性审计** | **官方 Dynamic Workflow 动态编排**(禁 general-purpose 单跑):主完整性方向保持 old→new 全覆盖，并增加只用于增强保留的 current-new-only delta sweep；adversarial 投票 + critic + loop-until-dry；**产迁移矩阵表**(允许 `old=N/A` 的 new-only 行) | ADR-014(修订 2026-06-22) | **§3.0** / §3.6 | **Dynamic Workflow**(migration-audit + baseline-adversarial 作模板) | 迁移矩阵过对抗投票锁基准;CRITICAL/HIGH gap 全登记 |
+| **2 前期实证·完整性审计** | **官方 Dynamic Workflow 动态编排**(禁 general-purpose 单跑):主完整性方向保持 old→new 全覆盖，并增加只用于增强保留的 current-new-only delta sweep；adversarial 投票 + critic + loop-until-dry；**产迁移矩阵表 + `completeness-sweep.json`**(允许 `old=N/A` 的 new-only 行) | ADR-014(修订 2026-06-22/2026-07-15) | **§3.0** / §3.6 | **Dynamic Workflow**(migration-audit + baseline-adversarial 作模板) | 六维扫描有证据、gap 全解决、连续 2 轮 dry;迁移矩阵过对抗投票锁基准 |
 | **3 Front-load 风险审查** | E2E 双层风险审查 + 功能骨架等价审查(spec 内嵌) | ADR-014 §1 | — | — | 涛哥校验整体策略(非逐条) |
 | **4 STEP1 分模块迁移** | 按契约锁 + 范式 1:1 等价移植落盘(批量同构页并行) | ADR-028 §2/§6 · ADR-037 | §3.2 | **migration-fanout** | Back-automate 自治(中断白名单 3 类,ADR-014 §2) |
 | **5 四层等价 DoD 门** | ①工具链 ②UI工程标准 ③功能骨架(对 UI 功能清单逐项打钩)④入口可达 — 四层逐项核 | ADR-028 §2 | §3.2 | — | 四层全过 |
@@ -87,7 +87,7 @@
 **四条硬规则**:
 1. **动态编排优先**:主会话本体**据本次迁移现状 inline 编排**四个 pattern —— **multi-modal sweep**(N agent 各扫一维互盲:模块/页面/字段/接口/菜单)+ **adversarial verify 投票**(对源/ref、排除、合并/重命名、退化工件、非 CRUD、客户集成和模块完整性等高判断风险派独立 skeptic refute)+ **completeness critic**(每轮收口「还漏哪维/哪模块停中间态/哪声称迁完无证据」)+ **loop-until-dry**(连续 2 轮无新发现才停)。机械字段由确定性合同门全量校验,不逐标量重复投票。预存的 `tools/migration-audit/{migration-audit,baseline-adversarial}.workflow.js` 降为**参考实现/起点模板**,不是套死 args 黑盒。
 2. **审计方向以 old→new 全覆盖为主,辅以 current-new-only 保留扫描**:以**老仓全量清单为锚**逐项在新平台找落点,禁止用 new→old 替代主完整性审计；同时独立枚举当前 new 的页面/字段/自动化/工程能力,对没有 old 对应项的 delta 建 `old=N/A` 行,防止 new-only 增强在迁移中被误删。
-3. **强制产物 = 规范化迁移合同**:逐**页面/字段/接口**建立稳定 ID,同时记录 new 现有能力、分类与最终目标。`migration-matrix.json` 只存基线决策,页面/UI 操作/API/字段/Service/菜单/壳层/集成拆成 8 个合同集合;每个源工件声明主合同维度并须被同行记录引用,每个矩阵行八维均须 `covered` 或有证据的 `not-applicable`。实现证据单独写 `migration-progress.json`。`codex-migration-audit contract + lock` 绿后才锁为契约基准(ADR-037):
+3. **强制产物 = 规范化迁移合同 + 完整性收敛记录**:逐**页面/字段/接口/Service/Repository/数据库表视图存储过程**建立稳定 ID,同时记录 new 现有能力、分类与最终目标。`migration-matrix.json` 只存基线决策,页面/UI 操作/API/字段/Service/菜单/壳层/集成拆成 8 个合同集合;每个源工件声明主合同维度并须被同行记录引用,每个矩阵行八维均须 `covered` 或有证据的 `not-applicable`。不可缩减的 canonical 六维扫描、已解决 gap 与 critic 轮次写入 `completeness-sweep.json`;critic 发现必须转同轮 gap、绑定矩阵与解决证据,不得后续静默清空;最后连续 2 轮 dry 才允许锁。实现证据单独写 `migration-progress.json`。`codex-migration-audit contract + completeness + lock` 绿后才锁为契约基准(ADR-037);`spec.md`、完整性产物与逐字段 coverage 均属于哈希锁输入:
 
 | old 源工件(页/字段/接口) | new 现有能力 | 分类 | 最终目标 | 后端实装 | **前端真实装(非桩)** | 菜单种子 | 操作员可用 | 对抗投票 |
 |---|---|---|---|---|---|---|---|---|

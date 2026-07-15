@@ -12,7 +12,7 @@
       "id": "",
       "module": "",
       "side": "legacy|current-new-only",
-      "type": "mvc-controller|mvc-action|webapi-controller|webapi-action|service|rule|data-process|dto|entity|request|response|field|view|page|script|route|menu|permission|layout|job|config|external-integration|other",
+      "type": "mvc-controller|mvc-action|webapi-controller|webapi-action|service|rule|data-process|repository|database-table|database-view|stored-procedure|dto|entity|request|response|field|view|page|script|route|menu|permission|layout|job|config|external-integration|other",
       "path": "",
       "pageClass": "crud|dashboard|report|statistics|topology|map|workbench|other",
       "contractDimension": "pages|uiFunctions|apiContracts|fields|serviceLinks|menuRoutes|shellFeatures|integrations|reviewed-exemption",

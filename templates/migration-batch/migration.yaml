@@ -13,6 +13,9 @@ migrationMatrixFile: "migration-matrix.json"
 migrationProgressFile: "migration-progress.json"
 contractIndexFile: "contract-index.json"
 baselineLockFile: "baseline-lock.json"
+baselineSpecFile: "spec.md"
+completenessFile: "completeness-sweep.json"
+requiredSweepDimensionsCsv: "enumeration,frontend-backend-ownership,shell-layout,menu-page-backend,source-degradation,current-new-only"
 
 # Existing deterministic gates.
 frontendSrcDir: "<target-frontend>/src"

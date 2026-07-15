@@ -282,6 +282,20 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 
 ---
 
+## 修订(2026-07-15)— 全局迁移轨硬门收口(CR 2 HIGH + 技术 MED)
+
+**问题**:2026-07-15 首版规范化合同已能校验引用和内容哈希,但完整性 sweep/critic/loop-until-dry 仍只有流程文字,锁链可在未实际扫全时变绿；`spec.md` 未进锁导致范围、运行时、工具链或源决策变化不失锁；风险票把空票一律判红却遗漏了仅以 `CRITICAL/HIGH` severity 标记的风险行；Service 关系虽写可达 DB,源工件类型没有 Repository/表/视图/存储过程；逐任务字段 coverage 也未纳入哈希。
+
+**决策**:
+
+1. 新增 `completeness-sweep.json` 与 `codex-migration-audit completeness` 硬门。固定检查六维枚举、前后端归属、壳层、菜单页面后端三方、源退化、current-new-only,项目配置只能追加不能缩减；critic 发现的漏维、中间态模块、无证完成声称必须转成同轮 gap ID,绑定矩阵行、解决并给证据,不得在后续轮静默清空；最后连续两轮必须 dry。
+2. `lock` 固定运行 `contract + completeness + fields + vote`。哈希输入增加 `spec.md`、完整性产物和 `field-diffs.json` 每项声明的 coverage 文件；输入内容或集合变化都让旧锁失效。
+3. 风险票采用两层触发：判断性 classification/riskFlags **或** severity=`CRITICAL/HIGH` 均强制绑定票；只有全批次零风险时允许 `votes.json` 为空。
+4. Service 关系正式支持 `repository`、`database-table`、`database-view`、`stored-procedure` 源工件类型，并统一映射到 `serviceLinks` 维度。
+5. 版本化/分发封装不属于本轮硬门：由涛哥明确豁免，当前继续以用户级 `$HOME/.agents/skills/legacy-migration` 作为运行时入口，不影响上述机制完成判定。
+
+**结果**:“扫全、规格未漂移、字段差异已消解、风险结论已复核”从提醒文字变成可重放的失败条件；未满足任一项时不得生成或保留 baseline lock。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
@@ -296,3 +310,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 2026-06-22 | 修订(标准瘦身 / dogfood) | 自评过度设计(10 天 5 修订,规则涨坑同期发;06-22 桩在前 4 次规则全就位后仍发)→ **减法**:① 12 类坑库收敛为 **3 失效模式**(完整性盲区/半迁中间态/误判+入口断链)② 高频坑下沉**机器门** `tools/migration-audit/migration-gate.sh`(Gate1 前端桩 / Gate2 后端归属 / Gate3 路由孤儿;CI/收尾必跑,非 0 即红)③ 文档单一真理源=活迁移矩阵取代散落复盘 md。**实跑 TPM 精准抓设备手册桩(0 误报)+ 老后端残留 2 处**。原则:「能跑的门 > 记 12 条坑」,治本在执行穿透而非加规则。锚点:playbook §3.0/§5 + SKILL |
 | 2026-06-22 | 修订(失效模式④ — CRUD 形状盲区) | TPMV2 6 仓审计漏 `Home` 个人中心 dashboard(单源 Controller 枚举 + boilerplate 黑名单)+ 误绿 `LubricationStatistics` 统计页(CRUD 4 列判据套不上非 CRUD 页),靠涛哥提醒才补回。根因:扇出/对抗投票全在**枚举下游**,枚举本身单源+黑名单+无完整性校验=裸奔最弱环。**减法修**:① **枚举范围铁律** = Controllers ∪ 所有 Views ∪ Scripts ∪ 菜单种子 ∪ 路由 多源并集 + **零黑名单**(Home/Account 未证伪算真功能)② `migration-gate.sh` 加 **Gate0 枚举完整性 critic**(传 legacy_roots,机器暴露非 CRUD 漏页)③ 迁移矩阵加**「页类」维**,非 CRUD 页换判据(聚合端点+可视化渲染+入口);workflow 加第 5 维(enumeration)。原则:**完整性=机器可验事实源,禁人手臆测过滤**。锚点:playbook §3.1 枚举铁律/§3.0 Gate0/§5 失效模式④ + SKILL + TPMV2 specs/2026-06-22-tpm-manual-migration |
 | 2026-07-15 | 修订(Codex/WMS 首用) | 全项目 DoD 留 spec/plan,Goal 按可验里程碑分段;首个 Goal 只锁 Phase 0。自由文本矩阵升级为源清单 + 基线矩阵 + 8 类规范化合同 + 独立进度;新增 contract/lock/check-lock/progress 硬门。对抗投票从机械字段逐项三票改为确定性全量校验 + 高判断风险多票。 |
+| 2026-07-15 | 修订(CR 硬门收口) | 完整性六维扫描与连续两轮 dry critic 升级为 `completeness` 硬门；锁输入增加 spec、完整性产物和逐任务字段 coverage；severity 高风险纳入投票；补 Repository/DB 工件类型。版本化按本轮明确授权豁免。 |

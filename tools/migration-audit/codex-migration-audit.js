@@ -19,12 +19,21 @@ const STANDARDS_ROOT = path.resolve(TOOL_DIR, '..', '..');
 const TEMPLATE_DIR = path.join(STANDARDS_ROOT, 'templates', 'migration-batch');
 const DEFAULT_CONFIG = 'migration.yaml';
 const DEFAULT_STATE = '.codex-migration-audit-state.json';
+const CANONICAL_SWEEP_DIMENSIONS = Object.freeze([
+  'enumeration',
+  'frontend-backend-ownership',
+  'shell-layout',
+  'menu-page-backend',
+  'source-degradation',
+  'current-new-only',
+]);
 
 function usage(exitCode = 2) {
   const text = `
 Usage:
   codex-migration-audit init --target <batch-dir> [--batch-id <id>] [--title <title>] [--force]
   codex-migration-audit contract --config <migration.yaml>
+  codex-migration-audit completeness --config <migration.yaml>
   codex-migration-audit gate   --config <migration.yaml>
   codex-migration-audit fields --config <migration.yaml>
   codex-migration-audit vote   --config <migration.yaml>
@@ -39,15 +48,16 @@ Usage:
 Commands:
   init    Copy templates/migration-batch into a project spec directory.
   contract Validate source inventory, normalized contracts, matrix coverage, and references.
+  completeness Validate required sweep dimensions, resolved gaps, critic, and two dry rounds.
   gate    Run migration-gate.sh using migration.yaml.
   fields  Run field-diff.sh for entries in field-diffs.json.
   vote    Merge votes.json using fail-safe disputed/confirmed rules.
-  lock    Run contract + fields + vote, then write an immutable baseline lock on success.
+  lock    Run contract + completeness + fields + vote, then write an immutable baseline lock on success.
   check-lock Verify that the baseline lock still matches all contract input files.
   progress Validate that every locked matrix row has verified implementation evidence.
   local   Run local verification commands from local-verify.commands.
   report  Write audit-report.json and audit-report.md from captured state.
-  verify  Hard local gate: contract, baseline lock, gate, fields, vote, progress, local, report.
+  verify  Hard local gate: contract, completeness, baseline lock, gate, fields, vote, progress, local, report.
   all     Alias for verify.
 `;
   console.error(text.trim());
@@ -130,6 +140,9 @@ function readConfig(configPath) {
   cfg.migrationProgressFile = cfg.migrationProgressFile || 'migration-progress.json';
   cfg.contractIndexFile = cfg.contractIndexFile || 'contract-index.json';
   cfg.baselineLockFile = cfg.baselineLockFile || 'baseline-lock.json';
+  cfg.completenessFile = cfg.completenessFile || 'completeness-sweep.json';
+  cfg.baselineSpecFile = cfg.baselineSpecFile || 'spec.md';
+  cfg.requiredSweepDimensionsCsv = cfg.requiredSweepDimensionsCsv || CANONICAL_SWEEP_DIMENSIONS.join(',');
   return cfg;
 }
 
@@ -211,6 +224,7 @@ function readState(cfg) {
       batchId: cfg.batchId || '',
       updatedAt: '',
       contract: null,
+      completeness: null,
       baselineLock: null,
       gate: null,
       fields: null,
@@ -292,6 +306,10 @@ const ARTIFACT_DIMENSION_BY_TYPE = {
   rule: 'serviceLinks',
   'data-process': 'serviceLinks',
   job: 'serviceLinks',
+  repository: 'serviceLinks',
+  'database-table': 'serviceLinks',
+  'database-view': 'serviceLinks',
+  'stored-procedure': 'serviceLinks',
   dto: 'fields',
   entity: 'fields',
   request: 'fields',
@@ -312,7 +330,7 @@ const ARTIFACT_TYPES_BY_DIMENSION = {
   pages: new Set(['view', 'page']),
   apiContracts: new Set(['mvc-controller', 'mvc-action', 'webapi-controller', 'webapi-action']),
   fields: new Set(['dto', 'entity', 'request', 'response', 'field']),
-  serviceLinks: new Set(['service', 'rule', 'data-process', 'job']),
+  serviceLinks: new Set(['service', 'rule', 'data-process', 'job', 'repository', 'database-table', 'database-view', 'stored-procedure']),
   menuRoutes: new Set(['route', 'menu', 'permission']),
   shellFeatures: new Set(['layout']),
   integrations: new Set(['external-integration']),
@@ -378,6 +396,10 @@ const ARTIFACT_TYPES = new Set([
   'permission',
   'layout',
   'job',
+  'repository',
+  'database-table',
+  'database-view',
+  'stored-procedure',
   'config',
   'external-integration',
   'other',
@@ -421,6 +443,7 @@ function loadContractBundle(cfg) {
 
 function rowRequiresVote(row, artifactsById) {
   if (RISK_CLASSIFICATIONS.has(row?.classification)) return true;
+  if (['CRITICAL', 'HIGH'].includes(row?.severity)) return true;
   if (asArray(row?.riskFlags).length > 0) return true;
   return asArray(row?.legacyArtifactIds).some((artifactId) => {
     const artifact = artifactsById.get(artifactId);
@@ -734,16 +757,132 @@ function commandContract(cfg) {
   return exitCode;
 }
 
+function commandCompleteness(cfg) {
+  const file = resolveMaybe(cfg.__configDir, cfg.completenessFile);
+  const payload = readJson(file, 'completenessFile');
+  const matrix = readJson(resolveMaybe(cfg.__configDir, cfg.migrationMatrixFile), 'migrationMatrixFile');
+  const issues = [];
+  const requiredDimensions = [...new Set([
+    ...CANONICAL_SWEEP_DIMENSIONS,
+    ...splitCsv(cfg.requiredSweepDimensionsCsv),
+  ])];
+  const matrixIds = new Set(asArray(matrix.rows).map((row) => row?.id).filter(validId));
+  const dimensionIds = new Set();
+  const referencedGapIds = new Set();
+  const gapsById = new Map();
+
+  if (payload.schemaVersion !== '0.2') issues.push('completeness-sweep.json: schemaVersion must be 0.2');
+  if (payload.batchId !== cfg.batchId) issues.push(`completeness-sweep.json: batchId must equal ${cfg.batchId || ''}`);
+  if (!Array.isArray(payload.dimensions)) issues.push('completeness-sweep.json: dimensions must be an array');
+  if (!Array.isArray(payload.gaps)) issues.push('completeness-sweep.json: gaps must be an array');
+  if (!Array.isArray(payload.criticRounds)) issues.push('completeness-sweep.json: criticRounds must be an array');
+
+  for (const [index, gap] of asArray(payload.gaps).entries()) {
+    const owner = `completeness.gaps[${index}]`;
+    if (!validId(gap?.id)) issues.push(`${owner}: invalid id`);
+    else if (gapsById.has(gap.id)) issues.push(`${owner}: duplicate id ${gap.id}`);
+    else gapsById.set(gap.id, gap);
+    if (!validId(gap?.dimension)) issues.push(`${owner}: dimension is required`);
+    if (!matrixIds.has(gap?.migrationRowId)) issues.push(`${owner}: unknown migrationRowId ${gap?.migrationRowId || ''}`);
+    if (gap?.status !== 'resolved') issues.push(`${owner}: status must be resolved before baseline lock`);
+    if (!hasEvidence(gap?.evidence)) issues.push(`${owner}: resolution evidence is required`);
+  }
+
+  for (const [index, dimension] of asArray(payload.dimensions).entries()) {
+    const owner = `completeness.dimensions[${index}]`;
+    if (!validId(dimension?.id)) issues.push(`${owner}: invalid id`);
+    else if (dimensionIds.has(dimension.id)) issues.push(`${owner}: duplicate id ${dimension.id}`);
+    else dimensionIds.add(dimension.id);
+    if (dimension?.status !== 'complete') issues.push(`${owner}: status must be complete`);
+    if (!hasEvidence(dimension?.evidence)) issues.push(`${owner}: evidence is required`);
+    if (!Array.isArray(dimension?.gapIds)) issues.push(`${owner}: gapIds must be an array`);
+    for (const gapId of asArray(dimension?.gapIds)) {
+      const gap = gapsById.get(gapId);
+      if (!gap) issues.push(`${owner}: unknown gapId ${gapId}`);
+      else if (gap.dimension !== dimension?.id) issues.push(`${owner}: gap ${gapId} belongs to ${gap.dimension}`);
+      referencedGapIds.add(gapId);
+    }
+  }
+
+  for (const dimension of requiredDimensions) {
+    if (!dimensionIds.has(dimension)) issues.push(`completeness: required dimension ${dimension} was not swept`);
+  }
+  for (const gapId of gapsById.keys()) {
+    if (!referencedGapIds.has(gapId)) issues.push(`completeness: gap ${gapId} is not referenced by its dimension`);
+  }
+
+  const rounds = asArray(payload.criticRounds);
+  let previousRound = 0;
+  for (const [index, round] of rounds.entries()) {
+    const owner = `completeness.criticRounds[${index}]`;
+    if (!Number.isInteger(round?.round) || round.round < 1) issues.push(`${owner}: round must be a positive integer`);
+    else if (round.round <= previousRound) issues.push(`${owner}: rounds must be strictly increasing`);
+    else previousRound = round.round;
+    if (!hasEvidence(round?.evidence)) issues.push(`${owner}: evidence is required`);
+    for (const field of ['newGapIds', 'missedDimensions', 'midStateModules', 'unverifiedClaims']) {
+      if (!Array.isArray(round?.[field])) issues.push(`${owner}: ${field} must be an array`);
+    }
+    const newGapIds = new Set(asArray(round?.newGapIds));
+    for (const gapId of newGapIds) {
+      if (!gapsById.has(gapId)) issues.push(`${owner}: unknown newGapId ${gapId}`);
+    }
+    for (const field of ['missedDimensions', 'midStateModules', 'unverifiedClaims']) {
+      for (const gapId of asArray(round?.[field])) {
+        if (!gapsById.has(gapId)) issues.push(`${owner}: ${field} must contain known gap IDs; unknown ${gapId}`);
+        else if (!newGapIds.has(gapId)) issues.push(`${owner}: ${field} gap ${gapId} must also appear in newGapIds for the same round`);
+      }
+    }
+  }
+  if (rounds.length < 2) {
+    issues.push('completeness: at least two critic rounds are required');
+  } else {
+    const dryRounds = rounds.slice(-2);
+    if (dryRounds[1].round !== dryRounds[0].round + 1) issues.push('completeness: final two critic rounds must be consecutive');
+    for (const [offset, round] of dryRounds.entries()) {
+      for (const field of ['newGapIds', 'missedDimensions', 'midStateModules', 'unverifiedClaims']) {
+        if (asArray(round?.[field]).length > 0) issues.push(`completeness: dry round ${offset + 1} has non-empty ${field}`);
+      }
+    }
+  }
+
+  const record = {
+    exitCode: issues.length ? 1 : 0,
+    file,
+    dimensionCount: dimensionIds.size,
+    gapCount: gapsById.size,
+    criticRoundCount: rounds.length,
+    issues,
+  };
+  writeState(cfg, { completeness: record });
+  if (issues.length) issues.forEach((issue) => console.error(`COMPLETENESS: ${issue}`));
+  else console.log(`Completeness passed: ${dimensionIds.size} dimensions, ${gapsById.size} resolved gaps, ${rounds.length} critic rounds`);
+  return record.exitCode;
+}
+
 function contractInputFiles(cfg) {
   const bundle = loadContractBundle(cfg);
-  const files = [cfg.__configPath, ...Object.values(bundle.files)];
+  const baselineSpec = resolveMaybe(cfg.__configDir, cfg.baselineSpecFile);
+  const completenessFile = resolveMaybe(cfg.__configDir, cfg.completenessFile);
+  if (!fs.existsSync(baselineSpec)) throw new Error(`baselineSpecFile not found: ${baselineSpec}`);
+  if (!fs.existsSync(completenessFile)) throw new Error(`completenessFile not found: ${completenessFile}`);
+  const files = [cfg.__configPath, baselineSpec, completenessFile, ...Object.values(bundle.files)];
+  const fieldDiffsFile = resolveMaybe(cfg.__configDir, cfg.fieldDiffsFile || 'field-diffs.json');
   const optional = [
-    resolveMaybe(cfg.__configDir, cfg.fieldDiffsFile || 'field-diffs.json'),
+    fieldDiffsFile,
     resolveMaybe(cfg.__configDir, cfg.votesFile || 'votes.json'),
     cfg.migrationCoverageFile ? resolveMaybe(cfg.__configDir, cfg.migrationCoverageFile) : '',
     cfg.fieldCoverageFile ? resolveMaybe(cfg.__configDir, cfg.fieldCoverageFile) : '',
   ];
   for (const file of optional) if (file && fs.existsSync(file)) files.push(file);
+  if (fs.existsSync(fieldDiffsFile)) {
+    const fieldDiffs = readJson(fieldDiffsFile, 'fieldDiffsFile');
+    if (!Array.isArray(fieldDiffs)) throw new Error('field-diffs.json must be an array');
+    for (const entry of fieldDiffs) {
+      if (!entry?.coverageFile) continue;
+      const coverageFile = resolveMaybe(cfg.__configDir, entry.coverageFile);
+      if (fs.existsSync(coverageFile)) files.push(coverageFile);
+    }
+  }
   return [...new Set(files)].sort();
 }
 
@@ -831,10 +970,11 @@ function invalidateBaselineLock(cfg, reason) {
 function commandLock(cfg) {
   try {
     const contract = commandContract(cfg);
+    const completeness = commandCompleteness(cfg);
     const fields = commandFields(cfg);
     const vote = commandVote(cfg);
-    if (contract || fields || vote) {
-      invalidateBaselineLock(cfg, 'contract, fields, or vote gate failed; stale lock removed');
+    if (contract || completeness || fields || vote) {
+      invalidateBaselineLock(cfg, 'contract, completeness, fields, or vote gate failed; stale lock removed');
       commandReport(cfg, 'baseline');
       return 1;
     }
@@ -1007,7 +1147,6 @@ function commandVote(cfg) {
   const issues = [];
   const claimIds = new Set();
   const claimById = new Map();
-  if (rawClaims.length === 0) issues.push('votes.json: at least one baseline claim is required');
 
   const artifacts = rawClaims.map((claim, index) => {
     const owner = `votes.artifacts[${index}]`;
@@ -1099,6 +1238,8 @@ function summarizeBlocking(state, phase = 'implementation') {
   const blocks = [];
   if (!state.contract) blocks.push('contract not_run');
   else if (state.contract.exitCode !== 0) blocks.push(`contract exit=${state.contract.exitCode}`);
+  if (!state.completeness) blocks.push('completeness not_run');
+  else if (state.completeness.exitCode !== 0) blocks.push(`completeness exit=${state.completeness.exitCode}`);
   if (phase === 'baseline') {
     if (!state.fields) blocks.push('fields not_run');
     else if (state.fields.exitCode !== 0) blocks.push(`fields exit=${state.fields.exitCode}`);
@@ -1152,6 +1293,7 @@ function commandReport(cfg, phase = cfg.auditPhase || 'implementation') {
     '## Gate Summary',
     '',
     `- contract-integrity: ${state.contract ? `exit=${state.contract.exitCode}` : 'not_run'}`,
+    `- completeness-sweep: ${state.completeness ? `exit=${state.completeness.exitCode}` : 'not_run'}`,
     `- baseline-lock: ${state.baselineLock ? `exit=${state.baselineLock.exitCode}` : 'not_run'}`,
     `- migration-gate: ${state.gate ? `exit=${state.gate.exitCode}` : 'not_run'}`,
     `- field-diff: ${state.fields ? `exit=${state.fields.exitCode}` : 'not_run'}`,
@@ -1208,6 +1350,7 @@ function main() {
     const cfg = readConfig(args.config || args.c || DEFAULT_CONFIG);
     let exitCode = 0;
     if (command === 'contract') exitCode = commandContract(cfg);
+    else if (command === 'completeness') exitCode = commandCompleteness(cfg);
     else if (command === 'gate') exitCode = commandGate(cfg);
     else if (command === 'fields') exitCode = commandFields(cfg);
     else if (command === 'vote') exitCode = commandVote(cfg);
@@ -1218,6 +1361,7 @@ function main() {
     else if (command === 'report') exitCode = commandReport(cfg);
     else if (command === 'verify' || command === 'all') {
       const c = commandContract(cfg);
+      const s = commandCompleteness(cfg);
       const b = commandCheckLock(cfg);
       const g = commandGate(cfg);
       const f = commandFields(cfg);
@@ -1225,7 +1369,7 @@ function main() {
       const p = commandProgress(cfg);
       const l = commandLocal(cfg);
       const r = commandReport(cfg, 'implementation');
-      exitCode = c || b || g || f || v || p || l || r ? 1 : 0;
+      exitCode = c || s || b || g || f || v || p || l || r ? 1 : 0;
     } else {
       usage();
     }

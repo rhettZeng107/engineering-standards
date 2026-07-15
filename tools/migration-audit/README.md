@@ -62,6 +62,7 @@ tools/migration-audit/codex-migration-audit.js init \
 | `source-inventory.json` | 老系统源工件清单 |
 | `migration-matrix.json` | old-to-new 决策与合同归属,不混入实现进度 |
 | `contract-index.json` + 8 个合同集合 | 页面/UI 操作/API/字段/Service/菜单/壳层/集成的规范化 1:1 合同 |
+| `completeness-sweep.json` | 六维扫描、已解决 gap 与连续两轮 dry critic 的硬门产物 |
 | `baseline-lock.json` | Phase 0 通过后生成的输入摘要锁;禁止手改 |
 | `migration-progress.json` | STEP1 后每个矩阵行的实现与验证证据 |
 | `field-diffs.json` | 字段 diff 任务列表 |
@@ -74,6 +75,7 @@ tools/migration-audit/codex-migration-audit.js init \
 
 ```bash
 tools/migration-audit/codex-migration-audit.js contract --config <batch>/migration.yaml
+tools/migration-audit/codex-migration-audit.js completeness --config <batch>/migration.yaml
 tools/migration-audit/codex-migration-audit.js lock   --config <batch>/migration.yaml
 tools/migration-audit/codex-migration-audit.js check-lock --config <batch>/migration.yaml
 tools/migration-audit/codex-migration-audit.js gate   --config <batch>/migration.yaml
@@ -84,7 +86,7 @@ tools/migration-audit/codex-migration-audit.js local  --config <batch>/migration
 tools/migration-audit/codex-migration-audit.js report --config <batch>/migration.yaml
 ```
 
-Phase 0 必须先跑 `contract` 和 `lock`。`contract` 强制批次 ID 一致、ID 唯一、源工件恰好归属一个矩阵行且被同行主维度合同引用、合同恰好归属一个矩阵行、专用引用与工件类型有效、每行 8 个合同维度均 `covered` 或登记 `not-applicable` 证据、无 draft/disputed/open gap。工具校验 N/A 证据存在性,其业务真实性仍由 CR/风险票审查。`lock` 还要求字段门和与具体风险行绑定的反证票通过;空票、无关票、重复视角或格式不完整的票均阻断并删除旧锁。没有当前有效锁不得进入 STEP1。
+Phase 0 必须先跑 `contract`、`completeness` 和 `lock`。`contract` 强制批次 ID 一致、ID 唯一、源工件恰好归属一个矩阵行且被同行主维度合同引用、合同恰好归属一个矩阵行、专用引用与工件类型有效、每行 8 个合同维度均 `covered` 或登记 `not-applicable` 证据、无 draft/disputed/open gap。工具校验 N/A 证据存在性,其业务真实性仍由 CR/风险票审查。`completeness` 的 canonical 六维不可通过配置缩减（配置只能追加项目维度）；critic 的漏维/中间态/无证声称必须写成同轮 `newGapIds` 中的 gap ID,由 gap 绑定矩阵行、解决状态和证据,最后连续两轮全部为空。`lock` 还要求字段门和与具体风险行绑定的反证票通过;零风险批次允许空票,但判断性风险或 `CRITICAL/HIGH` 行无绑定票必阻断。锁输入包含 `spec.md`、完整性产物及每个字段 diff 自己的 coverage 文件,任一内容或输入集合漂移即失锁。没有当前有效锁不得进入 STEP1。
 
 提交前必须一次跑硬门:
 
@@ -92,9 +94,9 @@ Phase 0 必须先跑 `contract` 和 `lock`。`contract` 强制批次 ID 一致�
 tools/migration-audit/codex-migration-audit.js verify --config <batch>/migration.yaml
 ```
 
-- V0 = `contract + lock + gate + fields + progress`:不依赖 LLM,包装合同完整性与既有 shell 门。
+- V0 = `contract + completeness + lock + gate + fields + progress`:不依赖 LLM,包装合同完整性、扫描收敛与既有 shell 门。
 - V1 = `vote + report`:合并多 subagent/codex-exec 的反证票,少于 2 个有效票或半数以上反证则 `disputed`。
-- 本机硬验证 = `verify`:依次跑 `contract + check-lock + gate + fields + vote + progress + local + report`;任一未跑/失败即非零退出。
+- 本机硬验证 = `verify`:依次跑 `contract + completeness + check-lock + gate + fields + vote + progress + local + report`;任一未跑/失败即非零退出。
 - `local` 执行 `local-verify.commands` 中的项目命令(build/test/E2E 等),命令列表为空也阻断,防假绿灯。
 - wrapper 只读业务代码,只写批次目录内的合同锁、审计状态和报告。
 
@@ -135,4 +137,4 @@ workflow(agent 编排)解「查得全 / 查对方向」,但 agent 仍可能漏�
 
 ## 状态
 
-首版(2026-06-15)。下个迁移项目(SRM/MES/WMS/EAM 任一)启动时首用并复验三指标(主 context 省 / wall-clock / gap 检出率),达标后落 ADR-014 转稳定推广。
+全局迁移轨硬门基线(2026-07-15)。合同引用、完整性六维收敛、规格/字段覆盖哈希锁、风险分层投票和实现进度均已有确定性 wrapper 回归；具体项目仍须按自己的源仓、目标仓、DB/集成边界填写批次合同并跑真实 build/E2E。
