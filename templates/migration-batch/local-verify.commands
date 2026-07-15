@@ -1,5 +1,6 @@
 # One shell command per line. Commands run from workspaceRoot.
 # Fill this file for the touched repos before commit. Empty active command list blocks `verify`.
+# Contract lock is a separate Phase 0 gate; do not add implementation commands until STEP1 begins.
 #
 # Examples:
 # dotnet build AI.Extend.SRM.Buyer.2/AI.Extend.SRM.Buyer.2.sln

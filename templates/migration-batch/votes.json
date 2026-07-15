@@ -3,13 +3,22 @@
     {
       "id": "baseline-claim-1",
       "subject": "",
+      "claimEvidence": [],
+      "migrationRowIds": [],
       "votes": [
         {
           "lens": "source-completeness",
           "refuted": false,
           "counterEvidence": "",
           "confidence": "low",
-          "note": "placeholder"
+          "note": ""
+        },
+        {
+          "lens": "origin-history",
+          "refuted": false,
+          "counterEvidence": "",
+          "confidence": "low",
+          "note": ""
         }
       ]
     }

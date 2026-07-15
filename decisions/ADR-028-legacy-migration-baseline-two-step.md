@@ -84,7 +84,7 @@ STEP 1 的目标 = **原业务在新基线上可正常使用**。这是 STEP 1 �
 - **冲突时 old 业务语义优先**:业务规则、状态机、财务口径、字段含义发生冲突时,以 old 为准;仅覆盖冲突局部,不得借等价迁移整页或整模块回退。
 - **非冲突 new 增强不删**:new 已有且不改变 old 业务语义的页面、字段、交互、校验、自动化和工程增强必须保留。
 - 主完整性审计保持 old→new；另做 `current-new-only` 保留扫描,矩阵允许 `old=N/A` 的 new-only 行,确保并集另一半也进入契约锁。
-- 迁移矩阵机器枚举固定为 `conflict-old-wins / merge-union / keep-new-enhancement / fix-source-defect / exclude-proven-dead`,中文仅作展示标签;并记录 old 证据、new 现状和最终目标。
+- 迁移矩阵机器枚举固定为 `migrate-equivalent / conflict-old-wins / merge-union / keep-new-enhancement / fix-source-defect / exclude-proven-dead`,中文仅作展示标签;并记录 old 证据、new 现状和最终目标。
 - 有菜单、路由、配置、调用方或业务价值的 buggy/half-finished 工件必须 `fix-source-defect`:迁移有效语义并修 Bug,或登记欠债且 STEP1 不绿。`exclude-proven-dead` 只剔除已实证无业务价值的死端点/不可达分支/错误行为。
 - `exclude-proven-dead` 至少需要仓内调用、路由、菜单与配置反向检索；日志可得时补运行/访问日志；异常路径用可复现测试或运行证据；skip 必须过 adversarial vote。单次文本 0 命中或单纯 build 结果不能独立证明可剔除。
 
@@ -147,3 +147,4 @@ STEP 1 的目标 = **原业务在新基线上可正常使用**。这是 STEP 1 �
 | 2026-06-11 | 修订(UI 功能清单铁律) | 涛哥定(HC srmc MVC cshtml 迁移驱动):老视图(cshtml 等)源页必**逐行提取 UI 功能清单**(每列/每按钮/每弹窗/每必填)—— Claude 本体锁定作契约锁基准(ADR-037),**贯穿全程**:派单实现按清单逐项 1:1 等价落盘(避免返工)→ CR/E2E 验收逐项打钩,任一项未勾 ③ 不通过;详 playbook §3.2 铁律 + §6 速查清单步骤 2 |
 | 2026-06-22 | 修订(规则1 + UI V2) | 涛哥定(TPM 设备手册漏迁复盘):①基线增**第 4 项「源仓分支范围」**——**Fork 全分支避污染**,默认看 master/develop + **最新活跃分支必看**,**最终基线分支涛哥拍板**(Claude 只实证摆分支活跃度,禁自行排除/纳入),多版本仓 diff 实证谁更全;②三层等价 ② 明确**迁移前端 UI 默认套 UI V2(Atlas)标准同步更新**(`frontend-ui-v2-standard.md`,不复刻老 UI)。锚点:TPM `_legacy` 6 仓 customer/kd/prd@2026-02 未进拍板视野 + FW/CORE 单点假设。配套 ADR-014 规则2 + playbook §2/§3.2 |
 | 2026-07-12 | 修订(old/new 能力合并规则) | 涛哥定:**冲突时 old 业务语义优先、非冲突 new 增强不删**。目标取 old 有效能力与 new 非冲突增强的并集；增加 current-new-only 保留扫描；活动业务缺陷须净化后迁移,仅有证据的死行为可剔除；矩阵固定五类,禁止借 parity 整页/整模块回退。 |
+| 2026-07-15 | 修订(规范化合同) | 增加正常路径 `migrate-equivalent`;迁移基线由自由文本矩阵升级为矩阵决策 + 八维规范化合同 + 独立实现进度,由 `contract/lock` 硬门锁定。 |

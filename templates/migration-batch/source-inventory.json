@@ -1,19 +1,23 @@
 {
-  "schemaVersion": "0.1",
-  "batchId": "",
+  "schemaVersion": "0.2",
+  "batchId": "<yyyy-mm-dd-topic>",
   "legacySource": {
     "repo": "",
     "branchOrRef": "",
+    "commit": "",
     "evidence": ""
   },
   "artifacts": [
     {
       "id": "",
       "module": "",
-      "type": "controller|service|dto|entity|view|script|route|menu|permission|layout|other",
+      "side": "legacy|current-new-only",
+      "type": "mvc-controller|mvc-action|webapi-controller|webapi-action|service|rule|data-process|dto|entity|request|response|field|view|page|script|route|menu|permission|layout|job|config|external-integration|other",
       "path": "",
       "pageClass": "crud|dashboard|report|statistics|topology|map|workbench|other",
-      "status": "complete|half-finished|broken|unknown",
+      "contractDimension": "pages|uiFunctions|apiContracts|fields|serviceLinks|menuRoutes|shellFeatures|integrations|reviewed-exemption",
+      "dimensionExemptionEvidence": "",
+      "status": "complete|half-finished|broken",
       "evidence": "",
       "notes": ""
     }

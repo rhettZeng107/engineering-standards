@@ -266,6 +266,20 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 
 **承载 + 适用**:复用现有两脚本(参考实现)+ 本体动态编排;SRM/MES/WMS/EAM/TPM 全系列。锚点:TPM `specs/2026-06-13-tpm-legacy-migration`(设备手册前端桩 `views/Manual/components/Edit/index.jsx:4`)+ playbook §1 哲学总纲/§2 分支范围/§3.0 前期实证 Dynamic Workflow + 迁移矩阵/§5 失效模式②(前端桩)。配套 ADR-028 同日修订(规则1)+ ADR-044(官方 dynamic-workflows 对标)。
 
+## 修订(2026-07-15)— Codex 长任务分段 + 规范化迁移合同硬锁(WMS 首用)
+
+**问题**:自由文本迁移矩阵同时承载源清单、合同决策和实现进度,无法机器证明“页面/操作/API/字段/Service/菜单/壳层/集成”逐项闭合;长任务若把“全项目 1:1 迁完”直接作为一个 Goal,也会把基线发现、产品判断和大批实现混在同一自治边界内。旧的“每个判定 3 票”还会让机械可证字段产生线性投票成本,却不能防引用串错或合同漂移。
+
+**决策**:
+
+1. 完整项目目标和 DoD 留在 spec/plan;Codex active Goal 每次只承载一个可验里程碑。新迁移首个 Goal 固定为 **Phase 0 基线合同锁定**,不写 STEP1 业务代码。
+2. 源工件、基线决策和实现进度分离为 `source-inventory.json`、`migration-matrix.json`、`migration-progress.json`;页面/UI 操作/API/字段/Service/菜单/壳层/集成拆成 8 个规范化合同集合,以稳定 ID 关联。每个源工件声明主合同维度并须被同行合同记录引用,禁止只归组不建合同。
+3. `codex-migration-audit contract` 全量机器校验批次一致、ID 唯一、源工件和合同的单一矩阵归属、专用引用、状态、证据和零 gap;`lock` 在合同/字段/投票均绿后写内容哈希锁。任何输入变化、输入集合变化或重锁异常都让旧锁失效。
+4. 对抗投票改为**风险分层**:源/ref 选择、排除、合并/重命名、半成品/坏工件、非 CRUD、客户集成和模块完整性等判断性结论保留独立 skeptic 投票;机械可证标量由确定性合同门全量覆盖,不再逐字段重复三票。
+5. STEP1 只更新 `migration-progress.json`;最终 `verify` 必须同时通过当前合同、当前锁、既有迁移/字段/投票门、逐矩阵行 verified 证据和本地 build/test/E2E。
+
+**代价**:Phase 0 文件数增加,首次整理成本上升;收益是基线可重放、引用可机验、合同变化显式失锁,后续模块 Goal 可按已锁矩阵稳定分批,降低漏迁与返工。
+
 ---
 
 ## History
@@ -281,3 +295,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 2026-06-22 | 修订(规则2 + 哲学) | 前期实证机制定标=官方 Dynamic Workflow(TPM 设备手册前端桩漏迁复盘):① 动态编排优先(本体据现状 inline 编排,预存 2 脚本降为参考模板)② 禁 general-purpose 单跑替代官方 Workflow ③ 审计方向 old→new 全覆盖 ④ 强制产物=迁移矩阵(逐页/字段/接口 × 后端·前端真实装非桩·菜单·可用 4 列 + 对抗投票);并沉淀「迁移轨工作流哲学」7 条总纲(跨项目)。根因:workflow 机制已落地但被劣化替代→失真放过「后端✅前端桩」半迁态。配套 ADR-028 规则1 + playbook §1/§3.0/§5 失效模式② |
 | 2026-06-22 | 修订(标准瘦身 / dogfood) | 自评过度设计(10 天 5 修订,规则涨坑同期发;06-22 桩在前 4 次规则全就位后仍发)→ **减法**:① 12 类坑库收敛为 **3 失效模式**(完整性盲区/半迁中间态/误判+入口断链)② 高频坑下沉**机器门** `tools/migration-audit/migration-gate.sh`(Gate1 前端桩 / Gate2 后端归属 / Gate3 路由孤儿;CI/收尾必跑,非 0 即红)③ 文档单一真理源=活迁移矩阵取代散落复盘 md。**实跑 TPM 精准抓设备手册桩(0 误报)+ 老后端残留 2 处**。原则:「能跑的门 > 记 12 条坑」,治本在执行穿透而非加规则。锚点:playbook §3.0/§5 + SKILL |
 | 2026-06-22 | 修订(失效模式④ — CRUD 形状盲区) | TPMV2 6 仓审计漏 `Home` 个人中心 dashboard(单源 Controller 枚举 + boilerplate 黑名单)+ 误绿 `LubricationStatistics` 统计页(CRUD 4 列判据套不上非 CRUD 页),靠涛哥提醒才补回。根因:扇出/对抗投票全在**枚举下游**,枚举本身单源+黑名单+无完整性校验=裸奔最弱环。**减法修**:① **枚举范围铁律** = Controllers ∪ 所有 Views ∪ Scripts ∪ 菜单种子 ∪ 路由 多源并集 + **零黑名单**(Home/Account 未证伪算真功能)② `migration-gate.sh` 加 **Gate0 枚举完整性 critic**(传 legacy_roots,机器暴露非 CRUD 漏页)③ 迁移矩阵加**「页类」维**,非 CRUD 页换判据(聚合端点+可视化渲染+入口);workflow 加第 5 维(enumeration)。原则:**完整性=机器可验事实源,禁人手臆测过滤**。锚点:playbook §3.1 枚举铁律/§3.0 Gate0/§5 失效模式④ + SKILL + TPMV2 specs/2026-06-22-tpm-manual-migration |
+| 2026-07-15 | 修订(Codex/WMS 首用) | 全项目 DoD 留 spec/plan,Goal 按可验里程碑分段;首个 Goal 只锁 Phase 0。自由文本矩阵升级为源清单 + 基线矩阵 + 8 类规范化合同 + 独立进度;新增 contract/lock/check-lock/progress 硬门。对抗投票从机械字段逐项三票改为确定性全量校验 + 高判断风险多票。 |

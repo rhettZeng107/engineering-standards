@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "0.2",
+  "batchId": "<yyyy-mm-dd-topic>",
+  "files": {
+    "pages": "pages.json",
+    "uiFunctions": "ui-functions.json",
+    "apiContracts": "api-contracts.json",
+    "fields": "fields.json",
+    "serviceLinks": "service-links.json",
+    "menuRoutes": "menu-routes.json",
+    "shellFeatures": "shell-features.json",
+    "integrations": "integrations.json"
+  }
+}

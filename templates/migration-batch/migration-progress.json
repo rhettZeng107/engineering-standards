@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "0.2",
+  "batchId": "<yyyy-mm-dd-topic>",
+  "rows": [
+    {
+      "migrationRowId": "",
+      "status": "not_started|in_progress|implemented|verified|blocked",
+      "evidence": [],
+      "openGaps": []
+    }
+  ]
+}

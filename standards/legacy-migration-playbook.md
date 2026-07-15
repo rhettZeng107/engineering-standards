@@ -82,19 +82,20 @@
 
 ### 3.0 前期实证阶段:官方 Dynamic Workflow + 迁移矩阵(规则2,ADR-014 修订 2026-06-22)
 
-> 源工件盘点 / 完整性审计 / 基准对抗(§3.1 / §3.6 + 两 workflow)的**执行机制定标 = Claude 官方 Dynamic Workflow**(harness 原生 `Workflow` 工具)。**禁** general-purpose / 单 agent 一遍过替代(TPM 设备手册漏迁即此劣化替代所致:workflow 已落地却没跑,改用 general-purpose → 失真放过「后端✅前端桩」)。
+> 源工件盘点 / 完整性审计 / 基准对抗(§3.1 / §3.6 + 两 workflow)的**执行机制定标 = Dynamic Workflow patterns**。Claude harness 用原生 `Workflow`;Codex 用互盲 subagents 或 `codex exec` 适配。**禁** general-purpose / 单 agent 一遍过替代(TPM 设备手册漏迁即此劣化替代所致:workflow 已落地却没跑,改用 general-purpose → 失真放过「后端✅前端桩」)。
 
 **四条硬规则**:
-1. **动态编排优先**:主会话本体**据本次迁移现状 inline 编排**官方 Workflow(`phase/agent/parallel/pipeline`),内含官方四 pattern —— **multi-modal sweep**(N agent 各扫一维互盲:模块/页面/字段/接口/菜单)+ **adversarial verify 投票**(每「已迁」判定派 N 独立 skeptic refute,多数票才确认)+ **completeness critic**(每轮收口「还漏哪维/哪模块停中间态/哪声称迁完无证据」)+ **loop-until-dry**(连续 2 轮无新发现才停)。预存的 `tools/migration-audit/{migration-audit,baseline-adversarial}.workflow.js` 降为**参考实现/起点模板**(可 `scriptPath` 复用、可据现状改写增维),不是套死 args 黑盒。
+1. **动态编排优先**:主会话本体**据本次迁移现状 inline 编排**四个 pattern —— **multi-modal sweep**(N agent 各扫一维互盲:模块/页面/字段/接口/菜单)+ **adversarial verify 投票**(对源/ref、排除、合并/重命名、退化工件、非 CRUD、客户集成和模块完整性等高判断风险派独立 skeptic refute)+ **completeness critic**(每轮收口「还漏哪维/哪模块停中间态/哪声称迁完无证据」)+ **loop-until-dry**(连续 2 轮无新发现才停)。机械字段由确定性合同门全量校验,不逐标量重复投票。预存的 `tools/migration-audit/{migration-audit,baseline-adversarial}.workflow.js` 降为**参考实现/起点模板**,不是套死 args 黑盒。
 2. **审计方向以 old→new 全覆盖为主,辅以 current-new-only 保留扫描**:以**老仓全量清单为锚**逐项在新平台找落点,禁止用 new→old 替代主完整性审计；同时独立枚举当前 new 的页面/字段/自动化/工程能力,对没有 old 对应项的 delta 建 `old=N/A` 行,防止 new-only 增强在迁移中被误删。
-3. **强制产物 = 迁移矩阵表**:逐**页面/字段/接口**为行,除四层覆盖与投票外,必须同时记录 new 现有能力、冲突分类与最终目标;过对抗投票才锁为契约基准(ADR-037):
+3. **强制产物 = 规范化迁移合同**:逐**页面/字段/接口**建立稳定 ID,同时记录 new 现有能力、分类与最终目标。`migration-matrix.json` 只存基线决策,页面/UI 操作/API/字段/Service/菜单/壳层/集成拆成 8 个合同集合;每个源工件声明主合同维度并须被同行记录引用,每个矩阵行八维均须 `covered` 或有证据的 `not-applicable`。实现证据单独写 `migration-progress.json`。`codex-migration-audit contract + lock` 绿后才锁为契约基准(ADR-037):
 
 | old 源工件(页/字段/接口) | new 现有能力 | 分类 | 最终目标 | 后端实装 | **前端真实装(非桩)** | 菜单种子 | 操作员可用 | 对抗投票 |
 |---|---|---|---|---|---|---|---|---|
 | `老仓/.../ManualEdit` 三级树 | 新仓已有批量预览 | `merge-union`（可合并-取并集） | 三级树 + 批量预览 | ✅ ManualAppService | 🔴 桩(import hourType/字段≠DTO/无子表树) | ✅ routes | 🔴 不可用 | 3:0 确认漏 |
 
-**机器枚举固定为五类**（中文仅作展示标签,不得另造枚举值）:
+**机器枚举固定为六类**（中文仅作展示标签,不得另造枚举值）:
 
+- `migrate-equivalent`（1:1 等价迁移）:old 有效行为在 new 无语义冲突,按原契约等价迁移。
 - `conflict-old-wins`（冲突-old覆盖）:new 与 old 的业务规则、状态机、财务口径或字段语义冲突;old 优先,只替换冲突局部。
 - `merge-union`（可合并-取并集）:old 与 new 能力可同时成立;去重后合并,任一侧有效能力不得丢失。
 - `keep-new-enhancement`（new增强保留）:new 独有且不改变 old 业务语义;强制保留,允许 `old=N/A`,不得以 parity 为由删除。
@@ -105,7 +106,7 @@
 
 4. **「前端真实装(非桩)」专项检测**(治设备手册类桩):① service import 是否错配自身模块 ② 表单字段数 vs 后端 DTO ③ 子表/树形结构是否存在。任一异常 = 桩 = 未迁。
 
-**触发**:迁移启动前置(扫存量盲区,产矩阵)/ 每模块 STEP1 验收前(复扫该模块四列)/ 完结 DoD(矩阵全绿才宣告迁完)。**机制必须是官方 Workflow,矩阵未过对抗投票不得锁基准。**
+**触发**:迁移启动前置(扫存量盲区,产矩阵)/ 每模块 STEP1 验收前(复扫该模块四列)/ 完结 DoD(矩阵全绿才宣告迁完)。**机制必须保留互盲 sweep + 风险投票 + critic + 收敛循环;合同/字段/风险票未过硬门不得锁基准。**
 
 > **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— **Gate0 枚举完整性**(老仓 `Controllers`+`Views`+`Scripts` 三源 vs 新前端,零黑名单:暴露 `Home`/统计/看板等非 CRUD 漏页,失效模式④;传 `legacy_roots_csv` 第4参启用,传 `coverage_file` 第5参升硬 gate)+ Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩;**前缀放行为弱判据,真实装仍以迁移矩阵「前端真实装」列+本体字段数核对为准**,MED)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处;Gate0 抓出 `Home`/`LubricationStatistics` 等非 CRUD 漏页。**「一个能跑的门 > 人工记一长串坑」**;坑库见 §5(4 失效模式)。
 

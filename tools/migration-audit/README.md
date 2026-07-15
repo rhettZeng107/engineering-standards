@@ -2,7 +2,7 @@
 
 > 决策依据:[ADR-014 修订 2026-06-15](../../decisions/ADR-014-migration-refactor-workflow.md)(完整性审计 workflow 化)。
 > 配套手册:[legacy-migration-playbook.md](../../standards/legacy-migration-playbook.md) §3.1 / §3.6 / §5。
-> 姊妹工具:[migration-fanout](../migration-fanout/)(执行=批量落盘);[baseline-adversarial](./baseline-adversarial.workflow.js)(建基准查「误判」);本工具查「漏」。均只读。
+> 姊妹工具:[migration-fanout](../migration-fanout/)(执行=批量落盘);[baseline-adversarial](./baseline-adversarial.workflow.js)(建基准查「误判」);本工具查「漏」。wrapper 只读业务代码,但会写批次目录内的合同、锁与审计产物。
 
 ## 解决什么
 
@@ -60,7 +60,10 @@ tools/migration-audit/codex-migration-audit.js init \
 |---|---|
 | `migration.yaml` | 批次配置,声明源仓/目标仓/gate 输入/报告输出 |
 | `source-inventory.json` | 老系统源工件清单 |
-| `migration-matrix.json` | old-to-new 映射和 gap 状态 |
+| `migration-matrix.json` | old-to-new 决策与合同归属,不混入实现进度 |
+| `contract-index.json` + 8 个合同集合 | 页面/UI 操作/API/字段/Service/菜单/壳层/集成的规范化 1:1 合同 |
+| `baseline-lock.json` | Phase 0 通过后生成的输入摘要锁;禁止手改 |
+| `migration-progress.json` | STEP1 后每个矩阵行的实现与验证证据 |
 | `field-diffs.json` | 字段 diff 任务列表 |
 | `.migration-coverage` | Gate0 无同名页的消解登记 |
 | `.field-coverage` | 字段差异消解登记 |
@@ -70,12 +73,18 @@ tools/migration-audit/codex-migration-audit.js init \
 ### 本机硬验证
 
 ```bash
+tools/migration-audit/codex-migration-audit.js contract --config <batch>/migration.yaml
+tools/migration-audit/codex-migration-audit.js lock   --config <batch>/migration.yaml
+tools/migration-audit/codex-migration-audit.js check-lock --config <batch>/migration.yaml
 tools/migration-audit/codex-migration-audit.js gate   --config <batch>/migration.yaml
 tools/migration-audit/codex-migration-audit.js fields --config <batch>/migration.yaml
 tools/migration-audit/codex-migration-audit.js vote   --config <batch>/migration.yaml
+tools/migration-audit/codex-migration-audit.js progress --config <batch>/migration.yaml
 tools/migration-audit/codex-migration-audit.js local  --config <batch>/migration.yaml
 tools/migration-audit/codex-migration-audit.js report --config <batch>/migration.yaml
 ```
+
+Phase 0 必须先跑 `contract` 和 `lock`。`contract` 强制批次 ID 一致、ID 唯一、源工件恰好归属一个矩阵行且被同行主维度合同引用、合同恰好归属一个矩阵行、专用引用与工件类型有效、每行 8 个合同维度均 `covered` 或登记 `not-applicable` 证据、无 draft/disputed/open gap。工具校验 N/A 证据存在性,其业务真实性仍由 CR/风险票审查。`lock` 还要求字段门和与具体风险行绑定的反证票通过;空票、无关票、重复视角或格式不完整的票均阻断并删除旧锁。没有当前有效锁不得进入 STEP1。
 
 提交前必须一次跑硬门:
 
@@ -83,11 +92,19 @@ tools/migration-audit/codex-migration-audit.js report --config <batch>/migration
 tools/migration-audit/codex-migration-audit.js verify --config <batch>/migration.yaml
 ```
 
-- V0 = `gate + fields`:不依赖 LLM,包装 `migration-gate.sh` / `field-diff.sh`。
+- V0 = `contract + lock + gate + fields + progress`:不依赖 LLM,包装合同完整性与既有 shell 门。
 - V1 = `vote + report`:合并多 subagent/codex-exec 的反证票,少于 2 个有效票或半数以上反证则 `disputed`。
-- 本机硬验证 = `verify`:依次跑 `gate + fields + vote + local + report`;任一未跑/失败即非零退出。
+- 本机硬验证 = `verify`:依次跑 `contract + check-lock + gate + fields + vote + progress + local + report`;任一未跑/失败即非零退出。
 - `local` 执行 `local-verify.commands` 中的项目命令(build/test/E2E 等),命令列表为空也阻断,防假绿灯。
-- wrapper 只读业务代码,只写批次目录内的审计状态/报告。
+- wrapper 只读业务代码,只写批次目录内的合同锁、审计状态和报告。
+
+wrapper 回归测试:
+
+```bash
+node tools/migration-audit/codex-migration-audit.test.js
+```
+
+当前 `local` 使用 POSIX `/bin/sh`;本 wrapper 的本地命令执行面支持 macOS/Linux。Windows runner 需通过 WSL 或另配 PowerShell adapter。
 
 ### Hook / CI 硬门
 
