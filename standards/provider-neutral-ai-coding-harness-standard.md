@@ -107,14 +107,24 @@ If LSP is unavailable, use text search plus line reads and mark the evidence as 
 | Track | Trigger | Required Output |
 |---|---|---|
 | Simple | Small reversible edit with no contract, DB, auth, production, or cross-project risk | Evidence anchor, minimal change, minimal verification |
-| Standard | Contract, DB schema, auth, multi-file, or business feature work | Plan, evidence, review gate, verification, run record when useful |
-| Migration | Legacy modernization or functional skeleton migration | Source inventory, equivalence review, staged plan, E1/E2 or equivalent verification |
+| Standard | Contract, DB schema, auth, multi-file, or business feature work | Complete contract lock, coverage record, plan, evidence, review gate, verification, run record when useful |
+| Migration | Legacy modernization or functional skeleton migration | Complete baseline lock, source/equivalence matrix, coverage record, staged plan, E1/E2 or equivalent verification |
+
+### Scope Completeness Gate for Standard and Migration Tracks
+
+- Do not let an agent downgrade known or agreed scope into an MVP, minimal demo, reduced field set, happy-path-only slice, fixture shell, or placeholder integration. An explicitly approved prototype or phase is allowed only when the complete known target and remaining contract items stay recorded and it is not reported as overall completion.
+- Standard-track contract lock must cover the maximum verified union within the agreed affected business boundary: roles, scenarios, fields, actions, states, exceptions, integrations, menu/auth entry points, and acceptance cases evidenced by the request, supplied artifacts, and current code/DB/API behavior.
+- Migration-track baseline and equivalence matrices must enumerate the complete source surface page by page, action by action, field by field, API by API, menu by menu, and data rule by data rule, while preserving non-conflicting target enhancements. A migrated subset is not an equivalent migration.
+- Phased implementation is allowed only after the full contract is locked. For a single-batch task, the spec acceptance matrix may serve as the coverage record; a separate ledger is required only for multi-batch work. Every tracked contract item has a stable ID, batch assignment, acceptance case, evidence, and one of `covered`, `pending`, `blocked`, or `approved-defer`. Missing external dependencies default to `blocked` and become `approved-defer` only after explicit user approval. A batch is `batch-complete` when all items it committed to are covered. The module is `in-progress` during execution, `partial` after a batch closes while any total-contract item is not covered, and `complete` only when no items remain. If the user explicitly redefines the baseline, `approved-defer` items move with decision/evidence pointers to a parent or backlog ledger and are never silently deleted.
+- When an external contract is unavailable, internally owned capabilities independent of that contract must be complete. Fields, states, mappings, and write requests that depend on the missing contract must not be guessed. Existing or contractually required user-visible entry points provide disabled state, pending/error feedback, and no-fake-success behavior; a task with no UI surface instead provides a stable capability state or error code plus audit evidence. External-related items keep the module from overall completion until closed or explicitly moved by a baseline decision.
+- This is a business-scope completeness rule, not permission for unrelated features or abstractions. Reuse and the smallest necessary code change remain the implementation default.
 
 ## Gate Model
 
 | Gate | Trigger |
 |---|---|
 | Preflight | Standard, migration, cross-repo, DB, auth, production, deployment, or long-running task |
+| Scope completeness | Before implementation, lock the complete contract/baseline and coverage record (spec acceptance matrix for one batch, separate ledger for multiple batches); before batch closure, require all batch-committed items covered; before module completion, require zero `pending`, `blocked`, or `approved-defer` items. A rebaseline moves deferred items with decision/evidence pointers to a parent or backlog ledger |
 | Code review | Code or executable config changes before commit |
 | Secret scan | Any staged change before commit |
 | DB review | Schema, migration, SQL, data correction, or DB contract |

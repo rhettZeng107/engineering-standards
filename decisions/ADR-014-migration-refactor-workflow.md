@@ -296,6 +296,17 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 
 **结果**:“扫全、规格未漂移、字段差异已消解、风险结论已复核”从提醒文字变成可重放的失败条件；未满足任一项时不得生成或保留 baseline lock。
 
+## 修订(2026-08-06)— 迁移轨禁止 MVP/演示切片冒充等价完成
+
+**问题**:迁移任务即使已有 source inventory 和 parity 机制，若实施阶段把少量页面、字段、样例数据或 happy path 当作“先做一个 MVP”，仍会形成前端可见但字段、操作、异常、菜单、数据规则或集成追溯缺失的半迁状态，并污染完成判定。
+
+**决策**:
+
+1. baseline lock 必须覆盖源系统逐页/操作/字段/API/菜单/数据规则的全量并集，并纳入目标端已有非冲突增强；不得由 agent 擅自把子集迁移标记为等价或完成。涛哥明确批准的原型/阶段范围仍须保留完整已知目标和剩余项。
+2. 允许按模块和里程碑分批实施。单批任务可复用 spec 验收表，多批任务才建独立 coverage ledger；每个合同项须有稳定 ID、批次、验收、证据和 `covered/pending/blocked/approved-defer` 状态。外部依赖缺失默认 `blocked`，仅涛哥明确批准后转 `approved-defer`。本批承诺项全覆盖后可标 `batch-complete`；执行中模块标 `in-progress`，批次关闭但仍有剩余项标 `partial`，零剩余项才标 `complete`。涛哥重定基线后，`approved-defer` 项须带决策/证据迁入父级或 backlog ledger，禁止静默删除。
+3. 外部契约未取得时，不依赖该契约的目标端内部能力须完整；依赖外部报文的字段、状态、映射和写请求禁止猜测。已有或合同约定的用户入口须实现禁用态、待接入/错误反馈和禁止假成功边界；无 UI 的任务须返回稳定能力状态/错误码并留审计证据。
+4. 本规则只防业务范围裁剪，不改变“移植非重写、Extend 优先、禁无关扩建、最小必要代码改动”。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
@@ -311,3 +322,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 2026-06-22 | 修订(失效模式④ — CRUD 形状盲区) | TPMV2 6 仓审计漏 `Home` 个人中心 dashboard(单源 Controller 枚举 + boilerplate 黑名单)+ 误绿 `LubricationStatistics` 统计页(CRUD 4 列判据套不上非 CRUD 页),靠涛哥提醒才补回。根因:扇出/对抗投票全在**枚举下游**,枚举本身单源+黑名单+无完整性校验=裸奔最弱环。**减法修**:① **枚举范围铁律** = Controllers ∪ 所有 Views ∪ Scripts ∪ 菜单种子 ∪ 路由 多源并集 + **零黑名单**(Home/Account 未证伪算真功能)② `migration-gate.sh` 加 **Gate0 枚举完整性 critic**(传 legacy_roots,机器暴露非 CRUD 漏页)③ 迁移矩阵加**「页类」维**,非 CRUD 页换判据(聚合端点+可视化渲染+入口);workflow 加第 5 维(enumeration)。原则:**完整性=机器可验事实源,禁人手臆测过滤**。锚点:playbook §3.1 枚举铁律/§3.0 Gate0/§5 失效模式④ + SKILL + TPMV2 specs/2026-06-22-tpm-manual-migration |
 | 2026-07-15 | 修订(Codex/WMS 首用) | 全项目 DoD 留 spec/plan,Goal 按可验里程碑分段;首个 Goal 只锁 Phase 0。自由文本矩阵升级为源清单 + 基线矩阵 + 8 类规范化合同 + 独立进度;新增 contract/lock/check-lock/progress 硬门。对抗投票从机械字段逐项三票改为确定性全量校验 + 高判断风险多票。 |
 | 2026-07-15 | 修订(CR 硬门收口) | 完整性六维扫描与连续两轮 dry critic 升级为 `completeness` 硬门；锁输入增加 spec、完整性产物和逐任务字段 coverage；severity 高风险纳入投票；补 Repository/DB 工件类型。版本化按本轮明确授权豁免。 |
+| 2026-08-06 | 修订 | 迁移轨新增禁止 agent 擅自用 MVP/演示切片冒充等价完成硬门；coverage ledger 区分合同项/批次/模块状态；缺失外部契约的依赖项禁止猜测。 |
