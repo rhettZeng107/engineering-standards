@@ -1,99 +1,103 @@
 #!/usr/bin/env bash
-# 新工作区一键 bootstrap 脚手架(ADR-029 工作区治理三层模型)
-#
-# 作用:把「工作区层」的机械骨架一键搭好 —— 目录结构 + CLAUDE.md(待填占位)
-#       + CI/CD 监控脚本 + git init。全局层与跨项目标准层无需操作(自动继承 / 引用)。
-#
-# 用法:  ./bootstrap-workspace.sh <工作区绝对路径>
-# 示例:  ./bootstrap-workspace.sh ~/Projects/SRMV2
-#
-# 搭完后仍需手动:填项目规则 / clone nested 项目仓。
-# QWEN.md 与项目地图仅在实际 qwen 派单或复杂改造/迁移时手动生成。
+# Create a minimal Codex-first governance workspace.
+# Never writes credentials, personal memory, hooks, skills, or runtime config.
 
 set -euo pipefail
 
 TEMPLATES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WS="${1:-}"
+TARGET_PATH="${1:-}"
 
-if [ -z "$WS" ]; then
-  echo "用法: $0 <工作区绝对路径>"
-  echo "示例: $0 ~/Projects/SRMV2"
-  exit 1
-fi
-WS="${WS/#\~/$HOME}"
-if [ -e "$WS" ]; then
-  echo "✗ 目标已存在,中止(不覆盖): $WS"
+if [ -z "$TARGET_PATH" ]; then
+  echo "Usage: $0 <workspace-path>" >&2
   exit 1
 fi
 
-# 1. 目录骨架
-mkdir -p "$WS"/docs/superpowers/{specs,plans,backlog,_archive} \
-         "$WS"/docs/decisions \
-         "$WS"/docs/ops
+case "$TARGET_PATH" in
+  "~") TARGET_PATH="$HOME" ;;
+  "~/"*) TARGET_PATH="$HOME/${TARGET_PATH#\~/}" ;;
+esac
 
-# 2. CLAUDE.md 模板(待填占位)
-cp "$TEMPLATES_DIR/workspace-CLAUDE.md.template" "$WS/CLAUDE.md"
+case "$TARGET_PATH" in
+  /*) ;;
+  *)
+    echo "Target must be an absolute path: $TARGET_PATH" >&2
+    exit 1
+    ;;
+esac
 
-# 3. CI/CD 监控脚本 + 跨项目运维基线(SYSV2 沉淀,新工作区开箱即有)
-#    含:监控(monitor/self-heal/failure-notify)+ 凭据外部化 + IP 中心表
-#      + 部署手册(IIS 建站 / Agent VM / pipeline 模板)— 新工作区适配自身 IP/站点名后即可照搬部署
-cp "$TEMPLATES_DIR/cicd-ado-monitor.js" "$WS/docs/ops/cicd-ado-monitor.js"
-for f in cicd-self-heal-sop.md credential-injection.md cicd-ado-monitor.md cicd-ado-failure-notification.md deployment-ip-map.md \
-         cicd-iis-server-setup.md cicd-agent-vm-setup.md cicd-sys-pipeline-draft.md; do
-  cp "$TEMPLATES_DIR/docs-ops-baseline/$f" "$WS/docs/ops/$f"
-done
+case "/$TARGET_PATH/" in
+  *"/../"*|*"/./"*)
+    echo "Target must not contain . or .. path segments: $TARGET_PATH" >&2
+    exit 1
+    ;;
+esac
 
-# 3b. IIS web.config 模板(子应用部署两种模式)
-#     spa-root  = external 独立站点(base='/',如 SRM Contract);spa-subapp = shared_iis 子 VDir(base='/<app>/',如 MDM)
-cp "$TEMPLATES_DIR/iis-web.config-spa-root.template.xml"   "$WS/docs/ops/iis-web.config-spa-root.template.xml"
-cp "$TEMPLATES_DIR/iis-web.config-spa-subapp.template.xml" "$WS/docs/ops/iis-web.config-spa-subapp.template.xml"
+TARGET_PARENT="$(dirname "$TARGET_PATH")"
+TARGET_NAME="$(basename "$TARGET_PATH")"
+if [ ! -d "$TARGET_PARENT" ]; then
+  echo "Target parent must already exist: $TARGET_PARENT" >&2
+  exit 1
+fi
+TARGET_PARENT="$(cd "$TARGET_PARENT" && pwd -P)"
+TARGET_PATH="$TARGET_PARENT/$TARGET_NAME"
 
-# 3c. 子应用迁移/接入前置自检(ADR-012 SOP,SRMV2 Contract 踩坑沉淀:每菜单同页/网络异常/假 E2E)
-#     checklist 复制到工作区;guard hook 确保装在全局 ~/.claude/hooks(所有工作区共享,机械拦 baseURL/postMessage 漏)
-cp "$TEMPLATES_DIR/subapp-migration-checklist.md" "$WS/docs/ops/subapp-migration-checklist.md"
-GUARD_DST="$HOME/.claude/hooks/subapp-frontend-guard.js"
-if [ ! -f "$GUARD_DST" ]; then
-  mkdir -p "$HOME/.claude/hooks"
-  cp "$TEMPLATES_DIR/hooks/subapp-frontend-guard.js" "$GUARD_DST"
-  echo "  ⚠ 已装 subapp-frontend-guard.js → ~/.claude/hooks/;请在 ~/.claude/settings.json 的 PostToolUse 接线(matcher Edit|Write|MultiEdit → node ~/.claude/hooks/subapp-frontend-guard.js)"
+if [ -e "$TARGET_PATH" ] || [ -L "$TARGET_PATH" ]; then
+  echo "Target already exists; refusing to overwrite: $TARGET_PATH" >&2
+  exit 1
 fi
 
-# 4. .gitignore(容器仓:排除 .mcp.json + nested 项目仓)
-cat > "$WS/.gitignore" <<'EOF'
-# MCP 配置含密码,永不入库
+mkdir "$TARGET_PATH"
+mkdir -p \
+  "$TARGET_PATH/docs/superpowers/specs" \
+  "$TARGET_PATH/docs/superpowers/backlog" \
+  "$TARGET_PATH/docs/superpowers/_archive" \
+  "$TARGET_PATH/docs/decisions" \
+  "$TARGET_PATH/docs/ops" \
+  "$TARGET_PATH/.planning/codebase"
+
+cp "$TEMPLATES_DIR/workspace-AGENTS.md.template" "$TARGET_PATH/AGENTS.md"
+
+cat > "$TARGET_PATH/.gitignore" <<'EOF'
+# Secrets and local runtime state
+.env
+.env.*
+!.env.example
 .mcp.json
-# CI watcher 运行态日志 / PID / current state,由 docs/ops/cicd-ado-monitor.js background 生成
-docs/ops/ci-watch/
-# nested 项目仓各自独立 git,在此逐个排除(bootstrap 后按实际补):
-# <nested-repo-1>/
-# <nested-repo-2>/
+*.pem
+*.key
+.codex/
+.claude/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Nested repositories are listed explicitly by each workspace:
+# app-one/
+# app-two/
 EOF
 
-# 5. git init(workspace 容器仓)
-( cd "$WS" && git init -q )
+(
+  unset \
+    GIT_DIR \
+    GIT_WORK_TREE \
+    GIT_COMMON_DIR \
+    GIT_OBJECT_DIRECTORY \
+    GIT_ALTERNATE_OBJECT_DIRECTORIES \
+    GIT_INDEX_FILE \
+    GIT_CEILING_DIRECTORIES \
+    GIT_DISCOVERY_ACROSS_FILESYSTEM \
+    GIT_CONFIG_PARAMETERS \
+    GIT_CONFIG_COUNT
+  git -C "$TARGET_PATH" init -q
+)
 
-# 6. memory 索引初始化 ─ 从 MEMORY.md.template 实例化(D2,2026-05-20)
-WS_NAME="$(basename "$WS")"
-WS_USER="$(id -un | sed 's/[^a-zA-Z0-9]/_/g')"
-MEM_DIR="$HOME/.claude/projects/-Users-${WS_USER}-Projects-${WS_NAME}/memory"
-mkdir -p "$MEM_DIR"
-if [ ! -f "$MEM_DIR/MEMORY.md" ]; then
-  sed "s/{{WORKSPACE_NAME}}/$WS_NAME/g" "$TEMPLATES_DIR/MEMORY.md.template" > "$MEM_DIR/MEMORY.md"
-  echo "  - memory/MEMORY.md(从模板实例化,$WS_NAME)"
+if [ ! -d "$TARGET_PATH/.git" ]; then
+  echo "Git initialization did not create an independent repository: $TARGET_PATH" >&2
+  exit 1
 fi
 
-echo "✓ 工作区骨架已建: $WS"
-echo "  - CLAUDE.md(待填占位)"
-echo "  - docs/ops/ 监控+凭据+IP表:{cicd-ado-monitor.js,cicd-self-heal-sop.md,credential-injection.md,cicd-ado-monitor.md,cicd-ado-failure-notification.md,deployment-ip-map.md}"
-echo "  - docs/ops/ 部署手册:{cicd-iis-server-setup.md,cicd-agent-vm-setup.md,cicd-sys-pipeline-draft.md}"
-echo "  - docs/ops/ web.config 模板:{iis-web.config-spa-root(external),iis-web.config-spa-subapp(shared_iis)}"
-echo "  - docs/ops/subapp-migration-checklist.md(子应用迁移前置自检)+ subapp-frontend-guard.js(全局 hook,机械拦 baseURL/postMessage 漏)"
-echo ""
-echo "后续手动(bootstrap 指南 §3):"
-echo "  1. 填 $WS/CLAUDE.md 的项目特化占位(交付线 / 双推 / 构建 / CI-CD / 测试环境)"
-echo "  2. clone nested 项目仓到工作区,并写进 .gitignore"
-echo "  3. 仅在明确 qwen 派单时，手动实例化 QWEN.md"
-echo "  4. 仅在复杂改造、迁移或陌生域排查时，手动运行 /gsd-map-codebase"
-echo "  5. 配 CI/CD 流水线 + 接监控(docs/ops/cicd-ado-monitor.js + 自治修复 SOP 已在;ADO_BASE/PAT 按需调)"
-echo "  6. 老项目迁移工作区:按 legacy-migration-playbook 声明基线 + 产源工件清单"
-echo "  7. 后续 memory 沉淀按 standards/memory-maintenance-standard.md 规范"
+echo "Workspace created: $TARGET_PATH"
+echo "Next: fill AGENTS.md placeholders, add nested-repo ignores, and record real verification commands."

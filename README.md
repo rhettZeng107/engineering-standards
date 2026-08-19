@@ -48,8 +48,8 @@ engineering-standards/
 | **鉴权** | ADR-007 | (subapp-onboarding-guide 含接入侧) | — |
 | **CICD / E2E / 监控** | ADR-008 / 024 / 022 / 034 | cicd-e2e-in-pipeline-standard · observability-apm-lite-standard | templates/azure-pipelines-e2e · pipeline-e2e · cicd-ado-monitor.js |
 | **主数据消费** | ADR-038 | sys-master-data-api-standard | templates/csharp-list-controller |
-| **项目地图 / codebase** | ADR-025 / 026 | (gsd `/gsd-map-codebase`) | — |
-| **新建工作区** | ADR-029 | workspace-bootstrap-guide | templates/bootstrap-workspace.sh · workspace-CLAUDE.md/QWEN.md · MEMORY.md.template |
+| **项目地图 / codebase** | ADR-025 / 026 | provider-neutral scoped mapping | Codex 本体 / codebase mapper / `codex exec` |
+| **新建工作区** | ADR-029 | workspace-bootstrap-guide | templates/bootstrap-workspace.sh · workspace-AGENTS.md.template |
 | **LSP 符号导航** | ADR-035 | tools/lsp-nav/SKILL.md | tools/lsp-nav |
 | **AI coding harness** | ADR-015 / 018 / 031 / 035 | provider-neutral-ai-coding-harness-standard | templates/ai-harness |
 | **治理 / 精简规则** | ADR-009 / 033 / 021 | memory-maintenance-standard · governance-reduction-audit(一次性审计记录) | — |

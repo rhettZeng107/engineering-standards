@@ -113,9 +113,25 @@
 
 **横向影响**:后续 multi-repo 工作区(MES/WMS/EAM/TPM)bootstrap 一并铺仓级 CLAUDE.md。SRMV2 7 仓已落(**均自写** —— 前端 Buyer/Supplier 原有 Codex `AGENTS.md` 实证已过时 craco→vite/端口错,未 import 改自写)。
 
+## 修订 2026-08-19 — Codex-first 最小治理容器
+
+**背景**:Codex 接管全局工作流后，旧 bootstrap 同时实例化 `CLAUDE.md`、`QWEN.md`、个人 memory 和运维基线，既扩大常驻 context，也把 provider、本机状态和项目事实混入团队治理。部分 GSD runtime 已不存在，继续绑定 `/gsd-*` 会生成不可执行的工作区规则。
+
+**修订**（替代本 ADR 中 2026-05-20 与 2026-06-18 的 provider-specific bootstrap 操作细节；原文保留为历史证据）：
+
+1. 工作区层的 Codex 主载体改为最近的 `AGENTS.md`；multi-repo 按需在 nested repo 放更近的 `AGENTS.md`，只写该目录树的项目特化。
+2. 新工作区默认只生成 `AGENTS.md`、安全 `.gitignore`、`docs/decisions/`、`docs/ops/`、`docs/superpowers/{specs,backlog,_archive}/` 和 `.planning/codebase/` 空骨架。
+3. bootstrap 不自动生成 `CLAUDE.md`、`QWEN.md`、个人 memory、凭据、hooks、完整 Skill 目录或运维脚本。provider adapter、项目事实和运维资产必须基于实际需要单独引入。
+4. 项目地图保持 provider-neutral：Codex 本体、当前可用 mapper/explorer 或结构化 `codex exec` 均可按受影响范围增量维护；不依赖 GSD 命令。
+5. 已存在工作区只做 preflight 后的增量合并，不覆盖已有指令、`.gitignore`、用户改动或 nested repo。
+6. 当前模板真理源为 `templates/workspace-AGENTS.md.template` 和最小化 `templates/bootstrap-workspace.sh`；初始化后的项目命令、边界与验证项必须经实证补全。
+
+**保留边界**:三层治理、最近指令优先、项目特化不重复全局规则等核心决策不变；旧 Claude/Qwen 模板仅作兼容参考，不再是默认 bootstrap 输出。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-18 | Proposed → Accepted | 涛哥拍板,SRM 迁移新建 SRMV2 工作区驱动 |
 | 2026-06-18 | Accepted(修订) | multi-repo 工作区层细化为「工作区根 + 仓级」两落点;Claude 官方按需加载 + AGENTS.md import 桥接;涛哥拍板 |
+| 2026-08-19 | Accepted(修订) | Codex-first 最小 bootstrap：AGENTS 为主、provider-neutral 项目地图、禁止自动写个人 memory/hooks/Qwen/GSD/ops 基线 |

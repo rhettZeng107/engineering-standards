@@ -1,0 +1,38 @@
+# AGENTS.md — <workspace name>
+
+> Keep only project specialization here. Cross-project defaults come from `~/.codex/AGENTS.md`; reusable policy comes from `engineering-standards`.
+
+## Positioning
+
+- Purpose: <one sentence>
+- Delivery stage: <requirements | design | implementation | operations>
+- Owners: <team or role>
+
+## Repository map
+
+| Path | Role | Remote/branch | Verification |
+|---|---|---|---|
+| `<repo>` | `<root workspace or nested app>` | `<remote/branch>` | `<build/test command>` |
+
+## Project boundaries
+
+- Source of truth: <schema/service/spec/API>
+- Reuse constraints: <existing modules/contracts to extend>
+- Do not: <project-specific prohibitions>
+- Environment authorization: <what may be changed and what requires approval>
+
+## Workflow specialization
+
+- Required history/ADR/spec sources: <paths>
+- Required semantic navigation: <LSP/tool and solution>
+- Required reviewers: <language/DB/security/architecture triggers>
+- Required progress/run-record location: <path or not applicable>
+- Project map refresh boundary: <paths and verification>
+
+## Verification
+
+- Build: `<command>`
+- Test: `<command>`
+- API/DB: `<method>`
+- UI/E2E: `<command and browser boundary>`
+- Git/CI: `<independent completion checks>`

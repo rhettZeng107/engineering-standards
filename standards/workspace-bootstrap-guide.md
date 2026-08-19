@@ -1,87 +1,87 @@
-# 新工作区 Bootstrap 指南(Workspace Bootstrap Guide)
+# Workspace Bootstrap Guide
 
-> ⚠️ **已降级归档**(2026-05-18):本指南内容已转为 skill `workspace-bootstrap`(`~/.claude/skills/workspace-bootstrap/SKILL.md`),由 skill 作真理源自包含维护。本文件冻结为只读历史快照,**不再更新** —— 新工作区 bootstrap 直接用 skill(关键词自动触发或手动 `/workspace-bootstrap`)。决策依据 ADR-029 与配套模板/脚本不变。
->
-> 决策依据:[ADR-029](../decisions/ADR-029-workspace-governance-bootstrap.md)(工作区治理三层模型)。
-> 适用:新建任何工作区(SRMV2 及未来 MES / WMS / EAM / TPM 等)。
-> 配套模板:[templates/workspace-CLAUDE.md.template](../templates/workspace-CLAUDE.md.template)。
+## Goal
 
----
+Create the smallest Codex-first governance container for one project or a set of nested repositories. Do not manufacture architecture, credentials, personal memory, runtime configuration, project maps, or operations assets before evidence exists.
 
-## 1. 工作区治理三层模型
+The executable entry is `templates/bootstrap-workspace.sh`; the repeated procedure is also packaged as the `workspace-bootstrap` Skill. This guide is the portable team standard, not a mirror of one user's home directory.
 
-| 层 | 载体 | 谁负责 | 放什么 |
-|---|---|---|---|
-| 全局层 | `~/.claude/`(CLAUDE.md / rules / hooks / agents) | 本机自动 | 跨项目通用工作流、编码路由、批次任务、鉴权刚性 |
-| 跨项目标准层 | `engineering-standards` 仓 | 引用 | ADR、工程标准、迁移手册、本模板 |
-| 工作区层 | `<workspace>/` 内的 CLAUDE.md + docs + 地图 + memory | bootstrap | **仅项目特化 + 项目级覆盖** |
+## Layer model
 
-**铁律**:工作区层只放项目特化,不重复上两层;跨项目可复用的 essence 上提 `engineering-standards`。
+| Layer | Truth source | Content |
+|---|---|---|
+| Global/runtime | `~/.codex/AGENTS.md`, config, hooks, personal Skills | Cross-project hard boundaries, personal defaults, mechanical gates |
+| Team | This repository | ADRs, provider-neutral standards, templates, portable Skills and tests |
+| Workspace | Nearest project `AGENTS.md` and project docs | Repository topology, commands, contracts, environments and project-only rules |
 
-> **ADR-030 GSD 融合能力自动继承**:A1 新会话地图注入 / A2 context 窗口监控 / A3 claim 来源标注 / B4 地图漂移检测 —— 这些 hook 与规则落在**全局层**(`~/.claude/`)与 `engineering-standards`,新工作区**自动继承,无需重装**;工作区层只需按 §3 建好项目地图作其数据源。
+Workspace instructions specialize the upper layers; they do not copy them wholesale.
 
----
-
-## 2. 一个标准工作区的构成
+## Bootstrap output
 
 ```text
-<workspace>/                      ← workspace 容器仓(git init,追踪 docs/scripts/根 *.md)
-├── CLAUDE.md                     ← 项目特化(由模板实例化)
-├── .gitignore                    ← 排除 nested 项目仓 + .mcp.json
-├── .mcp.json                     ← MCP 配置(含密码 → 永不入库)
-├── docs/
-│   ├── superpowers/
-│   │   ├── specs/                ← <YYYY-MM-DD-topic>/spec.md
-│   │   ├── plans/                ← <YYYY-MM-DD-topic>/plan.md
-│   │   ├── backlog/              ← 欠债登记
-│   │   └── _archive/             ← 完结归档
-│   ├── decisions/                ← 项目特化 ADR(跨项目 ADR 在 engineering-standards)
-│   └── ops/                      ← 运维脚本 / CI-CD 监控脚本 / 自治修复 SOP
-├── .planning/codebase/           ← 项目地图(7 文件,/gsd-map-codebase 产出)
-└── <nested 项目仓>/              ← 实际代码仓,各自独立 git,gitignore 排除
+<workspace>/
+├── AGENTS.md
+├── .gitignore
+├── .planning/codebase/
+├── docs/decisions/
+├── docs/ops/
+└── docs/superpowers/{specs,backlog,_archive}/
 ```
 
-memory 不在工作区内,在 `~/.claude/projects/<工作区路径转义>/memory/`(首次会话自动建)。
+`docs/superpowers` is a historical directory convention for spec/plan artifacts. It does not require a plugin with that name. `.planning/codebase/` starts empty and is populated only from real project evidence.
 
----
+The default bootstrap does not create or modify:
 
-## 3. Bootstrap 步骤
+- `CLAUDE.md`, `QWEN.md`, personal memory, sessions or history;
+- `.mcp.json`, credentials, internal endpoints or environment values;
+- global hooks, full Skill/plugin catalogs or user config;
+- CI/CD scripts, deployment maps, architecture claims or project-map content;
+- a separate tasks document; tasks stay inside the relevant `plan.md`.
 
-> **一键搭骨架**:`templates/bootstrap-workspace.sh <工作区绝对路径>` 自动完成机械部分 —— 建容器仓 + git init + 实例化 CLAUDE.md 模板 + 文档骨架 + `.gitignore` + 拷 CI/CD 监控脚本(下方步骤 1-3、5 的目录/文件部分)。之后人工:填 CLAUDE.md 占位、clone nested 仓、跑 `/gsd-map-codebase`。
+## New workspace procedure
 
-1. **建容器仓**:`mkdir <workspace> && cd <workspace> && git init`;workspace 容器仓只追踪 `docs/` `scripts/` 根 `*.md`,nested 项目仓写进 `.gitignore`。
-2. **实例化 CLAUDE.md**:复制 `templates/workspace-CLAUDE.md.template` → `<workspace>/CLAUDE.md`,逐个填 `<占位符>`(见 §4)。
-   - **填双推表前必跑「分支侦察」(ADR-042 D5,踩坑铁律)**:clone 后默认在 `master`,但团队常在 `develop` 等分支开发最新代码 —— 闷头在 master 干 = 基于旧代码 = 白干。每个 nested 仓填双推/默认分支前先跑 `git fetch --all --prune` → `git for-each-ref --sort=-committerdate refs/remotes/origin --format='%(refname:short) last=%(committerdate:short) by=%(authorname)'`(最顶 = 疑似活跃分支)→ `git rev-list --left-right --count HEAD...origin/<候选>`(领先/落后)。**不自动 checkout**,把「当前 X vs 疑似活跃 Y」摆给涛哥确认再 checkout + 锁进双推表 + push-guard registry。`git remote show origin` 的 HEAD 分支不可靠,以提交新鲜度为准。
-3. **建文档骨架**:`docs/superpowers/{specs,plans,backlog}/` + `docs/decisions/` + `docs/ops/`。
-4. **建项目地图**:`.planning/codebase/`,跑 `/gsd-map-codebase` 扫出 7 文件项目地图。**地图是 ADR-030 新会话自动导航的数据源** —— 建好后全局 hook `project-map-session-digest`(新会话注入地图摘要)+ `project-map-staleness-check`(漂移检测)即自动生效。
-5. **CI/CD 配置 + 监控**(ADR-022 监控双轨):配置各 nested 项目仓的 CI/CD 流水线;接监控两路 —— **被动**:全局 post-push 监控提醒 hook 已自动生效(推送后提示起 build 监控);**主动**:把 build 监控脚本(如 `cicd-ado-monitor`)+ 自治修复 SOP `cicd-self-heal-sop.md` 放工作区 `docs/ops/`。监控脚本可从已有工作区(SYSV2 `docs/ops/`)复用。
-6. **memory**:首次会话自动在 `~/.claude/projects/<路径>/memory/` 建;写一条工作区画像(交付线、技术栈、关键约束)。
-7. **回链标准**:CLAUDE.md 顶部声明「通用工作流以 `~/.claude/CLAUDE.md` 为准,跨项目标准见 `engineering-standards`」。
-8. **老项目迁移工作区额外**:按 [legacy-migration-playbook](legacy-migration-playbook.md) §2 在 spec 声明基线(后端运行时 / 前端工具链 / 前端工程标准)+ §3.1 产源工件清单 + §3.5 验收质量闸。
+1. Use an absolute path whose parent already exists; confirm the target does not exist and contains no `.` or `..` path segment.
+2. Verify the template repository's root, remote, branch and dirty ownership.
+3. Run `templates/bootstrap-workspace.sh <target>`.
+4. Fill `AGENTS.md` from current repository evidence: roles, remotes/branches, source of truth, reuse boundaries, prohibited actions and exact verification commands.
+5. Clone nested repositories separately, verify each Git root, and add explicit container-repo ignores.
+6. For standard, migration, cross-repo, DB/auth/production or long-running work, record repo preflight and one progress/run-record truth source.
+7. Run shell syntax, bootstrap smoke, secret scan and `git diff --check`; review code/executable configuration once against the final staged diff.
+8. Verify commit and push through independent read-only commands.
 
----
+## Existing workspace adoption
 
-## 4. CLAUDE.md 模板填空项
+Do not run the creation script over an existing directory. Inventory current instructions, repositories, docs, hooks, runtime files and user-owned dirty changes. Merge only missing governance surfaces and remove duplicated global prose from project instructions without weakening project-specific rules.
 
-模板 `<占位符>` 逐个填:
+Legacy provider files remain optional compatibility adapters. A stale Claude/Qwen/GSD command is not retained unless its current runtime and business value are verified.
 
-| 占位符 | 填什么 |
-|---|---|
-| `<工作区名>` / `<一句话定位>` | 工作区名与业务定位 |
-| `<交付线表>` | 各交付线:目录 / 技术栈 / 端口 |
-| `<git 双推表>` | 各 nested 仓:远程 / 默认分支。**填前必跑分支侦察(ADR-042 D5)定活跃分支 + 涛哥确认,禁默认填 master** |
-| `<构建命令>` | 前后端 build / dev 命令 |
-| `<架构落点>` | Context / Controller / Policy 注册等关键路径 |
-| `<CI/CD 与监控>` | 各仓 CI/CD 平台 + 流水线 / build 监控脚本 / 自治修复 SOP |
-| `<项目级覆盖>` | 项目特化覆盖全局规则的条目(无则留空) |
-| `<测试环境>` | 测试账号 / 测试库 |
+## Workflow defaults inherited by a new workspace
 
-不确定的项留 `TODO(<占位符>)`,首个 spec discuss 时补全。
+- Simple track: evidence anchor, small change and minimal verification; ordinary docs need no agent review, while code/executable configuration gets one staged-diff review before commit.
+- Standard track: complete known scope, contract lock, plan, evidence, risk-appropriate primary review and real verification.
+- Migration track: deterministic inventory/equivalence gates first; one initial independent critic, with reruns only after a gap, source/contract change or Tier 3 trigger; two evidence-lens votes only for high-impact non-deterministic claims.
+- Long-lived ADRs/business contracts use one primary review. A second review is reserved for independent high-risk domains, unresolved HIGH findings, external/irreversible contracts, auth/compliance or destructive production/DB decisions.
+- Monthly workflow review evaluates completion, rework, first-pass review, escaped HIGH, E2E, rebaseline, environment failures and cost trend before retaining or removing rules.
 
----
+See `provider-neutral-ai-coding-harness-standard.md` and `legacy-migration-playbook.md` for the full policy.
 
-## 5. 维护
+## Project maps
 
-- 治理改进(新踩坑沉淀、新标准)→ 同步更新本指南 + 模板,后续新工作区即继承。
-- 跨项目标准变更走 `engineering-standards`;各工作区因顶部回链,自然指向最新真理源。
-- 已存在的旧工作区(如 HC)若要并入本治理:对照 §2 §3 补齐缺的层,不必推倒重来。
+- Maps are navigation, not current-fact proof.
+- The default staleness reminder is 15 days.
+- Refresh only affected domains, preserve untouched content and record the mapped HEAD for each nested repository.
+- Map generation is provider-neutral: Codex, a codebase mapper, explorer or structured `codex exec` may produce the delta. Do not bind a workspace rule to an absent `/gsd-*` runtime.
+
+## Skill and plugin boundary
+
+Bootstrap installs or references only the team's core portable Skills. It never copies a personal full catalog into a workspace. Skill metadata stays concise for discovery; full Skill instructions and references load when triggered. Existing personal plugins and Skills remain under the user's runtime configuration and are not silently disabled or removed by workspace initialization.
+
+Archived Skills require a manifest, dependency scan, recovery path and a review period before permanent deletion.
+
+## Acceptance
+
+- The target is a new independent Git root and a second run refuses overwrite.
+- No bootstrap output contains credentials, personal memory, internal deployment facts or dead runtime commands.
+- `AGENTS.md` contains only project specialization and verified commands.
+- The script writes only under the requested target.
+- Tests, review and remote synchronization are independently verified.

@@ -7,6 +7,10 @@
 
 | 模板 | 用途 | 目标位置 |
 |---|---|---|
+| `workspace-AGENTS.md.template` | 最小 Codex 项目特化指令模板 | `<工作区>/AGENTS.md` |
+| `bootstrap-workspace.sh` | 新建最小治理工作区；不写个人 memory/凭据/hooks/全量 Skill | 新工作区初始化入口 |
+| `ai-harness/repo-preflight.template.md` | 标准/迁移/跨仓/高风险任务 preflight | `<run-record-dir>/repo-preflight.md` |
+| `ai-harness/run-record.template.json` | 多步骤/多门禁任务结构化记录 | `<run-record-dir>/run-record.json` |
 | `frontend-i18n-init.template.js` | React i18next 标准初始化(单 ns + cookie + zh-CN 强制 + useSuspense:false) | `<前端>/src/utils/i18n.js` |
 | `frontend-env-production.template` | Vite 前端 production 环境变量 | `<前端>/.env.production` |
 | `iis-web.config-spa-root.template.xml` | IIS SPA 主应用 web.config(含 inheritInChildApplications=false 防穿透) | `<前端>/public/web.config` |
@@ -24,10 +28,11 @@
 
 ## 使用流程
 
-1. 立项 / 新前端时,从本目录复制相关模板到目标位置
-2. 按模板顶部注释替换 `{{占位符}}`
-3. 提交时附:`Copy from engineering-standards/templates/<模板名> v<sha>` 备忘
-4. 标准升级时 → 模板同步更新 + 通知各项目按需对齐
+1. 新建工作区先运行 `bootstrap-workspace.sh`;已有工作区只做增量合并,禁止覆盖现有规则与用户改动
+2. 立项 / 新前端时,从本目录复制相关模板到目标位置
+3. 按模板顶部注释替换 `{{占位符}}`
+4. 提交时附:`Copy from engineering-standards/templates/<模板名> v<sha>` 备忘
+5. 标准升级时 → 模板同步更新 + 通知各项目按需对齐
 
 ## 违反 = code-reviewer HIGH
 
