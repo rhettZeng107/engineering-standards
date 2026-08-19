@@ -23,6 +23,13 @@ const OBSERVATION_BOUNDARIES = new Set([
 function emptyMetrics() {
   return {
     records: 0,
+    outcome: {
+      complete: 0,
+      partial: 0,
+      blocked: 0,
+      cancelled: 0,
+      unknown: 0,
+    },
     primaryReview: {
       pass: 0,
       fail: 0,
@@ -76,6 +83,13 @@ function incrementPrimaryReview(target, value) {
   else target.unknown += 1;
 }
 
+function incrementOutcome(target, value) {
+  const key = ['complete', 'partial', 'blocked', 'cancelled'].includes(value)
+    ? value
+    : 'unknown';
+  target[key] += 1;
+}
+
 function incrementStatus(target, value) {
   const key = {
     pass: 'pass',
@@ -106,8 +120,9 @@ function incrementBoundary(target, value) {
   target[key] += 1;
 }
 
-function addRecord(target, qualityMetrics) {
+function addRecord(target, qualityMetrics, outcomeStatus) {
   target.records += 1;
+  incrementOutcome(target.outcome, outcomeStatus);
   const quality = qualityMetrics ?? {};
   incrementPrimaryReview(target.primaryReview, quality.primaryReview?.firstPass);
 
@@ -286,9 +301,9 @@ export function aggregateRecords(records, { from, to, timezone } = {}) {
       ? data.task.track
       : 'unknown';
     result.byTrack[track] ??= emptyMetrics();
-    addRecord(result.byTrack[track], quality);
-    if (isDbAuthRecord(data)) addRecord(result.riskSlices.dbAuth, quality);
-    if (isE2eHeavyRecord(quality)) addRecord(result.riskSlices.e2eHeavy, quality);
+    addRecord(result.byTrack[track], quality, data.outcome?.status);
+    if (isDbAuthRecord(data)) addRecord(result.riskSlices.dbAuth, quality, data.outcome?.status);
+    if (isE2eHeavyRecord(quality)) addRecord(result.riskSlices.e2eHeavy, quality, data.outcome?.status);
     result.records.included += 1;
   }
 
