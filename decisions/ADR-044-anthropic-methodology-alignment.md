@@ -46,3 +46,30 @@
 - ✅ G4/G5 衍生 spec 立项(progressive disclosure / 迁移轨 workflow 重构)。
 - 适用:全工作区(SYSV2 / SRMV2 / HC / MES / WMS / EAM / TPM)。
 - **未采纳(已对齐,记录备查)**:workflows-vs-agents 分型、orchestrator-workers(主会话本体)、just-in-time retrieval(LSP)、像人测(E2E 真实 UI 提交)、人做 what/Claude 做 how(discuss 简化 + 涛哥深域 PM)、note-taking(progress.md)—— 均已在现行体系。
+
+## 修订(2026-08-19,OpenAI AGENTS.md 字节预算与常驻规则压缩)
+
+> 触发:核对“AGENTS.md 官方是否建议不超过 200 行”。OpenAI 官方没有 200 行限制;Codex 按 global→project→nested 合并指令链,默认在 `project_doc_max_bytes=32 KiB` 停止追加,并建议主文件简短准确、任务流程下沉 skill、项目特化放最近的 nested `AGENTS.md`。
+
+### 实证
+
+- 优化前 `~/.codex/AGENTS.md`:227 行 / 23,487 bytes,单文件未超过默认 32 KiB,但每次任务均常驻。
+- 本机 `project_doc_max_bytes=65,536`;压缩后 global+HC root 为 42,858 bytes(41.85 KiB)。当前实测最深链 `global + gsd-fork/docs + gsd-fork/docs/ja-JP` 为 62,031 bytes(60.58 KiB),距 64 KiB 仅余 3,505 bytes(3.42 KiB)。恢复默认 32 KiB 会截断现有项目指令,不是优化。
+- 200 行只作为可读性经验值,不作为门禁。内部软目标改为:全局文件优先 ≤16 KiB,无语义重复,只保留跨项目硬边界;最终是否合格以字节、加载链、代表性 eval 和规则逃逸共同判断。
+
+### 决策
+
+1. 将全局文件的 Why、命令细节、长 SOP 和项目特化继续下沉 ADR/standard/skill/hook/automation/项目 `AGENTS.md`。
+2. 不删除授权、安全、范围完整性、CR、迁移、DB/生产和真实验证边界;只合并重复表述与入口说明。
+3. `project_doc_max_bytes=64 KiB` 暂留作合并链安全上限,不得把提高上限当作继续膨胀全局文件的许可。
+4. 后续月度复盘同时看 global bytes、最大项目 instruction chain、首审/返工/HIGH 逃逸;一次只精简一组规则并做 delta 验证。
+
+### 结果
+
+- `~/.codex/AGENTS.md`:227→168 行(-26.0%),23,487→13,790 bytes(-41.3%),降至内部 16 KiB 软目标以内。
+- 64 KiB 是兼容当前大型项目 instruction chain 的有意偏离,不是 OpenAI 官方默认值;后续应优先压缩 HC 与 `gsd-fork/docs` 多层链,而非继续提高上限,再评估恢复 32 KiB。
+
+官方依据:
+
+- OpenAI `AGENTS.md`:合并顺序、默认 32 KiB、接近目录优先和 nested 拆分。<https://learn.chatgpt.com/docs/agent-configuration/agents-md>
+- OpenAI Codex best practices:短而准确优于长而模糊;过大时引用任务特定文件,重复流程转 skill。<https://learn.chatgpt.com/guides/best-practices>
