@@ -58,7 +58,7 @@ test('aggregates comparable quality metrics without coercing unknown records', (
     record({
       id: 'migration-rework',
       track: 'migration',
-      riskFlags: ['auth'],
+      riskFlags: ['auth-menu'],
       qualityMetrics: {
         primaryReview: { firstPass: false },
         rework: {
@@ -81,6 +81,7 @@ test('aggregates comparable quality metrics without coercing unknown records', (
         },
       },
     }),
+    record({ id: 'db-risk', track: 'simple', riskFlags: ['db-contract'], qualityMetrics: passingQuality }),
     record({
       id: 'not-applicable',
       qualityMetrics: {
@@ -93,8 +94,8 @@ test('aggregates comparable quality metrics without coercing unknown records', (
     record({ id: 'legacy-record', qualityMetrics: undefined }),
   ]);
 
-  assert.equal(result.records.discovered, 5);
-  assert.equal(result.records.included, 4);
+  assert.equal(result.records.discovered, 6);
+  assert.equal(result.records.included, 5);
   assert.equal(result.records.duplicates, 1);
   assert.equal(result.records.missingQualityMetrics, 1);
   assert.deepEqual(result.byTrack.standard.primaryReview, {
@@ -110,8 +111,8 @@ test('aggregates comparable quality metrics without coercing unknown records', (
   assert.equal(result.byTrack.migration.primaryReview.fail, 1);
   assert.equal(result.byTrack.migration.rework.reviewCycles, 1);
   assert.equal(result.byTrack.migration.highEscape.observed, 1);
-  assert.equal(result.riskSlices.dbAuth.records, 1);
-  assert.equal(result.riskSlices.e2eHeavy.records, 2);
+  assert.equal(result.riskSlices.dbAuth.records, 2);
+  assert.equal(result.riskSlices.e2eHeavy.records, 3);
 });
 
 test('excludes out-of-window records and reports invalid observation boundaries', () => {
@@ -120,17 +121,21 @@ test('excludes out-of-window records and reports invalid observation boundaries'
 
   const result = aggregateRecords(
     [
-      record({ id: 'inside', endedAt: '2026-08-15T00:00:00Z', qualityMetrics: invalidBoundary }),
-      record({ id: 'before', endedAt: '2026-07-31T23:59:59Z', qualityMetrics: passingQuality }),
-      record({ id: 'month-end', endedAt: '2026-08-31T23:59:59.999Z', qualityMetrics: passingQuality }),
-      record({ id: 'after', endedAt: '2026-09-01T00:00:00Z', qualityMetrics: passingQuality }),
+      record({ id: 'inside', endedAt: '2026-08-15T00:00:00+08:00', qualityMetrics: invalidBoundary }),
+      record({ id: 'month-start', endedAt: '2026-08-01T00:00:00+08:00', qualityMetrics: passingQuality }),
+      record({ id: 'utc-cross-offset', endedAt: '2026-07-31T23:59:59Z', qualityMetrics: passingQuality }),
+      record({ id: 'before', endedAt: '2026-07-31T15:59:59.999Z', qualityMetrics: passingQuality }),
+      record({ id: 'month-end', endedAt: '2026-08-31T23:59:59.999+08:00', qualityMetrics: passingQuality }),
+      record({ id: 'after', endedAt: '2026-09-01T00:00:00+08:00', qualityMetrics: passingQuality }),
+      record({ id: 'missing-date', endedAt: '', qualityMetrics: passingQuality }),
     ],
-    { from: '2026-08-01', to: '2026-08-31' },
+    { from: '2026-08-01', to: '2026-08-31', timezone: '+08:00' },
   );
 
-  assert.equal(result.records.discovered, 4);
-  assert.equal(result.records.included, 2);
+  assert.equal(result.records.discovered, 7);
+  assert.equal(result.records.included, 4);
   assert.equal(result.records.outsideWindow, 2);
+  assert.equal(result.records.missingOrInvalidEndedAt, 1);
   assert.deepEqual(result.dataQuality.invalidHighEscapeBoundary, ['/records/inside.json']);
 });
 
@@ -141,6 +146,7 @@ test('collects only run-record JSON files and ignores generated dependency direc
   await writeFile(path.join(root, 'run-record.alpha.json'), '{}');
   await writeFile(path.join(root, 'nested', 'batch-run-record.json'), '{}');
   await writeFile(path.join(root, 'nested', 'other.json'), '{}');
+  await writeFile(path.join(root, 'run-record.template.json'), '{}');
   await writeFile(path.join(root, 'node_modules', 'pkg', 'run-record.hidden.json'), '{}');
 
   try {
@@ -157,13 +163,24 @@ test('collects only run-record JSON files and ignores generated dependency direc
 
 test('parses explicit month and input paths', () => {
   assert.deepEqual(
-    parseCliArgs(['--month', '2026-08', '/a', '/b']),
+    parseCliArgs(['--month', '2026-08', '--timezone', '+08:00', '/a', '/b']),
     {
       from: '2026-08-01',
       to: '2026-08-31',
+      timezone: '+08:00',
       paths: ['/a', '/b'],
       pretty: true,
     },
   );
   assert.throws(() => parseCliArgs(['--month', '2026-13']), /Invalid --month/);
+  assert.throws(() => parseCliArgs(['--month', '2026-08']), /--timezone is required/);
+  assert.throws(() => parseCliArgs(['--from']), /Missing value for --from/);
+  assert.throws(() => parseCliArgs(['--to']), /Missing value for --to/);
+  assert.throws(() => parseCliArgs(['--from', '2026-08-01']), /--timezone is required/);
+  assert.throws(() => parseCliArgs(['--to', '2026-02-31', '--timezone', '+08:00']), /Invalid date/);
+  assert.throws(
+    () => parseCliArgs(['--from', '2026-08-02', '--to', '2026-08-01', '--timezone', '+08:00']),
+    /--from must not be after --to/,
+  );
+  assert.throws(() => parseCliArgs(['--timezone', '+15:00']), /Invalid --timezone/);
 });
