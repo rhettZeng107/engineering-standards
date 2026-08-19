@@ -6,13 +6,13 @@
 
 ## 解决什么
 
-MDM→SRM→TPM 三次迁移的高代价坑同属一类 —— **完整性盲区**:整模块后端漏迁 / 壳层功能随 layout 整删 / 菜单种子整组漏种。检查项 playbook 都有,但「人工/单 agent 一遍过」线性、易漏一整维。本工具用 Workflow 三模式主动穷扫:
+MDM→SRM→TPM 三次迁移的高代价坑同属一类 —— **完整性盲区**:整模块后端漏迁 / 壳层功能随 layout 整删 / 菜单种子整组漏种。当前默认先用确定性合同/字段/菜单/路由 gate 覆盖 canonical 六维，再运行一个独立 critic；本目录旧 Workflow 仅在机器证据不足时作 bounded 兼容模板:
 
 | 模式 | 作用 |
 |---|---|
-| **multi-modal sweep** | N 个 agent 各扫一维、互相盲(初始 4 维:前后端归属 / 壳层功能 / 三方交叉 / 源工件退化) |
-| **completeness critic** | 每轮收口问「还漏哪个维度 / 哪个模块停中间态 / 哪个声称迁完无证据」,遗漏维度并入下一轮 |
-| **loop-until-dry** | 连续 2 轮无新发现才停 |
+| **deterministic coverage** | 合同、字段、菜单、路由、API 和清单机器 gate 覆盖六维 |
+| **completeness critic** | 对 compact manifest/delta 收口问「还漏哪个维度 / 哪个模块停中间态 / 哪个声称迁完无证据」 |
+| **adaptive-until-dry** | 首次 dry 可停；找到 gap、源/合同变化或 Tier 3 高风险才复查 |
 
 ## 触发时机(ADR-014 强制)
 
@@ -35,11 +35,11 @@ args 见 workflow 文件头注释。关键:`apiAddrFiles` / `oldBackendMarkers` 
 | | migration-audit | baseline-adversarial |
 |---|---|---|
 | 查什么 | **漏**(completeness):哪些维度/模块没枚举 | **误判**(correctness):枚举了但判错 |
-| 模式 | multi-modal sweep + critic + loop-until-dry | fan-out-and-vote(每判定 3 视角独立 skeptic refute + 多数票) |
+| 模式 | deterministic coverage + one independent critic | 仅高影响非确定性判断，2 个不同证据 lens 一致确认 |
 | 防的坑 | 整模块漏迁 / 壳层整删 / 菜单漏种 | 坑 2 半成品当完好、坑 10 退化产物当设计意图 |
 | 触发 | 启动前置 / 每模块验收 / 完结 DoD | 建基准时(源工件清单/退化判定/UI 清单锁定前) |
 
-建基准时**两者都跑**:audit 查漏 + adversarial 查误判。adversarial 的 `disputed`(多数 refute)= 基准不得锁定,交主会话复核。args:`artifacts`(待裁决判定清单)+ `frontendDir/backendDir/legacyRepo`。
+建基准时 audit 必跑；只有存在 `highImpact=true` 且 `nonDeterministic=true` 的判断才跑 adversarial。任一有效反证即 `disputed`,基准不得锁定。args:`artifacts`(已过滤的待裁决判定清单)+ `frontendDir/backendDir/legacyRepo`。
 
 ## Codex wrapper:标准批次 + 硬交付链
 
@@ -62,7 +62,7 @@ tools/migration-audit/codex-migration-audit.js init \
 | `source-inventory.json` | 老系统源工件清单 |
 | `migration-matrix.json` | old-to-new 决策与合同归属,不混入实现进度 |
 | `contract-index.json` + 8 个合同集合 | 页面/UI 操作/API/字段/Service/菜单/壳层/集成的规范化 1:1 合同 |
-| `completeness-sweep.json` | 六维扫描、已解决 gap 与连续两轮 dry critic 的硬门产物 |
+| `completeness-sweep.json` | 六维证据、已解决 gap 与最终 dry critic 的硬门产物 |
 | `baseline-lock.json` | Phase 0 通过后生成的输入摘要锁;禁止手改 |
 | `migration-progress.json` | STEP1 后每个矩阵行的实现与验证证据 |
 | `field-diffs.json` | 字段 diff 任务列表 |
@@ -86,7 +86,7 @@ tools/migration-audit/codex-migration-audit.js local  --config <batch>/migration
 tools/migration-audit/codex-migration-audit.js report --config <batch>/migration.yaml
 ```
 
-Phase 0 必须先跑 `contract`、`completeness` 和 `lock`。`contract` 强制批次 ID 一致、ID 唯一、源工件恰好归属一个矩阵行且被同行主维度合同引用、合同恰好归属一个矩阵行、专用引用与工件类型有效、每行 8 个合同维度均 `covered` 或登记 `not-applicable` 证据、无 draft/disputed/open gap。工具校验 N/A 证据存在性,其业务真实性仍由 CR/风险票审查。`completeness` 的 canonical 六维不可通过配置缩减（配置只能追加项目维度）；critic 的漏维/中间态/无证声称必须写成同轮 `newGapIds` 中的 gap ID,由 gap 绑定矩阵行、解决状态和证据,最后连续两轮全部为空。`lock` 还要求字段门和与具体风险行绑定的反证票通过;零风险批次允许空票,但判断性风险或 `CRITICAL/HIGH` 行无绑定票必阻断。锁输入包含 `spec.md`、完整性产物及每个字段 diff 自己的 coverage 文件,任一内容或输入集合漂移即失锁。没有当前有效锁不得进入 STEP1。
+Phase 0 必须先跑 `contract`、`completeness` 和 `lock`。`contract` 强制批次 ID 一致、ID 唯一、源工件恰好归属一个矩阵行且被同行主维度合同引用、合同恰好归属一个矩阵行、专用引用与工件类型有效、每行 8 个合同维度均 `covered` 或登记 `not-applicable` 证据、无 draft/disputed/open gap。工具校验 N/A 证据存在性,其业务真实性仍由 CR/选择性风险票审查。`completeness` 的 canonical 六维不可通过配置缩减（配置只能追加项目维度）；critic 的漏维/中间态/无证声称必须写成同轮 `newGapIds` 中的 gap ID,由 gap 绑定矩阵行、解决状态和证据,最终一轮必须为空。`lock` 还要求字段门和所需高影响非确定性反证票通过；确定性失败直接阻断，普通等价项和 severity-only 行不投票。锁输入包含 `spec.md`、完整性产物及每个字段 diff 自己的 coverage 文件,任一内容或输入集合漂移即失锁。没有当前有效锁不得进入 STEP1。
 
 提交前必须一次跑硬门:
 
@@ -95,7 +95,7 @@ tools/migration-audit/codex-migration-audit.js verify --config <batch>/migration
 ```
 
 - V0 = `contract + completeness + lock + gate + fields + progress`:不依赖 LLM,包装合同完整性、扫描收敛与既有 shell 门。
-- V1 = `vote + report`:合并多 subagent/codex-exec 的反证票,少于 2 个有效票或半数以上反证则 `disputed`。
+- V1 = `vote + report`:仅合并高影响非确定性 claim 的两个不同证据 lens；少于 2 个有效票或任一反证即 `disputed`。
 - 本机硬验证 = `verify`:依次跑 `contract + completeness + check-lock + gate + fields + vote + progress + local + report`;任一未跑/失败即非零退出。
 - `local` 执行 `local-verify.commands` 中的项目命令(build/test/E2E 等),命令列表为空也阻断,防假绿灯。
 - wrapper 只读业务代码,只写批次目录内的合同锁、审计状态和报告。

@@ -1,9 +1,9 @@
 export const meta = {
   name: 'baseline-adversarial',
   description:
-    '迁移基准建立 adversarial verification 门 — 每判定 N 个独立 skeptic 多视角 refute + 多数票,查"误判"(correctness)。ADR-014 修订 2026-06-18 / ADR-044 G5,跨项目通用',
+    '迁移基准选择性 adversarial 门 — 仅 highImpact+nonDeterministic 判定使用 2 个独立证据 lens；任一反证即 disputed。ADR-014 修订 2026-08-19',
   phases: [
-    { title: 'Refute', detail: '每条基准判定派多视角独立 verifier 尽力推翻 + 多数票裁决' },
+    { title: 'Refute', detail: '仅高影响非确定性判定派 2 个独立证据 lens 尽力推翻；一致确认才通过' },
   ],
 }
 
@@ -14,12 +14,11 @@ export const meta = {
 //     —— 单视角审查必漏的两类高代价坑:
 //       坑 2  半成品被当完好迁(源本就未完成)
 //       坑 10 历史退化产物被当设计意图(MDM 期初导入 5 类 MES → 退化成 1 卡,涛哥两次纠正)
-//   这两类「看了但判错」靠 completeness 抓不到 —— 需多个独立 skeptic 各被 prompt 去 refute、多数票才抓。
+//   这两类「看了但判错」靠 completeness 抓不到 —— 高影响时需两个独立证据 lens 去 refute。
 //
-// 模式(官方 dynamic-workflows / building-effective-agents):adversarial verification +
-//   perspective-diverse(每 voter 不同 lens,避免冗余)+ 多数票。固定一轮 fan-out-and-vote(非 loop)。
+// 模式:selective adversarial verification + perspective-diverse；两个不同 lens 一致确认。
 //
-// 定位:只读判定门,不改码、不拍板。disputed(多数 refute)= 基准不得锁定,交主会话/涛哥复核;
+// 定位:只读判定门,不改码、不拍板。disputed(任一有效反证)= 基准不得锁定,交主会话/涛哥复核;
 //   契约锁定仍由主会话本体做(ADR-037)。confirmed 才可锁为契约基准。
 //
 // 触发时机(ADR-014 修订 2026-06-18):迁移启动产源工件清单/UI 功能清单/退化判定【后、锁基准前】跑主门;
@@ -29,7 +28,8 @@ export const meta = {
 //
 // args = {
 //   artifacts,    // 待裁决判定清单(必填),每项:
-//                 //   { id, kind:'status'|'degradation'|'completeness', subject, claim, evidence }
+//                 //   { id, kind:'status'|'degradation'|'completeness', subject, claim, evidence,
+//                 //     highImpact:true, nonDeterministic:true }
 //                 //     status       = 源工件状态判定(完好/半成品/坏)
 //                 //     degradation  = 退化产物判定(设计意图 vs 历史退化)
 //                 //     completeness = UI 功能清单完整性判定(每列/按钮/弹窗/必填/交互齐全)
@@ -43,13 +43,15 @@ const FE = cfg.frontendDir || '(未指定前端仓 frontendDir)'
 const BE = cfg.backendDir || '(未指定后端仓 backendDir)'
 const LEGACY = cfg.legacyRepo || '(未指定老仓 legacyRepo — 退化判定取反证需要)'
 const MAX = cfg.maxArtifacts || 60
-const ARTIFACTS = Array.isArray(cfg.artifacts) ? cfg.artifacts.slice(0, MAX) : []
+const ARTIFACTS = Array.isArray(cfg.artifacts)
+  ? cfg.artifacts.filter((artifact) => artifact?.highImpact === true && artifact?.nonDeterministic === true).slice(0, MAX)
+  : []
 
 const EVIDENCE_RULE =
   '【证据纪律】反证必带实证来源(file:line / grep -c 数字 / git ref / SQL 结果 其一);' +
   '无确凿反证的推断标 [假设];只读取证,禁改任何文件。'
 
-// perspective-diverse:每 kind 三个互补 lens(各一票),多数 = 2/3
+// perspective-diverse:每 kind 提供候选 lens，执行时取前两个不同证据视角。
 const LENSES = {
   status: [
     { key: 'source-completeness', instr: '从「源工件本身是否完整」找反证:被判【完好】的源是否其实半成品(TODO/空函数/未接线/注释掉逻辑/报错)?被判【坏】的是否其实可用?' },
@@ -96,24 +98,30 @@ const refutePrompt = (a, lens) =>
   `返回 VERDICT_SCHEMA。`
 
 if (ARTIFACTS.length === 0) {
-  log('⚠️ 未传 artifacts(待裁决判定清单)。本工具裁决「源工件清单/退化判定/UI 清单」是否被误判,需主会话先产出判定清单再传入。')
-  return { audit: 'baseline-adversarial', error: 'no-artifacts', confirmed: [], disputed: [] }
+  log('未发现 highImpact=true 且 nonDeterministic=true 的待裁决项；确定性/普通等价项不投票。')
+  return {
+    audit: 'baseline-adversarial',
+    skipped: true,
+    reason: 'no-selective-vote-claims',
+    confirmed: [],
+    disputed: [],
+  }
 }
 
 log(
-  `迁移基准 adversarial 门启动 | ${ARTIFACTS.length} 条判定 | 每条 3 视角独立 skeptic refute + 多数票 | ` +
+  `迁移基准 adversarial 门启动 | ${ARTIFACTS.length} 条高影响非确定性判定 | 每条 2 个独立证据 lens | ` +
     `disputed = 基准不得锁定,交主会话/涛哥复核`
 )
 if (Array.isArray(cfg.artifacts) && cfg.artifacts.length > MAX)
   log(`⚠️ artifacts ${cfg.artifacts.length} 条超上限 ${MAX},仅裁决前 ${MAX} 条,余 ${cfg.artifacts.length - MAX} 条未裁决`)
 
-// fan-out-and-vote:每 artifact 独立跑(外层 parallel),其内 3 个 lens 各一独立 verifier(内层 parallel barrier 收齐再投票)。
+// fan-out-and-vote:每 artifact 独立跑(外层 parallel),其内 2 个 lens 各一独立 verifier(内层 parallel barrier 收齐再投票)。
 // 嵌套 parallel 在此安全:verifier 全是只读 Explore(grep/read/git),无写竞争/无共享可变资源 —— 不像 migration-fanout 需 pipeline 限并发。
 const results = await parallel(
   ARTIFACTS.map((a) => () => {
     const lenses = LENSES[a.kind]
     if (!lenses) log(`⚠️ artifact ${a.id || a.subject}:未知 kind='${a.kind}',回退通用 lens(专用 lens 未生效)`)
-    const usedLenses = lenses || GENERIC_LENSES
+    const usedLenses = (lenses || GENERIC_LENSES).slice(0, 2)
     return parallel(
       usedLenses.map((lens) => () =>
         agent(refutePrompt(a, lens), {
@@ -127,12 +135,11 @@ const results = await parallel(
       )
     ).then((votes) => {
       const valid = votes.filter(Boolean)
-      // 只用「真正投了票」的(剔除 errored)做多数分母 —— 崩溃的 verifier 不得算作「确认基准」的一票
+      // 只用真正返回的票；崩溃的 verifier 不得算作确认。
       const substantive = valid.filter((v) => !v._error)
       const refuteCount = substantive.filter((v) => v.refuted).length
-      // fail-safe(adversarial 默认存疑):① 不足 2 个 verifier 真正投票(panel 退化)→ 强制 disputed;
-      // ② 平票(refute 占半数)也判 disputed —— 50% skeptic 找到反证即不得锁基准(用 `>=`,堵剔除 errored 后偶数票平分缺口)
-      const disputed = substantive.length < 2 ? true : refuteCount * 2 >= substantive.length
+      // fail-safe 一致制:不足 2 个不同 lens 或任一有效反证均 disputed。
+      const disputed = substantive.length < 2 || refuteCount > 0
       return {
         id: a.id || a.subject,
         kind: a.kind,
@@ -158,9 +165,9 @@ return {
   totalArtifacts: ARTIFACTS.length,
   confirmedCount: confirmed.length,
   disputedCount: disputed.length,
-  disputed, // 多数 verifier 找到反证:基准误判嫌疑,交主会话/涛哥逐条复核
+  disputed, // 任一有效反证:基准误判嫌疑,交主会话/涛哥逐条复核
   confirmed: confirmed.map((r) => ({ id: r.id, subject: r.subject, kind: r.kind })),
   note:
-    'disputed = 多数独立 skeptic 找到反证 → 该判定不得锁为契约基准,交主会话/涛哥逐条复核(ADR-037 契约锁定不进 workflow);' +
+    'disputed = 任一独立证据 lens 找到反证 → 该判定不得锁为契约基准,交主会话/涛哥逐条复核(ADR-037 契约锁定不进 workflow);' +
     'confirmed 才可锁基准。本门只读、不改码、不拍板。与 migration-audit 配合:audit 查漏(completeness)+ adversarial 查误判(correctness),建基准时两者都跑。',
 }

@@ -1,7 +1,7 @@
 export const meta = {
   name: 'migration-audit',
   description:
-    '迁移完整性审计 — multi-modal sweep + completeness critic + loop-until-dry,主动穷扫迁移盲区(只读,不改码)。ADR-014 修订 2026-06-15,跨项目通用',
+    '迁移完整性审计兼容模板 — 机器 gate 后的 bounded sweep + 单 critic；仅在机器证据不足时调用(只读,不改码)。ADR-014 修订 2026-08-19',
   phases: [
     { title: 'Sweep', detail: '多维并扫(各 agent 互盲):枚举完整性+非CRUD页类 / 前后端归属 / 壳层功能 / 三方交叉 / 源工件退化' },
     { title: 'Critic', detail: '完整性批判收口:漏哪个维度 / 哪个模块停中间态 / 哪个声称迁完无证据' },
@@ -14,8 +14,8 @@ export const meta = {
 //
 // 病根(ADR-014 修订 2026-06-15):完整性检查项 playbook 都有,但检查方式是
 //   「人工/单 agent 一遍过」—— 线性、靠记忆穷举维度、漏掉的那一维自己不会冒出来提醒。
-//   本 workflow 把它升级为「多维并扫 + 收敛循环」:N 个 agent 并行扫多维、互不遗忘,
-//   critic 收口补漏,连续 2 轮无新发现才停。
+//   当前默认先跑 deterministic gate；本兼容模板只在机器证据不足时补扫,
+//   critic 收口补漏,最终 1 轮无新发现即可停；有新 gap 才继续定向收敛。
 //
 // 定位:与 migration-fanout(执行=批量落盘页面)互补 —— 本工具只审计、只读、
 //   不改码、不拍板。产出 gap 清单交主会话/涛哥决策(契约锁定/拍板不进 workflow,ADR-037)。
@@ -50,6 +50,7 @@ const MENU_Q = cfg.menuDbQuery || '(未指定菜单库查询 menuDbQuery — 三
 const LEGACY = cfg.legacyRepo || '(未指定老仓 legacyRepo — 源工件退化维度需要)'
 const MODULES = cfg.modules || '(未指定模块清单 modules)'
 const MAX_ROUNDS = cfg.maxRounds || 5
+const TARGET_DRY_ROUNDS = 1
 
 // 证据纪律(ADR-015 / ADR-030 A3):每个 gap 必带实证,禁臆测
 const EVIDENCE_RULE =
@@ -145,7 +146,7 @@ const gapKey = (g) => `${g.dimension || ''}::${g.module || ''}::${g.type || ''}:
 
 log(
   `迁移完整性审计启动 | 前端 ${FE} | 后端 ${BE} | 初始 ${BASE_DIMENSIONS.length} 维 | ` +
-    `loop-until-dry(连续 2 轮无新发现停,上限 ${MAX_ROUNDS} 轮)`
+    `adaptive-until-dry(最终 ${TARGET_DRY_ROUNDS} 轮无新发现停,上限 ${MAX_ROUNDS} 轮)`
 )
 
 const seen = new Set()
@@ -155,7 +156,7 @@ let dimensions = BASE_DIMENSIONS.map((d) => ({ ...d }))
 let dry = 0
 let round = 0
 
-while (dry < 2 && round < MAX_ROUNDS) {
+while (dry < TARGET_DRY_ROUNDS && round < MAX_ROUNDS) {
   round++
 
   // ── Sweep:multi-modal,每维一个只读 Explore agent,互相盲(barrier 收齐后统一去重)──
@@ -211,7 +212,7 @@ while (dry < 2 && round < MAX_ROUNDS) {
 
   if (fresh.length === 0 && critic.complete && newDims.length === 0) {
     dry++
-    log(`第 ${round} 轮无新发现且 critic 判完整 → dry=${dry}/2`)
+    log(`第 ${round} 轮无新发现且 critic 判完整 → dry=${dry}/${TARGET_DRY_ROUNDS}`)
   } else {
     dry = 0
     if (newDims.length) {
@@ -240,7 +241,7 @@ const midState = [...new Set(criticTrail.flatMap((c) => c.midStateModules || [])
 return {
   audit: 'migration-audit',
   rounds: round,
-  stoppedBy: dry >= 2 ? 'dry(连续2轮无新发现)' : `maxRounds(${MAX_ROUNDS})`,
+  stoppedBy: dry >= TARGET_DRY_ROUNDS ? 'dry(最终1轮无新发现)' : `maxRounds(${MAX_ROUNDS})`,
   dimensionsScanned: dimensions.map((d) => d.key),
   totalGaps: allGaps.length,
   gapsBySeverity: {

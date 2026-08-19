@@ -106,7 +106,7 @@ If LSP is unavailable, use text search plus line reads and mark the evidence as 
 
 | Track | Trigger | Required Output |
 |---|---|---|
-| Simple | Small reversible edit with no contract, DB, auth, production, or cross-project risk | Evidence anchor, minimal change, minimal verification |
+| Simple | Small reversible edit with no contract, DB, auth, production, or cross-project risk | Evidence anchor, minimal change, minimal verification; one staged-diff review for code/executable config, zero agent review for ordinary docs/text |
 | Standard | Contract, DB schema, auth, multi-file, or business feature work | Complete contract lock, coverage record, plan, evidence, review gate, verification, run record when useful |
 | Migration | Legacy modernization or functional skeleton migration | Complete baseline lock, source/equivalence matrix, coverage record, staged plan, E1/E2 or equivalent verification |
 
@@ -125,7 +125,7 @@ If LSP is unavailable, use text search plus line reads and mark the evidence as 
 |---|---|
 | Preflight | Standard, migration, cross-repo, DB, auth, production, deployment, or long-running task |
 | Scope completeness | Before implementation, lock the complete contract/baseline and coverage record (spec acceptance matrix for one batch, separate ledger for multiple batches); before batch closure, require all batch-committed items covered; before module completion, require zero `pending`, `blocked`, or `approved-defer` items. A rebaseline moves deferred items with decision/evidence pointers to a parent or backlog ledger |
-| Code review | Code or executable config changes before commit |
+| Code review | Code or executable config changes: minimal verification, stage the final candidate, then one primary review bound to the staged diff before commit |
 | Secret scan | Any staged change before commit |
 | DB review | Schema, migration, SQL, data correction, or DB contract |
 | Production guard | Any production write; destructive production operations require explicit human approval |
@@ -134,6 +134,22 @@ If LSP is unavailable, use text search plus line reads and mark the evidence as 
 | Recovery | Multi-turn work, interruption, or resume command |
 
 Gate results should be evidence records, not prose assertions. If a gate is intentionally skipped, record the reason, owner, and residual risk.
+
+### Risk-triggered review routing
+
+- Use one primary reviewer per independently deliverable staged batch. A language, DB, architecture, or security specialist replaces the generic reviewer; it is not added by default.
+- Add a second focused review only for a second independent high-risk domain, unresolved CRITICAL/HIGH findings, scope expansion, or substantial rework. File count alone is not an architecture-review trigger.
+- Ordinary docs, text, and non-executable configuration need deterministic checks but no reviewer agent. Long-lived business contracts and ADRs use one risk-appropriate primary reviewer; dual review is reserved for external/irreversible contracts, auth/compliance, or destructive production/DB decisions.
+- A review receipt must bind reviewer completion, PASS verdict, repository, and the staged diff hash. Starting a reviewer, completing an implementation agent, or modifying the staged diff after review cannot satisfy the gate.
+- Static contract review and real UI E2E cover different failure modes; retaining both where required is not duplicate review.
+
+### Adaptive migration completeness and adversarial review
+
+- Run deterministic inventory, reference, field, route, menu, API, schema, build, and E2E gates first. Deterministic failures block directly and do not vote.
+- Run one independent critic over the normalized manifest and evidence delta. If it finds a gap, the source/contract changes, or the unit is Tier 3 high risk, resolve the finding and run another focused critic; the final critic round must be dry.
+- Require two distinct evidence-lens votes only when a claim is both non-deterministic and high impact, including source/ref selection, exclusion, semantic conflict, customer integration, half-finished source classification that changes scope, and irreversible DB decisions. Both must confirm; any refutation keeps the claim disputed.
+- Ordinary `migrate-equivalent` and mechanically proven rows do not vote. A third vote is not a default tie-breaker; unresolved evidence conflict returns to the human decision owner.
+- Keep one final code review per migration batch plus E1/E2. Baseline adversarial review validates source truth; final code review validates implementation, so they are not interchangeable.
 
 ## Runtime Adapter Requirements
 

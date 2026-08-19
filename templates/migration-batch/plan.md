@@ -13,11 +13,11 @@
 - Fill `migration-matrix.json`.
 - Close every row's eight `dimensionCoverage` entries; silent omission is not allowed.
 - Run independent enumeration, frontend/backend ownership, shell/layout, menu/page/backend, source-degradation, and current-new-only sweeps; record evidence and resolved gaps in `completeness-sweep.json`.
-- Run completeness critic until the final two consecutive rounds have no new gaps, missed dimensions, mid-state modules, or unverified completion claims.
+- Run one independent completeness critic over the normalized manifest. If it finds a new gap, or the source/contract changes, resolve the gap and run another focused critic; the final round must be dry.
 - Run `codex-migration-audit contract --config migration.yaml` until referential integrity is green.
 - Run `codex-migration-audit completeness --config migration.yaml` until the sweep hard gate is green.
 - Run `codex-migration-audit fields --config migration.yaml`.
-- Run `codex-migration-audit vote --config migration.yaml`.
+- Run `codex-migration-audit vote --config migration.yaml` only for high-impact, non-deterministic judgment rows. Deterministic failures and ordinary equivalent rows do not vote.
 - Run `codex-migration-audit lock --config migration.yaml`; do not start STEP1 until `baseline-lock.json` exists and is current.
 
 ## Phase 1 — STEP1 Baseline Migration
@@ -42,5 +42,5 @@
 | T1 | Build source inventory | legacy source | `source-inventory.json` | all in-scope artifacts classified | pending |
 | T2 | Build normalized contracts | inventory + source/target code | `contract-index.json` and contract files | page/API/field/service/menu relations are complete | pending |
 | T3 | Build migration matrix | inventory + normalized contracts | `migration-matrix.json` | every artifact and contract has a locked target decision | pending |
-| T4 | Lock baseline | spec + contract + completeness sweep + field diff/coverage + votes | `baseline-lock.json` | no draft/disputed/unreferenced item and two dry critic rounds | pending |
+| T4 | Lock baseline | spec + contract + completeness sweep + field diff/coverage + selective votes | `baseline-lock.json` | no draft/disputed/unreferenced item and final critic round dry | pending |
 | T5 | Run implementation gates | config + progress | `audit-report.*` | no untriaged blocking finding | pending |

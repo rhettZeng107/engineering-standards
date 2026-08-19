@@ -307,6 +307,21 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 3. 外部契约未取得时，不依赖该契约的目标端内部能力须完整；依赖外部报文的字段、状态、映射和写请求禁止猜测。已有或合同约定的用户入口须实现禁用态、待接入/错误反馈和禁止假成功边界；无 UI 的任务须返回稳定能力状态/错误码并留审计证据。
 4. 本规则只防业务范围裁剪，不改变“移植非重写、Extend 优先、禁无关扩建、最小必要代码改动”。
 
+## 修订(2026-08-19)— GPT-5.6 成本优化：机器优先 + 单 Critic + 选择性两票
+
+**问题**:确定性合同门成熟后，固定六 Agent 全量重复阅读、连续两轮相同 dry critic，以及“仅 severity=HIGH 即投票”产生大量相关性重复调用；更多同模型、同材料投票并不能替代字段/菜单/路由等机器枚举证据。
+
+**决策**:
+
+1. 六个 canonical completeness 维度继续强制覆盖，但默认由确定性枚举、规范化合同和一份结构化 sweep 记录证明，不再要求每维固定派一个 LLM Agent。只有独立、可并行且机器证据不足的维度才派 bounded subagent。
+2. `completeness` 改为至少 1 个独立 critic，最终一轮必须 dry。首次即 dry 可收口；critic 找到 gap、源清单/合同变化或 Tier 3 高风险时，解决后再跑定向 critic。取消无变化材料上的固定连续两轮 dry。
+3. 确定性失败直接阻断，不投票。投票触发改为“**需要非确定性判断且影响高**”；仅 severity=`CRITICAL/HIGH`、但结论可被机器证明的普通 `migrate-equivalent` 行不再强制投票。`conflict-old-wins`、`exclude-proven-dead`、源/ref 选择、语义冲突、客户集成和明确 riskFlag 仍属选择性高风险票。
+4. 高风险 claim 最少两个不同证据 lens，采用 fail-safe 一致制：任一有效反证即 `disputed`；第三票不作为默认多数裁决，证据冲突返回涛哥拍板。
+5. 迁移批次最终代码仍做 1 次主 CR，并保留 E1+E2。基线对抗验证与实现 CR 检查对象不同，不能互相替代。
+6. 模型与上下文按成本路由：确定性检查用脚本；第一 critic/第一 skeptic 可用 Terra bounded context；Sol High 留给主合同锁、高影响争议第二票和最终 CR；禁止默认 full-history fan-out。
+
+本修订覆盖本 ADR 2026-07-15 硬门收口中“最后连续两轮 dry”和“severity 单独触发投票”的旧口径，其余规范化合同、哈希锁、字段门和完整范围铁律保持不变。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
@@ -323,3 +338,4 @@ Plan 全部完成 + code review 自治修复完后,**一次性输出完整报告
 | 2026-07-15 | 修订(Codex/WMS 首用) | 全项目 DoD 留 spec/plan,Goal 按可验里程碑分段;首个 Goal 只锁 Phase 0。自由文本矩阵升级为源清单 + 基线矩阵 + 8 类规范化合同 + 独立进度;新增 contract/lock/check-lock/progress 硬门。对抗投票从机械字段逐项三票改为确定性全量校验 + 高判断风险多票。 |
 | 2026-07-15 | 修订(CR 硬门收口) | 完整性六维扫描与连续两轮 dry critic 升级为 `completeness` 硬门；锁输入增加 spec、完整性产物和逐任务字段 coverage；severity 高风险纳入投票；补 Repository/DB 工件类型。版本化按本轮明确授权豁免。 |
 | 2026-08-06 | 修订 | 迁移轨新增禁止 agent 擅自用 MVP/演示切片冒充等价完成硬门；coverage ledger 区分合同项/批次/模块状态；缺失外部契约的依赖项禁止猜测。 |
+| 2026-08-19 | 修订 | GPT-5.6 成本优化：canonical 六维覆盖保留但不固定六 Agent；至少一个最终 dry critic；仅非确定性且高影响判断两票；任一反证即 disputed；确定性 gate、最终批次 CR、E1/E2 保留。 |

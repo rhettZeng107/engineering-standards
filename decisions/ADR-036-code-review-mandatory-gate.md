@@ -40,35 +40,41 @@
 
 ## Decision(决策本身)
 
-**一句话**:Code Review 是 **commit 门禁(hook 强制)**,不是自觉建议 —— 代码文件落盘后未过 reviewer agent,`git commit` 被 BLOCK。
+**一句话**:Code Review 是 **commit 门禁(hook 强制)**,但按风险控制频次 —— 普通文档 0 审、代码/执行配置对最终 staged diff 做 1 次主审；只有第二类独立高风险才加定向二审。
 
 **详细**:
 
-### 1. Hook 三阶段守护(`~/.claude/hooks/core-code-review-gate.js`)
+### 1. Hook 三阶段守护(`~/.codex/hooks/core-code-review-gate.js`)
 
 | 阶段 | 触发 | 行为 |
 |---|---|---|
-| **记录** | PostToolUse `Edit\|Write\|MultiEdit` | 代码扩展名文件累加到 `~/.claude/state/uncr-edits.json`(按 git repo root 分桶);累计 3/6/10 个时 stderr 软提醒 |
-| **清空** | PostToolUse `Task\|Agent`(reviewer 类 agent) | reviewer agent 完成 → 清空当前 repo 未审清单 |
-| **拦截** | PreToolUse `Bash`(`git commit`) | 当前 repo 未审清单非空 → BLOCK(exit 2)+ 列文件 + 提示派 reviewer |
+| **记录** | PostToolUse `Edit\|Write\|MultiEdit\|apply_patch` | 代码/执行配置文件累加到 `~/.codex/state/uncr-edits.json`，只作批次提醒，不作为通过证据 |
+| **签发** | `SubagentStop`(独立 reviewer) | Reviewer 最终消息必须以连续两行 `CR-GATE: PASS` + `CR-REPO: <absolute path>` 结尾；缺仓、非绝对路径、标记后仍有正文均不签发。Hook 以 Git NUL 路径协议和 `--no-renames` 同时覆盖中文/特殊字符路径及 code→doc rename，再对该仓当前 staged 代码/执行配置 diff 计算 SHA-256 并写 PASS 凭证 |
+| **拦截** | PreToolUse `Bash`(`git commit`) | 当前 staged 代码/执行配置没有相同 diff hash 的 PASS 凭证 → BLOCK；commit 必须为隔离命令(允许单一前置 `cd`)；shell 链/管道、pathspec、`-a/--only/--include/--patch/--interactive` 等会在预检后改变候选的形式一律阻断；Git 状态/差异读取异常按 fail-closed 阻断，可用显式 `skip-cr` 审计绕过 |
 
 ### 2. 计入 CR 的文件范围
 
-- **计入**:代码扩展名 `.jsx/.tsx/.ts/.js/.cs/.css/.less/.scss/.sql/.cshtml/.vue/.py/.go/.rs/.java/.kt/.swift/.cpp/.c/.h`
-- **不计入**:`docs/**` / `.planning/**` / `node_modules/**` / `build|dist/**` / 纯 markdown / json / yml 配置
+- **计入代码**:`.jsx/.tsx/.ts/.js/.cs/.css/.less/.scss/.sql/.cshtml/.vue/.py/.go/.rs/.java/.kt/.swift/.cpp/.c/.h/.sh/.ps1/.toml/.props/.targets`
+- **计入执行配置**:`package*.json`、依赖锁、`hooks.json`、`appsettings*.json`、`launchSettings/global.json`、`Web/NuGet/*.config`、`.npmrc/.yarnrc`、`pnpm-workspace`、`tsconfig/jsconfig`、CI workflow YAML、Docker/Makefile、`harness-policy.yml` 等会改变构建、运行、门禁或依赖的配置。
+- **不计入**:`node_modules/**` / `build|dist/**` / 纯 markdown / 普通数据 JSON/YAML；是否计入按执行语义和明确文件模式判断，不按“所有 JSON/YAML”扩大。`docs/**`、`.planning/**` 不是目录级豁免，其中的 ops/deploy JS、PS1、Python、SQL 等真实执行资产仍计入。
 
-### 3. reviewer agent 白名单(清空触发)
+### 3. Reviewer 白名单与一主审路由
 
-`code-reviewer`(默认)/ `csharp-reviewer` / `typescript-reviewer` / `python-reviewer` / `go-reviewer` / `rust-reviewer` / `java-reviewer` / `cpp-reviewer` / `kotlin-reviewer` / `flutter-reviewer` / `dba` / `architect` / `frontend-developer` / `security-reviewer` / `database-reviewer` 等(支持 plugin 命名空间 `xxx:code-reviewer`)
+`code-reviewer`(无专业风险默认)/ `csharp-reviewer` / `typescript-reviewer` / `python-reviewer` / `go-reviewer` / `rust-reviewer` / `java-reviewer` / `cpp-reviewer` / `kotlin-reviewer` / `flutter-reviewer` / `dba` / `architect` / `security-reviewer` / `database-reviewer` 等(支持 plugin 命名空间 `xxx:code-reviewer`)。
+
+实现角色(`frontend-developer`、`dotnet-developer`、普通 worker 等)不能签发凭证。专业 Reviewer 替代通用 `code-reviewer`，不默认叠加；文件数量本身不触发 architect。
 
 ### 4. 绕过开关(审计可见)
 
-紧急场景命令前加注释 `# skip-cr=<reason>`(e.g. `# skip-cr=hotfix-rollback` / `# skip-cr=docs-only`),hook 放行 + stderr 记录 reason。
+紧急场景只能在命令开头加独立注释行 `# skip-cr=<reason>`(e.g. `# skip-cr=hotfix-rollback` 后换行再执行 commit),Hook 放行并追加 `~/.codex/state/cr-gate-bypass.jsonl` 审计记录；commit message 或命令中部出现该文本不生效。普通 docs-only staged diff 本身不触发代码门禁，无需绕过。
 
-### 5. reviewer agent 路由(沿用 ADR-003 + 全局「评审」段)
+### 5. 评审频次与二审触发
 
-- 默认 `code-reviewer`;C# / .NET → `csharp-reviewer` 或 `dba`(迁移/DDL);DB → `dba`;跨仓 ≥ 10 文件 → `architect`
-- 轮数:0 CR + 0 HIGH 通过 / 0 CR + HIGH Claude 本体回修自审 / 有 CR 列涛哥拍板
+- 普通文档/文案/非执行配置:0 次 Reviewer；保留格式、解析、链接等确定性检查。
+- 简单代码/执行配置:最小验证后 stage 最终候选，1 次主 CR。
+- 标准/迁移:每个可独立交付 staged 批次 1 次主 CR，不按文件、Phase 或实现 Agent 重复审。
+- 只有第二类独立高风险、CRITICAL/HIGH 回修、范围扩大或大幅返工才做定向二审；MED/LOW 小修且验证通过不重跑全量 CR。
+- 静态契约检查与真实 UI E2E 检查对象不同，需要时都保留。
 
 ---
 
@@ -78,21 +84,21 @@
 
 - CR 从「自觉」变「门禁」,杜绝连续多 commit 漏审
 - 状态文件按 repo 分桶,multi-repo workspace 各仓独立计数
-- reviewer agent 完成自动清空,无需手动管理
+- 凭证绑定 Reviewer 完成事件、PASS 结论、仓库和 staged diff hash；审后改动自然失效
 - `# skip-cr=` 绕过保留灵活性(hotfix / docs-only)+ 审计可追
 
 ### 代价 / 风险
 
-- 每批代码改动 commit 前**必须**派 reviewer agent(增加一次 agent 调用成本)—— 但这正是目的
-- 状态文件 `uncr-edits.json` 跨 session 持久 → 若上次 session 未 commit 残留,新 session commit 会被拦(可 `# skip-cr=stale-state` 或派 CR)
-- hook 不能 introspect agent 真实审了哪些文件 → reviewer agent「跑了就清空」,信任 agent 真审(trust but verify 仍靠 Claude 本体把关 reviewer 报告质量)
+- 每个代码交付批次 commit 前仍增加一次独立 Reviewer 调用；通过一主审和风险触发二审控制成本。
+- Reviewer 必须在 stage 后运行并输出固定 PASS 标记；旧的“先审工作区、后 stage”顺序不再签发凭证。
+- Hook 仍是机械护栏，不能替代对 Reviewer 报告质量、测试结果和真实 E2E 的主会话验收。
 
 ### 配套固化
 
 | 配套 | 位置 | 状态 |
 |---|---|---|
-| Hook 实现 | `~/.claude/hooks/core-code-review-gate.js` + `hooks.json` 注册(PreToolUse Bash + PostToolUse Edit\|Write\|MultiEdit + Task\|Agent) | ✅ |
-| 全局 CLAUDE.md 修订 | 「评审」段 + 「中断白名单第 1 项 CR」加「**hook 强制 `core-code-review-gate`**」标注 | ✅ |
+| Hook 实现 | `~/.codex/hooks/core-code-review-gate.js` + `hooks.json` 注册(PreToolUse Bash + PostToolUse Edit/Write/apply_patch + SubagentStop) | ✅ |
+| 全局 AGENTS.md 修订 | 「评审」段固化一主审、风险触发二审和 staged-diff 凭证 | ✅ |
 | 工作区 memory | `feedback_cr_mandatory_gate.md`(踩坑 case + hook 行为) | ✅(SRMV2)|
 
 ---
@@ -101,12 +107,13 @@
 
 | 方案 | 描述 | 否决原因 |
 |---|---|---|
-| A 纯 PreToolUse commit 拦 | 检 staged 代码文件 → 验 session 派过 CR | hook 独立进程,**无法 introspect** session agent 调用历史 |
+| A 纯 PreToolUse commit 拦 | 检 staged 代码文件 → 验 session 派过 CR | 只验证“派过”不能证明 Reviewer 完成、PASS 或当前 diff 未变化 |
 | C 仅 commit body 强制 `Reviewed-by:` | commit msg 必含 reviewer agent id | 可写假 id 绕过,**审计弱** |
-| **B+C 组合(采纳)** | 状态文件累积未审清单 + agent 完成清空 + commit 拦 | 精确知道哪些文件未审,审计完整,绕过可控 |
+| **staged-diff receipt(采纳)** | `SubagentStop` PASS + staged diff hash + commit 前重算 | 审查对象与提交对象一致；实现 Agent、启动事件和审后改动不能误放行 |
 
 ---
 
 ## 修订历史
 
 - 2026-05-28 创建(Accepted)。触发:SRMV2 polish 批次连续漏 CR 复盘。
+- 2026-08-19 修订(Accepted)。涛哥批准从固定多审改为风险触发式评审：普通文档 0 审、代码每批 1 次主审、专业 Reviewer 替代通用 Reviewer、二审仅由独立高风险触发；Codex Hook 改用 `SubagentStop` + staged diff hash + PASS 凭证。

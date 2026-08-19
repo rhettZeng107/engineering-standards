@@ -48,7 +48,7 @@ Usage:
 Commands:
   init    Copy templates/migration-batch into a project spec directory.
   contract Validate source inventory, normalized contracts, matrix coverage, and references.
-  completeness Validate required sweep dimensions, resolved gaps, critic, and two dry rounds.
+  completeness Validate required sweep dimensions, resolved gaps, and a final dry critic round.
   gate    Run migration-gate.sh using migration.yaml.
   fields  Run field-diff.sh for entries in field-diffs.json.
   vote    Merge votes.json using fail-safe disputed/confirmed rules.
@@ -365,6 +365,14 @@ const RISK_CLASSIFICATIONS = new Set([
   'exclude-proven-dead',
 ]);
 
+// These decisions are high-impact by nature even when a row's manually
+// assigned severity is lower. Other judgment classifications require a vote
+// only when the row is also CRITICAL/HIGH or carries an explicit risk flag.
+const ALWAYS_VOTE_CLASSIFICATIONS = new Set([
+  'conflict-old-wins',
+  'exclude-proven-dead',
+]);
+
 const CONTRACT_REFERENCE_FIELDS = {
   pages: { sourceArtifactId: 'pageArtifact' },
   uiFunctions: { pageId: 'pages' },
@@ -443,15 +451,18 @@ function loadContractBundle(cfg) {
 }
 
 function rowRequiresVote(row, artifactsById) {
-  if (RISK_CLASSIFICATIONS.has(row?.classification)) return true;
-  if (['CRITICAL', 'HIGH'].includes(row?.severity)) return true;
-  if (asArray(row?.riskFlags).length > 0) return true;
-  return asArray(row?.legacyArtifactIds).some((artifactId) => {
+  const hasExplicitRisk = asArray(row?.riskFlags).some((flag) => VOTE_RISK_FLAGS.has(flag));
+  const hasArtifactJudgment = asArray(row?.legacyArtifactIds).some((artifactId) => {
     const artifact = artifactsById.get(artifactId);
     return artifact?.status !== 'complete' ||
       artifact?.type === 'external-integration' ||
       (['view', 'page'].includes(artifact?.type) && artifact?.pageClass !== 'crud');
   });
+  const requiresJudgment = RISK_CLASSIFICATIONS.has(row?.classification) || hasExplicitRisk || hasArtifactJudgment;
+  const highImpact = ['CRITICAL', 'HIGH'].includes(row?.severity) ||
+    ALWAYS_VOTE_CLASSIFICATIONS.has(row?.classification) ||
+    hasExplicitRisk;
+  return requiresJudgment && highImpact;
 }
 
 function validateContractBundle(cfg) {
@@ -793,7 +804,7 @@ function commandCompleteness(cfg) {
   const referencedGapIds = new Set();
   const gapsById = new Map();
 
-  if (payload.schemaVersion !== '0.2') issues.push('completeness-sweep.json: schemaVersion must be 0.2');
+  if (payload.schemaVersion !== '0.3') issues.push('completeness-sweep.json: schemaVersion must be 0.3');
   if (payload.batchId !== cfg.batchId) issues.push(`completeness-sweep.json: batchId must equal ${cfg.batchId || ''}`);
   if (!Array.isArray(payload.dimensions)) issues.push('completeness-sweep.json: dimensions must be an array');
   if (!Array.isArray(payload.gaps)) issues.push('completeness-sweep.json: gaps must be an array');
@@ -855,15 +866,12 @@ function commandCompleteness(cfg) {
       }
     }
   }
-  if (rounds.length < 2) {
-    issues.push('completeness: at least two critic rounds are required');
+  if (rounds.length < 1) {
+    issues.push('completeness: at least one critic round is required');
   } else {
-    const dryRounds = rounds.slice(-2);
-    if (dryRounds[1].round !== dryRounds[0].round + 1) issues.push('completeness: final two critic rounds must be consecutive');
-    for (const [offset, round] of dryRounds.entries()) {
-      for (const field of ['newGapIds', 'missedDimensions', 'midStateModules', 'unverifiedClaims']) {
-        if (asArray(round?.[field]).length > 0) issues.push(`completeness: dry round ${offset + 1} has non-empty ${field}`);
-      }
+    const finalRound = rounds[rounds.length - 1];
+    for (const field of ['newGapIds', 'missedDimensions', 'midStateModules', 'unverifiedClaims']) {
+      if (asArray(finalRound?.[field]).length > 0) issues.push(`completeness: final critic round has non-empty ${field}`);
     }
   }
 
@@ -1017,7 +1025,10 @@ function commandLock(cfg) {
 function decideVotes(votes) {
   const valid = (votes || []).filter((vote) => vote && !vote.error && !vote._error);
   const refuteCount = valid.filter((vote) => vote.refuted === true).length;
-  const disputed = valid.length < 2 ? true : refuteCount * 2 >= valid.length;
+  // Two different evidence lenses are the minimum. Confirmation is fail-safe:
+  // any valid refutation keeps the claim disputed; a third majority vote does
+  // not override counter-evidence.
+  const disputed = valid.length < 2 || refuteCount > 0;
   return {
     voterCount: valid.length,
     refuteCount,

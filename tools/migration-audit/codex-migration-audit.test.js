@@ -93,7 +93,7 @@ function validFixture() {
       contractIds: ['page.inventory'],
       dimensionCoverage: dimensionCoverage({ pages: ['page.inventory'] }),
       contractStatus: 'ready',
-      riskFlags: [],
+      riskFlags: ['module-completeness'],
       voteClaimIds: ['claim.inventory-module'],
       severity: 'HIGH',
       evidence: ['Views/Inventory/Index.cshtml:1'],
@@ -129,7 +129,7 @@ function validFixture() {
     writeJson(name, { schemaVersion: '0.2', batchId: 'test-batch', records: [] });
   }
   writeJson('completeness-sweep.json', {
-    schemaVersion: '0.2',
+    schemaVersion: '0.3',
     batchId: 'test-batch',
     dimensions: [
       'enumeration',
@@ -145,14 +145,14 @@ function validFixture() {
       gapIds: [],
     })),
     gaps: [],
-    criticRounds: [1, 2].map((round) => ({
-      round,
+    criticRounds: [{
+      round: 1,
       newGapIds: [],
       missedDimensions: [],
       midStateModules: [],
       unverifiedClaims: [],
-      evidence: [`critic round ${round} evidence`],
-    })),
+      evidence: ['critic round 1 evidence'],
+    }],
   });
   fs.writeFileSync(
     config,
@@ -263,9 +263,9 @@ try {
   run('completeness', 1);
   fs.writeFileSync(completenessFile, validCompleteness);
 
-  const oneCriticRound = JSON.parse(validCompleteness);
-  oneCriticRound.criticRounds.pop();
-  writeJson('completeness-sweep.json', oneCriticRound);
+  const noCriticRound = JSON.parse(validCompleteness);
+  noCriticRound.criticRounds = [];
+  writeJson('completeness-sweep.json', noCriticRound);
   run('completeness', 1);
   fs.writeFileSync(completenessFile, validCompleteness);
 
@@ -320,6 +320,7 @@ try {
 
   const zeroRiskMatrix = JSON.parse(fs.readFileSync(path.join(batch, 'migration-matrix.json'), 'utf8'));
   zeroRiskMatrix.rows[0].severity = 'LOW';
+  zeroRiskMatrix.rows[0].riskFlags = [];
   zeroRiskMatrix.rows[0].voteClaimIds = [];
   writeJson('migration-matrix.json', zeroRiskMatrix);
   writeJson('votes.json', { artifacts: [] });
@@ -328,8 +329,8 @@ try {
 
   zeroRiskMatrix.rows[0].severity = 'CRITICAL';
   writeJson('migration-matrix.json', zeroRiskMatrix);
-  run('contract', 1);
-  run('vote', 1);
+  run('contract', 0);
+  run('vote', 0);
   validFixture();
 
   const riskMatrix = JSON.parse(fs.readFileSync(path.join(batch, 'migration-matrix.json'), 'utf8'));
@@ -337,6 +338,17 @@ try {
   riskMatrix.rows[0].voteClaimIds = [];
   writeJson('migration-matrix.json', riskMatrix);
   run('contract', 1);
+  run('vote', 1);
+  validFixture();
+
+  const oneRefutation = JSON.parse(fs.readFileSync(votesFile, 'utf8'));
+  oneRefutation.artifacts[0].votes.push({
+    lens: 'runtime-behavior',
+    refuted: true,
+    confidence: 'high',
+    counterEvidence: 'runtime trace contradicts the proposed baseline',
+  });
+  writeJson('votes.json', oneRefutation);
   run('vote', 1);
   validFixture();
 
@@ -386,7 +398,7 @@ try {
   run('lock', 0);
 
   const completenessBeforeDrift = fs.readFileSync(completenessFile, 'utf8');
-  fs.writeFileSync(completenessFile, completenessBeforeDrift.replace('critic round 2 evidence', 'critic round 2 updated evidence'));
+  fs.writeFileSync(completenessFile, completenessBeforeDrift.replace('critic round 1 evidence', 'critic round 1 updated evidence'));
   run('check-lock', 1);
   fs.writeFileSync(completenessFile, completenessBeforeDrift);
   run('lock', 0);

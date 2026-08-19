@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.2",
+  "schemaVersion": "0.3",
   "batchId": "<yyyy-mm-dd-topic>",
   "dimensions": [
     {
@@ -43,14 +43,6 @@
   "criticRounds": [
     {
       "round": 1,
-      "newGapIds": [],
-      "missedDimensions": [],
-      "midStateModules": [],
-      "unverifiedClaims": [],
-      "evidence": []
-    },
-    {
-      "round": 2,
       "newGapIds": [],
       "missedDimensions": [],
       "midStateModules": [],

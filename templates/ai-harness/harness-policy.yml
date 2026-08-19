@@ -129,11 +129,35 @@ gates:
     required_for: "preflight.required_for"
   pre_commit:
     code_review_required_for_code_changes: true
+    review_candidate: "staged_diff"
+    primary_reviewer_count: 1
+    specialist_replaces_generic: true
+    second_review_triggers:
+      - "second_independent_high_risk_domain"
+      - "critical_or_high_rework"
+      - "scope_expansion"
+      - "substantial_rework"
+    ordinary_docs_review_required: false
+    receipt_fields:
+      - "repo"
+      - "staged_diff_hash"
+      - "reviewer"
+      - "verdict"
     secret_scan_required: true
     verification_required: true
   migration:
     source_inventory_required: true
     equivalence_review_required: true
+    deterministic_gate_before_llm: true
+    default_critic_rounds: 1
+    additional_critic_triggers:
+      - "critic_found_gap"
+      - "source_or_contract_changed"
+      - "tier3_high_risk"
+    vote_trigger: "non_deterministic_and_high_impact"
+    minimum_distinct_vote_lenses: 2
+    any_refutation_disputes: true
+    final_batch_code_review_count: 1
     local_verify_before_commit: true
   multi_repo:
     verify_each_touched_repo: true
