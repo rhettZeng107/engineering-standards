@@ -1,4 +1,4 @@
-version: 0.3
+version: 0.4
 status: template
 scope:
   provider_neutral: true
@@ -184,6 +184,17 @@ run_record:
     - "multi_turn"
   human_readable_progress: "progress.md"
   machine_readable_template: "templates/ai-harness/run-record.template.json"
+  update_on:
+    - "gate_state_change"
+    - "batch_close"
+  quality_metrics:
+    progress_is_compact_snapshot: true
+    run_record_is_aggregation_source: true
+    do_not_copy_long_logs: true
+    rework_counts_gate_driven_product_corrections_only: true
+    e2e_product_and_environment_failures_separate: true
+    high_escape_requires_observation_boundary: true
+    outcome_status_required_at_batch_close: true
 
 runtime_adapters:
   coordinator_owns:
@@ -204,5 +215,31 @@ evaluation:
   metrics:
     - "completion_rate"
     - "first_pass_review_rate"
+    - "review_rework_cycles"
+    - "verification_rework_cycles"
+    - "e2e_product_rework_cycles"
+    - "rebaseline_count"
+    - "high_severity_escape_by_observation_boundary"
     - "evidence_completeness"
     - "e2e_pass_rate"
+  monthly_review:
+    cadence: "monthly"
+    default_mode: "read_only"
+    aggregation: "deterministic_from_run_record_json"
+    aggregator: "tools/ai-harness/aggregate-run-records.mjs"
+    timezone_required_for_calendar_window: true
+    report_template: "eval/templates/monthly-workflow-review.md"
+    rule_actions:
+      - "retain"
+      - "optimize"
+      - "move_to_mechanism"
+      - "demote"
+      - "remove"
+    change_policy: "one_attributable_rule_group_then_delta_eval"
+    zero_incidents_alone_justify_removal: false
+    protected_boundaries:
+      - "safety"
+      - "destructive_production"
+      - "auth"
+      - "irreversible_db"
+      - "audit"

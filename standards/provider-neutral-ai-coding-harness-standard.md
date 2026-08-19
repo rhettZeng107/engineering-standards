@@ -241,6 +241,22 @@ Minimum fields:
 
 Use `progress.md` for human-readable continuation and `run-record.template.json` when the task needs machine-readable audit or downstream reporting.
 
+### Quality event recording
+
+Record quality data only when a gate changes state or a batch closes. Do not turn every task update into an eval and do not duplicate reviewer or E2E logs.
+
+| Metric | Definition |
+|---|---|
+| Batch outcome | `complete`, `partial`, `blocked`, `cancelled`, or `unknown`; do not infer completion from the presence of `endedAt` or a run-record file. |
+| Primary-review first pass | The first review of the final staged candidate signs PASS without a blocking change. Non-blocking MED/LOW findings do not make it fail. |
+| Review rework cycle | One correction cycle caused by a blocking CRITICAL/HIGH review finding. Ordinary implementation edits are not rework. |
+| Verification rework cycle | One correction cycle caused by a product defect found by build, test, API, or DB verification. Command retries without a product change are excluded. |
+| E2E product rework cycle | One correction cycle caused by a real product defect found by E2E. Environment, transport, fixture, and test-infrastructure failures are counted separately. |
+| Rebaseline count | A locked spec, contract, or migration baseline had to be amended and re-locked because verified facts or approved scope changed. |
+| High-severity escape | A HIGH/CRITICAL defect is discovered after a gate that should have detected it already reported PASS. Record the escaped gate, discovery stage, and evidence. |
+
+`progress.md` contains only a compact snapshot and a pointer to the run record. The run record is the machine-readable source for aggregation. Use `not_observed` plus `observedThrough=pre_commit|ci|deployment|production` for a high-severity escape that has not been seen yet; do not present a task-close zero as a permanent no-escape claim. Preserve `not_required`, `blocked`, `not_evaluable`, and `unknown` instead of coercing them to PASS or zero.
+
 ## Evaluation Loop
 
 Projects should maintain golden tasks that cover:
@@ -265,6 +281,29 @@ Recommended metrics:
 - Retries per task.
 - Evidence completeness.
 - Cost per successful task.
+
+### Monthly workflow review
+
+Run one monthly workflow review over representative run records, available golden-task evals, and later-discovered incidents. The review is read-only by default and produces a dated report; it does not autonomously edit policy, gates, `AGENTS.md`, skills, or ADRs.
+
+1. Validate data quality first: required fields present, unknown/not-applicable values preserved, duplicate runs removed, and evidence paths resolvable.
+2. Compare task classes separately. Do not average simple, standard, migration, DB/auth, and E2E-heavy work into one misleading score.
+3. Review primary-review first-pass rate, gate-driven rework cycles, E2E product/environment outcomes, rebaseline count, high-severity escapes by observation boundary, completion, evidence completeness, and cost/latency only when captured automatically.
+4. Classify each workflow rule as `retain`, `optimize`, `move_to_mechanism`, `demote`, or `remove`, with evidence and residual risk. Zero incidents alone is not proof that a preventive rule is useless.
+5. Change one attributable rule group at a time, preserve a baseline, run the relevant delta eval, and revert or adjust when completion/quality regresses.
+
+Prefer deterministic aggregation from run-record JSON. Use model judgment only for evidence classification, conflicting causes, and final recommendations. Safety, destructive production, auth, irreversible DB, and audit boundaries are not removed solely because they trigger infrequently. The reusable report format lives in `eval/templates/monthly-workflow-review.md`.
+
+Start the monthly review with the deterministic aggregator and an explicit business timezone so month boundaries are comparable:
+
+```bash
+node tools/ai-harness/aggregate-run-records.mjs \
+  --month <YYYY-MM> \
+  --timezone <+HH:MM|-HH:MM> \
+  <workspace-root> [<workspace-root> ...]
+```
+
+Treat missing/invalid `endedAt`, absent `qualityMetrics`, invalid HIGH-escape observation boundaries, duplicates, and invalid JSON as data-quality findings before interpreting rates.
 
 ## Adoption Path
 

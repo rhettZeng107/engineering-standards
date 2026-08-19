@@ -158,6 +158,36 @@
 
 **影响**:本 ADR §二 L4 行(:50)语义降级为「E2E #2 + contract-lock 兜底,不上 analyzer」;§三 Eval 不变(E2/E5 仍验分页契约一致);P3 A 阶段仅落 L2 + L3 + MDM 接入(L1-L3)。
 
+## 修订(2026-08-19,Codex 工作流质量记录 + 月度复盘)
+
+> 触发:全局工作流完成 Codex-native 接管与 CR/迁移成本优化后,现有 eval 仍主要停留在单个 Claude 时代 E4 baseline,无法客观判断首审、返工、E2E 和 HIGH 逃逸趋势。涛哥拍板把正常门禁产生的质量事件同步进接续/run record,并按月用评测证据优化或清理规则。
+
+本修订覆盖原文 §三/§四/§五中固定 `Claude 4.7`、固定 5 题全跑和“仅手工月度复盘”的运行口径,不改 Lint 已有技术决策。
+
+### 质量事件
+
+- `progress.md` 只保留人读快照;需要跨期统计时以结构化 run record 为准。只在门禁状态变化或批次关闭时更新,不为每个 task 生成评测总结。
+- 记录批次结果(`complete/partial/blocked/cancelled/unknown`)、主 CR 首审直通、CR 阻断回修、验证回修、E2E 产品回修/环境失败、重新锁定基线和 HIGH 逃逸观察边界。不得用存在 `endedAt` 或 run record 推断已完成;正常编码修改、格式化、非阻断 LOW/MED 和纯环境重试不算返工。
+- HIGH 逃逸按 `not_observed/observed/not_evaluable` + `observedThrough` 表达。任务刚关闭时的 0 只代表截至当前观察边界未发现,不是永久无逃逸断言。
+- Token、成本、耗时只有运行时可自动取得时才记录;禁止让模型估算,也不为补齐这些字段增加一次总结调用。
+
+### 月度复盘
+
+1. 先做确定性聚合和数据质量检查,再由模型/人工判断因果和规则取舍。
+2. 简单/标准/迁移/DB 鉴权/E2E-heavy 分层比较,不汇总成一个误导性平均分。
+3. 每条规则给出 `retain/optimize/move_to_mechanism/demote/remove` 建议、证据和残余风险。
+4. 一次只改一组可归因规则,保留 baseline 后运行相关 delta eval;质量回归则恢复或再调整。
+5. 零事故不能单独证明规则无用;安全、生产破坏、鉴权、不可逆 DB 和审计硬边界不因低频清理。
+
+### 自动化边界
+
+月度 Scheduled/automation 默认只读,可以读取 run record、eval 和事故证据并生成报告,不得无人值守修改全局/项目 `AGENTS.md`、ADR、skill 或门禁。正式规则调整仍按正常实证、评审、验证和提交闭环执行。
+
+官方依据:
+
+- OpenAI Evaluation best practices:任务特定评测、开发时记录、尽量自动评分、持续评测,并用人工反馈校准自动评分。<https://developers.openai.com/api/docs/guides/evaluation-best-practices>
+- OpenAI Scheduled tasks:定时任务先在普通会话验证,观察前几次运行再调整;本地项目任务依赖桌面端运行和可用工作区。<https://learn.chatgpt.com/docs/automations>
+
 ## Alternatives Considered(其他选项)
 
 ### A. 维持现状(仅 markdown 规则 + 人工 code-reviewer)

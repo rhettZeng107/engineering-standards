@@ -24,8 +24,9 @@
 - **题目**: <task name>
 - **类型**: baseline / delta
 - **日期**: <YYYY-MM-DD>
-- **被测模型**: Claude 4.7
-- **Reviewer**: code-reviewer subagent
+- **被测模型**: <exact model id>
+- **Reasoning/runtime**: <effort + Codex/Claude/other + relevant config>
+- **Reviewer/grader**: <deterministic grader or isolated reviewer>
 - **配套 transcript**: `<YYYY-MM-DD>-<task-id>-transcript.md`
 - **跑题耗时**: <分钟>
 - **Worktree 路径**: <path,已清理则注明>
@@ -35,10 +36,14 @@
 | 指标 | 本次 | 公式 |
 |---|---|---|
 | 协议遵守率 | N / M | ✓ 项数 / 总 rubric 项 |
-| 打断次数 | K | Claude 主动 ask 未在 plan 节点次数 |
-| Token 用量 | X K | 被测 session 总消耗 |
-| Reviewer 轮次 | R | 0 = 直通 |
-| E2E pass 率 | n/a 或 X% | 仅 E1/E2/E3/E5 适用 |
+| 打断次数 | K | 非必要且不在计划拍板点的主动 ask |
+| 批次结果 | complete/partial/blocked/cancelled/unknown | 不以 `endedAt` 或存在记录推断完成 |
+| 主 CR 首审 | pass/fail/n-a/unknown | 首次最终 staged 候选是否直通 |
+| CR 阻断回修 | R | CRITICAL/HIGH 导致的修复轮次 |
+| 验证回修 | V | build/test/API/DB 产品缺陷修复轮次 |
+| E2E | pass/fail/blocked/not_required/not_run/unknown | 产品失败与环境失败分列 |
+| HIGH 逃逸 | status + boundary | escapedGate/discoveredAt/observedThrough |
+| Token/成本/耗时 | value/unknown | 仅 runtime 自动采集,禁止估算 |
 
 ## Rubric 逐项判定
 
@@ -53,7 +58,9 @@
 
 ## 反指标检查
 
-- [ ] 自评全 PASS 但 Reviewer 轮次 0 → 是否 self-gaming?<结论>
+- [ ] 全 PASS 但缺少独立证据 → 是否 self-gaming?<结论>
+- [ ] unknown/not-applicable/not-required/blocked/not-evaluable 是否被错误计为 PASS/0?<结论>
+- [ ] HIGH 逃逸是否有观察边界?<结论>
 - [ ] 完成率突涨(对比上次) → 是否题目答案被记住?<结论>
 - [ ] Token 跌穿历史低值 → 是否漏装载?<结论>
 
@@ -63,8 +70,10 @@
 |---|---|---|---|
 | 协议遵守率 | | | |
 | 打断次数 | | | |
-| Token | | | |
-| Reviewer 轮次 | | | |
+| 主 CR 首审 | | | |
+| CR/验证/E2E 回修 | | | |
+| HIGH 逃逸 + 观察边界 | | | |
+| Token/成本/耗时(若自动采集) | | | |
 
 ## 改进建议(Reviewer 出)
 
@@ -72,7 +81,7 @@
 
 - [ ] **建议加 lint Lx**:<规则描述> → 反推 Plan §P4 加 sub-task
 - [ ] **建议升 memory 到 ADR**:<memory 文件> → 反推升级路径
-- [ ] **建议改 CLAUDE.md cheatsheet**:<段名> → 反推 Edit
+- [ ] **建议改 AGENTS/skill/hook/automation**:<证据 + 推荐 surface>
 - [ ] **建议改 ADR**:<ADR 编号> → 反推 Superseded 链路
 
 ## 涛哥抽查结果(若本月被抽到)
@@ -96,12 +105,12 @@
 
 - session 启动时间 / 装载列表 / 模型版本
 - 用户 prompt(题目)
-- Claude 全部输出(含 tool calls)
+- 被测 runtime 全部输出(含 tool calls 或结构化 trace)
 - session 结束时间 / 最终状态
 
 推荐导出方式:
-- Claude Code `/export <path>`
-- 或主 session 用 Bash 读取 `~/.claude/projects/<project-hash>/session-<id>.jsonl` 转 markdown
+- 使用当前 runtime 官方 export/JSONL/trace 能力
+- 无完整 transcript 时只引用已持久化的确定性证据,不得补写模型未实际执行的步骤
 
 ---
 
@@ -113,7 +122,7 @@ Reviewer 出的"改进建议"段直接驱动后续动作:
 |---|---|
 | 加 lint | Plan §P4 新增 sub-task(L6 / L7 等) |
 | 升 ADR | 新建 ADR 链路(参 ADR-002 ADR 治理规则) |
-| 改 CLAUDE.md cheatsheet | 直接 Edit + commit |
+| 改 AGENTS/skill/hook/automation | 按最窄持久 surface 调整 + commit |
 | 改 ADR | Superseded 链路(不改写历史,见 ADR-002) |
 
 ---

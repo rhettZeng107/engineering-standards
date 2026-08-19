@@ -28,19 +28,16 @@ cd $worktreePath
 git checkout -b eval/$task-$date
 ```
 
-### 2. 启 Claude session(新进程,模拟新 PM 视角)
+### 2. 启隔离的被测 session(模拟冷启动)
 
-**关键**:**不在当前主 session 跑** — 当前 session 已有上下文。必须:
-- 新开 Claude Code 实例,或
-- 关闭当前 session 重启,或
-- 用 `claude --continue=false` 强制冷启动
+**关键**:**不在当前主 session 跑** — 当前 session 已有上下文。使用独立 Codex thread、`codex exec -C <worktree> --json`、独立 runtime session 或等价隔离方式,并记录实际 model ID、reasoning effort 与配置。
 
 启动后**直接粘贴题目 prompt**(见 `tasks/<task>.md` §1 题目段),**不给其他提示**。
 
 ### 3. 被测 session 跑题(全程 Tier 1 自主)
 
 - 允许 plan 节点拍板(Tier 2 设计内)
-- Claude 中途主动 ask 未在 plan 节点的 = "打断"(计入指标)
+- 被测 session 中途主动 ask 未在 plan 节点且并非授权/安全所必需 = "打断"(计入指标)
 - 不限时 — 但默认 30 分钟内完成
 
 ### 4. 落盘 transcript
@@ -51,23 +48,19 @@ git checkout -b eval/$task-$date
 engineering-standards/eval/reports/<YYYY-MM-DD>-<task>-transcript.md
 ```
 
-可选:用 Claude Code `/export` 或截图 + 复制粘贴。
+优先保存 runtime 直接导出的 JSONL/trace;不能导出时保存评分所需的最小证据,不重新让模型总结 transcript。
 
-### 5. 派 `code-reviewer` subagent 客观打分
+### 5. 先确定性评分,再做必要的隔离语义评分
 
-主 session(评分 session,与被测 session 独立)用 Agent 工具:
+能由 exit code、JSON、Git、build、test、E2E 和固定断言评分的项目直接机器判定。只有业务语义、证据冲突或开放式质量项才使用与被测执行隔离的 Reviewer;Reviewer 类型按风险路由,不固定叠加通用 `code-reviewer`。
 
 ```
-Agent({
-  description: "Eval <task> reviewer",
-  subagent_type: "code-reviewer",
-  prompt: "审核 <task> eval transcript,按 tasks/<task>.md §4 rubric 4 项逐条 yes/no 客观判定,每项给证据(tool call 引用或 grep 命中位置)。输出 reports/<YYYY-MM-DD>-<task>-baseline.md(按 templates/report-schema.md 格式)。"
-})
+Review the <task> evidence against tasks/<task>.md rubric. Preserve deterministic grader results, judge only semantic items, cite evidence anchors, and output reports/<YYYY-MM-DD>-<task>-baseline.md using templates/report-schema.md.
 ```
 
 ### 6. 涛哥抽查(每月 1 题)
 
-涛哥从月度 5 题中抽 1 题:
+涛哥从当月实际运行的代表性题中抽 1 题:
 - 复核 reviewer rubric 判定
 - 抽样查 transcript 关键点
 - 出"reviewer 客观性"评价(PASS / 需调整)
@@ -97,26 +90,26 @@ git branch -D eval/$task-$date
 
 ## 反 Self-Gaming 防御层
 
-1. **独立 subagent 审** — 被测 session 不参与自评
+1. **确定性 grader 优先 + 隔离 Reviewer** — 被测 session 不参与自评
 2. **涛哥月度抽查** — 复核 reviewer
 3. **反指标警示**:
-   - 完成率突涨 + 自评全 PASS + Reviewer 轮次 0 → 深审
-   - Token 跌穿历史低值 → 装载缺失风险
+   - 完成率突涨 + 全 PASS + 缺独立证据 → 深审
+   - unknown/not-required/blocked 被计为 PASS/0 → 数据污染
+   - HIGH 逃逸无观察边界 → 不接受该指标
+   - Token 跌穿历史低值仅在自动采集且配置可比时才检查装载缺失
    - 跨期题目"答案"被记住 → 用 v2 题型替换(锁期满后)
 
 ---
 
 ## 跨题目并行
 
-允许同时跑多题,每题独立 worktree。Token 总消耗需控制(参见 spec §7.5 频次)。
+允许同时跑独立题,每题独立 worktree。优先跑与本次规则/模型变化相关的最小代表性集合,不要为“全集”名义固定消耗 Token。
 
 ---
 
 ## 题目集 v1
 
-见 `../tasks/` 目录:E1 / E2 / E3 / E4 / E5。
-
-E4 = P1 spike 首跑题目,**0 副作用 + 无 DDL 回滚需要**,推荐第一次跑。
+以 `../tasks/` 实际存在的文件为准。当前只有 E4 已落盘;README 中待办题不算可运行题。新增题应覆盖 provider-neutral standard 定义的 10 类 golden task,优先从真实 run record/逃逸案例脱敏提炼。
 
 ---
 

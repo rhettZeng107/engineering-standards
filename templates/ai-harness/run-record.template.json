@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.3",
+  "schemaVersion": "0.4",
   "task": {
     "id": "",
     "title": "",
@@ -142,6 +142,37 @@
       "status": "pass|fail|partial|cancelled"
     }
   ],
+  "qualityMetrics": {
+    "primaryReview": {
+      "firstPass": "true|false|not_applicable|unknown",
+      "criticalFound": 0,
+      "highFound": 0,
+      "mediumFound": 0,
+      "lowFound": 0,
+      "receipt": ""
+    },
+    "rework": {
+      "reviewCycles": 0,
+      "verificationCycles": 0,
+      "e2eProductCycles": 0,
+      "rebaselineCount": 0
+    },
+    "e2e": {
+      "status": "pass|fail|blocked|not_required|not_run|unknown",
+      "attempts": 0,
+      "productFailureCount": 0,
+      "environmentFailureCount": 0,
+      "evidence": []
+    },
+    "highEscape": {
+      "status": "not_observed|observed|not_evaluable|unknown",
+      "count": 0,
+      "observedThrough": "pre_commit|ci|deployment|production|unknown",
+      "escapedGate": "",
+      "discoveredAt": "",
+      "evidence": []
+    }
+  },
   "decisions": [],
   "approvals": [],
   "debt": [],
@@ -152,6 +183,7 @@
     "owner": ""
   },
   "outcome": {
+    "status": "complete|partial|blocked|cancelled|unknown",
     "blocked": [],
     "fixed": [],
     "leftover": [],
