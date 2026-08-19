@@ -15,6 +15,7 @@ function record({
   track = 'standard',
   riskFlags = [],
   endedAt = '2026-08-15T00:00:00Z',
+  outcomeStatus = 'complete',
   qualityMetrics,
 }) {
   return {
@@ -23,6 +24,7 @@ function record({
       schemaVersion: '0.4',
       task: { id, track, riskFlags, endedAt },
       qualityMetrics,
+      outcome: { status: outcomeStatus },
     },
   };
 }
@@ -58,6 +60,7 @@ test('aggregates comparable quality metrics without coercing unknown records', (
     record({
       id: 'migration-rework',
       track: 'migration',
+      outcomeStatus: 'partial',
       riskFlags: ['auth-menu'],
       qualityMetrics: {
         primaryReview: { firstPass: false },
@@ -111,7 +114,9 @@ test('aggregates comparable quality metrics without coercing unknown records', (
   assert.equal(result.byTrack.standard.e2e.environmentFailureCount, 1);
   assert.equal(result.byTrack.standard.e2e.status.notRequired, 1);
   assert.equal(result.byTrack.standard.highEscape.notEvaluable, 1);
+  assert.equal(result.byTrack.standard.outcome.complete, 3);
   assert.equal(result.byTrack.migration.primaryReview.fail, 1);
+  assert.equal(result.byTrack.migration.outcome.partial, 1);
   assert.equal(result.byTrack.migration.rework.reviewCycles, 1);
   assert.equal(result.byTrack.migration.highEscape.observed, 1);
   assert.equal(result.riskSlices.dbAuth.records, 5);
