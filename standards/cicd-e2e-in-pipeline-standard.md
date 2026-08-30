@@ -25,6 +25,7 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 | 4 | **POST 被 IIS 降级 / 端点 5xx** | 部署后验关键 POST verb 不被重定向降级;E2E 捕获业务 5xx。 |
 | 5 | **render-walk `goto` 路由 + 注入 token 绕过菜单 ≠ 入口可达** | 验收方(涛哥)只在部署环境以**操作用户视角**验收(登录门户 → 点菜单 → 进页面)。CI E2E 必**全检 ADR-008 #5 入口可达性全链**(路由→菜单种子→权限码→登录看到→渲染)**并确保绿**:有菜单的应用必加 **critical-menu-walk**(从门户菜单树**点进**目标页断言可达),**禁只** `goto` 路由 + 注入 token(漏菜单种子 / 权限码 —— SRM 外协单元1-3 代码迁完、render-walk 22/22 绿,却因菜单种子整组漏种门户点不进,即此漏)。 |
 | 6 | **分层 grep 含 `\|` 经 CLI `--grep` 在 PowerShell→npx 泄漏成管道符 → reporter EPIPE 假崩** | tier L1 多模块 grep(`@floor\|@module:A\|@module:B`)经 CLI `--grep "…"` 传 npx,Windows PowerShell 把 `\|` 当 shell 管道符 → `ListReporter.onBegin` `EPIPE broken pipe`(用例没跑就崩;Deploy stage 已绿=deliverable 已上,仅验证 stage 假红易误判)。**规则:grep 必经 `$env:E2E_GREP` 注入(playwright.config.ts 读 `process.env.E2E_GREP`→`new RegExp`),禁 CLI `--grep` 带 `\|`**(SYSV2 2026-06-28 实证:#1182/1183 EPIPE 崩 → env 化后 #1186 同多模块场景绿)。 |
+| 7 | **只验“点开无异常”会让业务空壳假绿** | 菜单/按钮点击后必须检查目标页、Drawer、Modal 的语义内容:标题/主键、契约关键字段、状态、关联对象、统计与明细。`undefined/null/[object Object]/NaN/Invalid Date`、有数据但关键值全空或汇总矛盾均阻断;API 200/无 JS 错/容器可见不能单独通过。批次改动页面与关键详情必须拆为独立 spec,防止早期失败遮蔽后续异常。 |
 
 ## 3. 验证 SOP(E2E_Verify stage 内)
 
@@ -33,7 +34,8 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 3. **critical-menu-walk**(有菜单的门户子应用必跑,ADR-008 #5 入口可达性):**以操作用户视角**登录门户 → 渲染菜单树 → **逐目标菜单点进**(`click` 菜单项,非 `goto` 路由)→ 断言落到目标页且渲染健康。验**菜单种子 + 权限码 + 路由**全链,堵「代码迁完但菜单点不进」。**禁**用注入 token + `goto` 路由绕过菜单(那只验渲染层)。
 4. **critical-i18n-mix**(标准 antd-console / 门户应用必跑,ADR-024 修订 2026-06-18):**zh-CN 默认模式**扫描菜单/标签/列头/按钮渲染文本,堵**部署后视觉中英混杂** — ① 原始 i18n key 泄露(`menu.org.list`)② 未渲染插值 `{{}}`/`${}` ③ zh 模式纯英文菜单/标签(白名单豁免合法缩写)。检测器 `helpers/i18n-mix.ts`(`collectMixHits` 返回 `{hits, scanned}`),力度=**稳健+英文菜单拦**;**哨兵**:`scanned` 过少(login/渲染失败)判失败防假绿(反 stub)。每仓白名单 `APP_ALLOW` 首跑后调;`COMMON_ALLOW` 已含 MDM/SRM/API/KPI/版本号等通用缩写。
 5. **失败诊断**:`helpers/diag.ts` 在 CI log 直出 pageError/console/network/DOM(不用下 trace)。
-6. **CRASH > 0 / 菜单不可达 / 中英混杂命中 = 阻塞**,根因到 file:line 再修;修后重跑(CI 自愈 SOP `cicd-self-heal-sop.md`)。
+6. **critical-business-display**(改动模块必跑):用已知真实数据打开列表首行/指定行详情与批次内安全操作,断言标题主键、契约关键字段、状态、关联对象、列表/统计一致性;显式扫描 `undefined/null/[object Object]/NaN/Invalid Date` 与裸 key。每个改动页/关键详情独立 spec,不允许“九菜单一个长用例”中首个失败遮蔽其余场景。
+7. **CRASH > 0 / 菜单不可达 / 中英混杂 / 业务显示契约命中 = 阻塞**,根因到 file:line 再修;修后重跑(CI 自愈 SOP `cicd-self-heal-sop.md`)。
 
 ### 3.6 critical-i18n-mix 适用边界(2026-06-18 SYSV2 试点定)
 
@@ -61,6 +63,7 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 - [ ] 有业务页:critical-render-walk 覆盖曾崩溃 + 核心路由,**CRASH = 0**
 - [ ] **有菜单门户子应用:critical-menu-walk 从门户菜单点进每目标页,菜单全可达(#5 入口可达性,操作员视角)**
 - [ ] **标准 antd-console/门户应用:critical-i18n-mix 中英混杂门禁通过(zh-CN 0 命中,scanned 哨兵过线);定制双语应用豁免须注释理由**
+- [ ] **改动模块:critical-business-display 已验标题/主键、关键字段、状态、关联对象、数量一致性;0 个未定义值/裸 key/数据空壳**
 - [ ] Table dataSource 数组守卫(编码标准)
 - [ ] 钩子 `cicd-e2e-stage-guard` 未报缺 stage
 - [ ] **E2E job `timeoutInMinutes ≥ 60`**(全量套件留余量;分层后 L0/L1 远低于此)
