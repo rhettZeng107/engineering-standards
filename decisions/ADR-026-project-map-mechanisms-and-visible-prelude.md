@@ -30,32 +30,32 @@
 
 ## Decision(决策本身)
 
-**一句话**:项目地图新增 `MECHANISMS.md`(核心机制 / 领域模型)第 8 维;spec/plan discuss 的「读图」从自觉约定升级为**可见交付物**;承接 ADR-025,不 Supersede。
+**一句话**:项目地图新增 `MECHANISMS.md`(核心机制 / 领域模型)第 8 维，作为可选、非阻断导航；当前机制结论仍以按需运行证据为准。
 
 **详细**:
 
 1. **地图 7→8 文件**:新增 `.planning/codebase/MECHANISMS.md` —— 专讲跨模块语义机制(鉴权与授权模型、组织模型、主数据真理源、子应用接入、菜单注册等)。这是 AI 最易臆测错的层面,集中固化、带 `file:line` / 表名锚点。
-2. **discuss「全局理解」段(ADR-004)强制三分**:① 地图依据(引用 MECHANISMS / ARCHITECTURE 等具体段)② 历史实证依据(ADR / 历史 spec)③ 地图未覆盖 → 本次实证。涛哥据此一眼判断是否真读了图。
+2. discuss 若使用项目地图，可引用 `MECHANISMS` / `ARCHITECTURE` 等具体段帮助导航；未使用地图无需额外说明，关键结论必须引用当前代码、LSP、DB、API、git、build/test 或 Browser/E2E 证据。
 3. **探索类调研派带「事实驱动铁律」的 `code-explorer`**(铁律:断言慎下 / 找不到≠不存在 / 交叉验证 / 带锚点),不派无定义文件、不可编辑的内置 Explore;agent 的断言式结论(无 / 只能 / 必须)必须二次核验到 `file:line` / 表结构再采信。
-4. **spec 完结增量更新地图**(强化 ADR-025):`MECHANISMS.md` 纳入 ADR-025 强触发清单 —— 新机制实证清楚即增补。
+4. `MECHANISMS.md` 只在涛哥明确要求，或低频核心机制变化具有重复导航价值时按受影响范围增量更新；spec 完结本身不触发刷新。
 
 ## Consequences(影响 / 副作用)
 
 ### 正向
 
 - 平台机制有单一可查处,新 spec 不再从零臆测鉴权 / 授权 / 组织模型。
-- 「读图」可见、可校验,涛哥能即时发现 AI 跳过了地图。
+- 地图在有价值时可复用，但不会挤占当前运行证据和交付门禁。
 - agent 误判经核验拦截,不直接污染基线。
 
 ### 负向 / 代价
 
 - `MECHANISMS.md` 需随平台演进持续维护。
-- discuss「全局理解」段变长(分三类列依据)。
+- 地图内容仍可能过时，使用时必须回到当前运行证据复核。
 
 ### 影响范围
 
-- 影响所有项目所有 spec / plan 的 discuss 启动流程。
-- 影响 ADR-004(全局理解格式扩展为三分)、ADR-025(地图维度 7→8)、ADR-016(启动必扫含 MECHANISMS)。
+- 影响采用 `.planning/codebase/` 的项目导航方式。
+- 影响 ADR-025(地图维度 7→8，且只作非阻断导航)。
 - 影响 memory:[feedback_verify_platform_mechanism_before_conclusion](项目 memory)。
 - 影响 agent:`~/.claude/agents/code-explorer.md`(已加事实驱动铁律)。
 
@@ -77,6 +77,10 @@
 
 - 不选原因:`Explore` 是 Claude Code 内置 agent type,无可编辑定义文件,改不了;改用可编辑的 `code-explorer`。
 
+## 修订(2026-08-31)— MECHANISMS 保留但读图不再是交付物
+
+`MECHANISMS.md` 继续作为可复用导航维度；spec/plan 是否读取项目地图由当前任务是否受益决定，不再要求展示“地图依据”，也不以未读、过期、漂移或未刷新阻断调研、评审与交付。机制结论必须回到代码、LSP、DB、API、git、build/test 或 Browser/E2E 运行证据复核。本修订覆盖本 ADR 早期“强制读图并可见化”的流程要求。
+
 ## Related(相关引用)
 
 - spec:`SYSV2/docs/superpowers/specs/2026-05-17-mdm-master-data-distribution/`
@@ -87,3 +91,4 @@
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-17 | Proposed → Accepted | 涛哥拍板(MDM 分发 spec discuss 基线偏差复盘) |
+| 2026-08-31 | 修订 | 保留 MECHANISMS 导航价值；取消强制读图与可见交付物要求，当前运行证据为真理源。 |

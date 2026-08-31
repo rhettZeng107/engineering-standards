@@ -1,4 +1,4 @@
-version: 0.4
+version: 0.5
 status: template
 scope:
   provider_neutral: true
@@ -76,23 +76,27 @@ preflight:
 project_map:
   retain_when_present: true
   default_path: ".planning/codebase"
-  role: "navigation_and_mechanism_map_not_final_truth"
-  staleness_reminder_days: 15
-  read_for:
-    - "standard"
-    - "migration"
-    - "spec_plan"
-    - "major_research"
-  stale_relevant_action: "scoped_refresh_or_record_stale_risk"
+  role: "optional_non_blocking_navigation"
+  truth_source: "live_code_lsp_db_api_git_build_test_browser_e2e_evidence"
+  blocking_gate: false
+  staleness_gate: false
+  read_when: "it_shortens_current_discovery"
+  refresh_when:
+    - "explicitly_requested"
+    - "low_frequency_topology_ownership_or_core_mechanism_change_with_reuse_value"
   refresh_scope: "affected_sections_only_no_full_rewrite"
-  refresh_after:
-    - "substantial_plan_done"
-    - "migration_done"
-    - "major_mechanism_change"
   refresh_requirements:
     - "preserve_unrelated_domains"
-    - "update_MECHANISMS_when_mechanism_changes"
-    - "stamp_per_repo_heads_for_multi_repo"
+
+model_routing:
+  deterministic_work: "tools_or_scripts"
+  small_reversible_work: "current_main_session"
+  contract_locked_bounded_mechanical_coding_and_test_additions_only: "terra_medium"
+  cross_file_integration_compiler_repair_non_mechanical_implementation_and_ordinary_review: "sol_high"
+  cross_repo_contract_architecture_db_auth_production_external_integration_and_high_risk_review: "sol_xhigh"
+  terra_other_work: "not_used_for_implementation_analysis_integration_review_or_cross_contract_work"
+  luna: "not_used_for_enterprise_project_work"
+  runtime_evidence_overrides_model_judgment: true
 
 code_navigation:
   symbol_queries_default: "lsp"

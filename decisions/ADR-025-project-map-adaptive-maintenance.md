@@ -165,6 +165,21 @@ Codex 接管全局工作流后,涛哥拍板保留 `.planning/codebase/` 项目�
 
 - 全局 hook、Codex 全局规则、provider-neutral harness 标准、harness policy/run-record、enterprise skill 同步记录 15 天阈值和“增量不全量”红线。
 
+## 修订(2026-08-31)— 按需实证为真理源，地图降为非阻断导航
+
+### 触发
+
+涛哥复盘 HC 多仓交付效率后拍板：项目地图的时间/提交漂移提醒、plan 完结强制维护和启动注入会增加上下文与维护成本，却不能替代当前代码、DB、API、git、build/test、Browser/E2E 与 LSP 证据。
+
+### 决策
+
+- 当前事实与完成断言统一以按需 `rg`/LSP/DB/API/git/build/test/Browser/E2E 等运行证据为真理源。
+- `.planning/codebase/` 保留为可选、非阻断导航；不再是 spec/plan 前置事实、开工检查、CR、提交、打包、部署或完成门禁。
+- 取消 15 天时效、提交漂移和 plan 完结强制刷新；不再要求记录 stale risk。SessionStart staleness hook 从活动配置移除，地图摘要仅保留显式 opt-in。
+- 仅在涛哥明确要求，或低频拓扑、所有权、核心机制变化且维护成本低于后续重复检索时，按受影响 scope 增量维护；禁止为清提醒全量重写。
+
+本修订覆盖本 ADR 早期“启动必扫、15 天提醒、plan 完结即刷”口径；保留目录、历史地图及 MECHANISMS 作为按需导航资产。
+
 ## History(变更轨迹)
 
 | 日期 | 状态变更 | 备注 |
@@ -175,3 +190,4 @@ Codex 接管全局工作流后,涛哥拍板保留 `.planning/codebase/` 项目�
 | 2026-05-22 | SRMV2 验证 + 第 4 失配点 | SRMV2(6 nested repo)dogfood 验证机制跑通(增量只扫 scope / 8 图齐含 MECHANISMS / per-repo HEAD 非根 HEAD 84935dc / 他域零丢失);新发现失配点④(mapper `Write` 整篇覆盖冲聚合图他域,数据丢失)→ 解法 merge-aware spawn(带 required_reading 现有图 + 保留他域指令) |
 | 2026-05-29 | 修订(hook 化 + 泛化) | 涛哥明确「任何 plan 完结即刷地图」不限 GSD;触发面泛化到任何 `progress.md status:done`;约定层(recall)升级为 hook(inject/warn)`core-plan-done-codebase-sync-reminder.js`;补齐失配点③;hook 只提醒不接管刷新流程 |
 | 2026-07-05 | 修订(15 天提醒 + 增量刷新红线) | Codex 接管后保留 codebase;SessionStart 时效提醒阈值 30→15 天;提醒/漂移触发后只按受影响 scope 增量刷新,禁止为清提醒全量重写 codebase |
+| 2026-08-31 | 修订(非阻断导航) | 按需运行证据成为真理源；取消地图时效/漂移/plan 完结门禁及 stale-risk 记录；SessionStart staleness hook 退役，摘要仅显式 opt-in |

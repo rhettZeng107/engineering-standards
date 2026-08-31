@@ -27,7 +27,7 @@
 - Required semantic navigation: <LSP/tool and solution>
 - Required reviewers: <language/DB/security/architecture triggers>
 - Required progress/run-record location: <path or not applicable>
-- Project map refresh boundary: <paths and verification>
+- Optional project-map navigation: <paths if useful; never a blocking or truth-source requirement>
 
 ## Verification
 

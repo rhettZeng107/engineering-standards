@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.4",
+  "schemaVersion": "0.5",
   "task": {
     "id": "",
     "title": "",
@@ -29,11 +29,9 @@
   },
   "projectMap": {
     "path": "",
-    "status": "current|stale|absent|not_relevant",
-    "lastMappedAt": "",
-    "stalenessReminderDays": 15,
+    "status": "not_read|read_for_navigation|absent|not_relevant",
     "relevantToTask": false,
-    "action": "read|scoped_refresh|recorded_stale_risk|skipped",
+    "action": "skipped|read_for_navigation|scoped_refresh_on_request|scoped_refresh_for_reusable_topology_ownership_or_mechanism_change",
     "evidence": []
   },
   "sourcesRead": [],

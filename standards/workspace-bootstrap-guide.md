@@ -67,9 +67,9 @@ See `provider-neutral-ai-coding-harness-standard.md` and `legacy-migration-playb
 
 ## Project maps
 
-- Maps are navigation, not current-fact proof.
-- The default staleness reminder is 15 days.
-- Refresh only affected domains, preserve untouched content and record the mapped HEAD for each nested repository.
+- Maps are optional, non-blocking navigation, not current-fact proof or a workflow gate.
+- Do not require map reading, age checks, drift checks, stale-risk recording, or refresh before review, commit, packaging, deployment, or completion.
+- Refresh only when explicitly requested, or when a low-frequency topology, ownership, or core-mechanism change has reusable navigation value; update affected domains only and preserve untouched content.
 - Map generation is provider-neutral: Codex, a codebase mapper, explorer or structured `codex exec` may produce the delta. Do not bind a workspace rule to an absent `/gsd-*` runtime.
 
 ## Skill and plugin boundary

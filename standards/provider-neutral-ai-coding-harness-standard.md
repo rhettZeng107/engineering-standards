@@ -80,14 +80,27 @@ Do not claim commit, push, sync, deployment, or CI closure from the action comma
 
 ## Project Map / Codebase
 
-Keep `.planning/codebase/` when a workspace already uses it. It is a navigation and mechanism map, not the final source of current truth.
+Keep `.planning/codebase/` when a workspace already uses it. It is optional non-blocking navigation, not a preflight gate, delivery gate, or source of current truth.
 
 | Rule | Requirement |
 |---|---|
-| Role | Use the project map to understand topology, major mechanisms, risks, and likely source-of-truth files before standard, migration, or spec/plan work. |
-| Boundary | Do not use stale project-map text as final evidence for key claims; verify against code, DB, API, build, browser, E2E, git, or LSP. |
-| Staleness | Session-start time staleness reminder threshold is 15 days. If the map is stale or drifted and the current task touches that scope, refresh the affected map sections or explicitly record the staleness and residual risk. |
-| Refresh | After substantial plan/spec/migration work, update affected maps only, preserve unrelated domains, update `MECHANISMS.md` for new mechanism knowledge, and stamp per-repo mapped heads in multi-repo workspaces. Do not rewrite the whole codebase map just because a reminder fired. |
+| Role | Use the map only when it shortens discovery of topology, ownership, major mechanisms, risks, or likely source files. Skipping it is valid. |
+| Truth source | Discover and verify current facts on demand with code search, LSP, DB, API, build/test, browser/E2E, git, and runtime evidence. These sources govern key claims and completion. |
+| Non-blocking | Do not make map age, commit drift, reading, refresh, or stale-risk recording a preflight, review, commit, package, deployment, or completion gate. |
+| Refresh | Refresh only when explicitly requested, or when low-frequency topology, ownership, or core-mechanism change makes maintenance cheaper than repeated discovery. Update affected scope only; never rewrite the whole map to clear a reminder. |
+
+## Model and Reasoning Routing
+
+| Work type | Default route |
+|---|---|
+| Deterministic discovery, LSP, build/test, formatting, hashes, manifests | Tools or scripts; do not spend higher model reasoning on deterministic checks. |
+| Small reversible work | Current main session directly; do not spawn only to lower model cost. |
+| Contract-locked, bounded mechanical coding and test additions only | Terra Medium. Do not route other implementation, analysis, integration, review, or cross-contract work to Terra. |
+| Cross-file implementation, normal frontend/backend integration, compiler-error repair, non-mechanical implementation after contract lock, ordinary final review | Sol High. |
+| Cross-repo contract analysis, architecture, DB schema, auth, production, external integration, high-impact non-deterministic disputes and high-risk review | Sol xhigh. |
+| Luna | Not used for enterprise project work. |
+
+Build, test, LSP, DB, API, browser, E2E, and git evidence always outrank model judgment.
 
 ## Code Navigation
 
