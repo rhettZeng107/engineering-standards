@@ -67,6 +67,7 @@ cat > "$TARGET_PATH/.gitignore" <<'EOF'
 *.key
 .codex/
 .claude/
+docs/ops/ci-watch/
 
 # OS/editor
 .DS_Store

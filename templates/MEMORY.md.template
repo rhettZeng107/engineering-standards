@@ -1,8 +1,8 @@
 # {{WORKSPACE_NAME}} Memory Index
 
 > {{WORKSPACE_NAME}} 工作区独立 memory(SessionStart 由 `core-fact-driven-prelude.js` 注入事实驱动自检卡片)。
-> 引用源:全局 `~/.claude/CLAUDE.md` + 跨项目 `engineering-standards/decisions/ADR-*.md` + 本工作区 `docs/decisions/ADR-*.md`。
-> **删除原则**:已锚点 ADR-NNN 的条目从 disk 删除(decisions 仓即真理源);同语义合并为集合文件。
+> 引用源:全局 `~/.codex/AGENTS.md` + 跨项目 `engineering-standards/decisions/ADR-*.md` + 本工作区 `docs/decisions/ADR-*.md`。
+> **整理原则**:已锚点 ADR-NNN 的条目应改为ADR引用，同语义条目应合并；仅在涛哥明确授权或已授权 automation 中，才整理获批的 curated memory，Codex管理资产只报告不直接改写。
 > **保留原则**:本工作区特化反模式 / 实证案例锚点 / 外部资源 / 本工作区踩坑沉淀。
 > **维护规范**:见 `engineering-standards/standards/memory-maintenance-standard.md`(跨项目工程标准,中性表述,不绑定具体工作区)。
 
@@ -22,7 +22,7 @@
 
 ## 工作区特化沉淀
 
-<!-- 列本工作区独有的反模式 / 实证案例锚点。已锚 ADR 的条目从这里删除,改为 ADR 引用。 -->
+<!-- 列本工作区独有的反模式 / 实证案例锚点。已锚 ADR 的条目应改为 ADR 引用；实际整理仍受顶部授权边界约束。 -->
 
 (空 — 本工作区启动后逐步沉淀)
 
@@ -48,7 +48,7 @@
 
 (空)
 
-## 编码路由 / Teams / Qwen
+## 编码路由 / Agents / Models
 
 (空)
 
@@ -62,9 +62,9 @@
 
 ---
 
-## 使用说明(给 Claude)
+## 使用说明(给 Codex)
 
-1. 涛哥纠正或确认非显然偏好时,在对应分类下加 1 行索引 + 写独立 memory 文件
-2. 本索引文件总行数硬上限 **200 行**(超过则触发精简,按 `memory-maintenance-standard.md` 处理)
-3. 工作区 memory 数超过 **50 个** 时,主动按维护规范精简(合并 / 删除已锚 ADR 的条目)
-4. **不写 user_role.md / 通用工作流(已在全局 CLAUDE.md)/ 已锚 ADR 的规则**
+1. 只有涛哥明确要求记入 memory 时，才按当前 Codex memory 扩展入口落档；普通纠正更新本轮 Plan、适用规则或项目文档
+2. 本索引文件超过 **200 行** 时只报告阈值；仅在涛哥明确要求或已授权 automation 中，才按 `memory-maintenance-standard.md` 整理获批的 curated memory
+3. 工作区 memory 数超过 **50 个** 时只报告阈值；仅在涛哥明确要求或已授权 automation 中，才按维护规范整理获批的 curated memory
+4. **不写 user_role.md / 通用工作流(已在全局 AGENTS.md)/ 已锚 ADR 的规则**

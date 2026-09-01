@@ -87,10 +87,10 @@ L2 配对主题部分回溯;L3 孤立 plan 暂保留扁平。
 - **Plan**(`plan.md`)— 怎么做 + 谁做 + 验证;顶部必填 `## Spec` 行引用对应 spec
 - **Tasks**(内嵌 plan 底部 `## Tasks 拆解`)— 单单元目标 / 输入 / 输出 / 涉及文件 / 验收 / 依赖
 
-详见全局 `~/.claude/CLAUDE.md` 「三层文档:Spec / Plan / Tasks」段。
+详见全局 `~/.codex/AGENTS.md` 的 Spec / Plan / 文档分层规则。
 
 ## 历史溯源
 
 - 2026-05-03 涛哥拍板单目录结构,replace 原扁平命名(`<topic>-design.md` / `<topic>-plan.md`)
 - user scope superpowers 5.0.7 cache `SKILL.md` 已 patch 输出此结构(指纹见 `docs/ops/superpowers-patch-notes.md`)
-- 2026-05-05 抽出独立标准文档(本文档),CLAUDE.md 仅保留摘要 + 引用
+- 2026-05-05 抽出独立标准文档(本文档),当时的 provider 指令文件仅保留摘要 + 引用

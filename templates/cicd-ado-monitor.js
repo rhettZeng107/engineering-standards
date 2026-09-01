@@ -10,7 +10,9 @@
  *   node docs/ops/cicd-ado-monitor.js cancel-old <repo>
  *   node docs/ops/cicd-ado-monitor.js wait <repo> <buildId> [--timeout 1800]
  *   node docs/ops/cicd-ado-monitor.js watch <repo> [--timeout 1800]
- *   node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id> [--branch <branch>] [--timeout 1800] [--log-dir docs/ops/ci-watch]
+ *   node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id> [--branch <branch>] [--interval-min 10] [--timeout 1800] [--quiet]
+ *   node docs/ops/cicd-ado-monitor.js summary [--log-dir docs/ops/ci-watch]
+ *   node docs/ops/cicd-ado-monitor.js consume [--peek] [--log-dir docs/ops/ci-watch]
  *
  * Repo 名:工作区各 nested 仓名,按 ADO 项目实际填。
  * 配置:ADO_BASE / PAT 文件可按 org 与工作区调整(下方常量,支持环境变量覆盖)。
@@ -32,12 +34,28 @@ const ADO_BASE = process.env.ADO_BASE || 'http://172.21.10.30:8090/JYDevOps/JYPr
 const PAT_FILE = process.env.ADO_PAT_FILE || path.join(os.homedir(), '.claude', 'ado-pat');
 const POLL_SEC = Number(process.env.CI_MONITOR_POLL_SEC || 15);        // wait(已知 buildId)轮询间隔
 const WATCH_POLL_SEC = Number(process.env.CI_MONITOR_WATCH_POLL_SEC || 30);  // watch(盯最新 build)轮询间隔
+const BACKGROUND_POLL_SEC = Number(process.env.CI_MONITOR_BACKGROUND_POLL_SEC || 10 * 60);
 const DEFAULT_LOG_DIR = path.join('docs', 'ops', 'ci-watch');
 const REQUEST_TIMEOUT_MS = Number(process.env.CI_MONITOR_REQUEST_TIMEOUT_MS || 15000);
 const REQUEST_RETRIES = Number(process.env.CI_MONITOR_REQUEST_RETRIES || 3);
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAX_TASK_LOG_BYTES = Number(process.env.CI_MONITOR_MAX_TASK_LOG_BYTES || 2 * 1024 * 1024);
 const MAX_BUNDLE_BYTES = Number(process.env.CI_MONITOR_MAX_BUNDLE_BYTES || 8 * 1024 * 1024);
+const MIN_BACKGROUND_POLL_SEC = 60;
+const MAX_BACKGROUND_POLL_SEC = 24 * 60 * 60;
+const CONSUME_LOCK_STALE_MS = 5 * 60 * 1000;
+
+function resolveBackgroundPollSec(intervalMin) {
+  const explicitlyProvided = intervalMin !== undefined;
+  if (explicitlyProvided && !Number.isFinite(intervalMin)) {
+    throw new Error(`后台轮询间隔必须是 1 至 1440 之间的数字，当前值: ${String(intervalMin)}`);
+  }
+  const seconds = explicitlyProvided ? intervalMin * 60 : BACKGROUND_POLL_SEC;
+  if (!Number.isFinite(seconds) || seconds < MIN_BACKGROUND_POLL_SEC || seconds > MAX_BACKGROUND_POLL_SEC) {
+    throw new Error(`后台轮询间隔必须在 1 至 1440 分钟之间，当前值: ${Number.isFinite(intervalMin) ? intervalMin : BACKGROUND_POLL_SEC / 60}`);
+  }
+  return seconds;
+}
 
 // 读 PAT 文件生成 Basic 认证头
 function authHeader() {
@@ -144,6 +162,92 @@ function sanitizeFilePart(value) {
 
 function appendJsonLine(file, value) {
   fs.appendFileSync(file, `${JSON.stringify({ ts: new Date().toISOString(), ...value })}\n`);
+}
+
+function writeJsonAtomic(file, value) {
+  const temp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(temp, JSON.stringify(value, null, 2));
+  fs.renameSync(temp, file);
+}
+
+function writeJsonCreateOnce(file, value) {
+  const temp = `${file}.${process.pid}.${Math.random().toString(16).slice(2, 10)}.tmp`;
+  let fd;
+  try {
+    fd = fs.openSync(temp, 'wx');
+    fs.writeFileSync(fd, JSON.stringify(value, null, 2));
+    fs.fsyncSync(fd);
+    fs.closeSync(fd);
+    fd = undefined;
+    try {
+      fs.linkSync(temp, file);
+    } catch (error) {
+      if (!['EPERM', 'ENOTSUP', 'EOPNOTSUPP', 'ENOSYS'].includes(error.code)) throw error;
+      fs.copyFileSync(temp, file, fs.constants.COPYFILE_EXCL);
+    }
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+    try { fs.unlinkSync(temp); } catch (_) { /* 临时文件未创建或已清理 */ }
+  }
+}
+
+function writeAuxiliary(label, operation) {
+  try {
+    operation();
+  } catch (error) {
+    console.error(`MONITOR_WARNING: ${label} 写入失败: ${redactSecrets(error.message)}`);
+  }
+}
+
+function processStartFingerprint(pid) {
+  try {
+    const { execFileSync } = require('child_process');
+    if (process.platform === 'win32') {
+      return execFileSync(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`],
+        { encoding: 'utf8', timeout: 3000, windowsHide: true },
+      ).trim() || null;
+    }
+    return execFileSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding: 'utf8', timeout: 3000 }).trim() || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function processIsAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code !== 'ESRCH';
+  }
+}
+
+function inspectOwnedLock(file) {
+  let record = null;
+  let raw = null;
+  let ageMs = Number.POSITIVE_INFINITY;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+    record = JSON.parse(raw);
+    const ts = Date.parse(record.ts);
+    ageMs = Number.isFinite(ts) ? Date.now() - ts : Number.POSITIVE_INFINITY;
+  } catch (_) {
+    try { ageMs = Date.now() - fs.statSync(file).mtimeMs; } catch (_) { /* 文件可能刚被释放 */ }
+  }
+  const ownerKnown = Number.isInteger(record?.pid) && record.pid > 0;
+  const ownerAlive = ownerKnown && processIsAlive(record.pid);
+  const currentOwnerStart = ownerAlive && record?.processStart ? processStartFingerprint(record.pid) : null;
+  const pidReused = ownerAlive && record?.processStart && currentOwnerStart && record.processStart !== currentOwnerStart;
+  const unverifiableOwnerExpired = ownerAlive
+    && (!record?.processStart || !currentOwnerStart)
+    && ageMs > CONSUME_LOCK_STALE_MS;
+  return {
+    record,
+    raw,
+    reclaimable: ownerKnown ? !ownerAlive || pidReused || unverifiableOwnerExpired : ageMs > CONSUME_LOCK_STALE_MS,
+  };
 }
 
 function currentBranch(repo) {
@@ -280,17 +384,31 @@ async function cmdCancelOld(repo) {
 // 轮询等待 build 跑完;succeeded → exit 0,否则 exit 1
 async function cmdWait(repo, buildId, opts) {
   const timeout = opts.timeout || 1800;
+  const pollSec = Number.isFinite(opts.pollSec) ? opts.pollSec : POLL_SEC;
   const start = Date.now();
+  const timeoutMs = timeout * 1000;
   while (true) {
-    const el = Math.round((Date.now() - start) / 1000);
+    const elapsedMs = Date.now() - start;
+    const el = Math.floor(elapsedMs / 1000);
     let b;
     try {
       b = await apiGet(`${ADO_BASE}/${repo}/_apis/build/builds/${buildId}?api-version=7.0`);
     } catch (error) {
       if (!isTransientError(error)) throw error;
       console.error(`[${el}s] MONITOR_WARNING: ${error.message}; 下轮继续`);
-      if (el > timeout) throw new Error(`等待超时 ${timeout}s — 最后错误: ${error.message}`);
-      await sleep(POLL_SEC * 1000);
+      if (typeof opts.onState === 'function') {
+        writeAuxiliary('轮询警告状态', () => opts.onState({
+          type: 'build-poll-warning',
+          repo,
+          buildId,
+          status: 'monitor_warning',
+          elapsedSeconds: el,
+          error: redactSecrets(error.message),
+        }));
+      }
+      const remainingMs = timeoutMs - (Date.now() - start);
+      if (remainingMs <= 0) throw new Error(`等待超时 ${timeout}s — 最后错误: ${error.message}`);
+      await sleep(Math.min(pollSec * 1000, remainingMs));
       continue;
     }
     console.log(`[${el}s] #${b.id} status=${b.status} result=${b.result || '-'}`);
@@ -298,8 +416,20 @@ async function cmdWait(repo, buildId, opts) {
       process.exitCode = b.result === 'succeeded' ? 0 : 1;
       return b;
     }
-    if (el > timeout) throw new Error(`等待超时 ${timeout}s — build ${buildId} 仍 ${b.status}`);
-    await sleep(POLL_SEC * 1000);
+    if (typeof opts.onState === 'function') {
+      writeAuxiliary('轮询状态', () => opts.onState({
+        type: 'build-poll',
+        repo,
+        buildId: b.id || buildId,
+        buildNumber: b.buildNumber || null,
+        status: b.status || null,
+        result: b.result || null,
+        elapsedSeconds: el,
+      }));
+    }
+    const remainingMs = timeoutMs - (Date.now() - start);
+    if (remainingMs <= 0) throw new Error(`等待超时 ${timeout}s — build ${buildId} 仍 ${b.status}`);
+    await sleep(Math.min(pollSec * 1000, remainingMs));
   }
 }
 
@@ -337,7 +467,8 @@ async function cmdWatch(repo, opts) {
 }
 
 function cmdBackground(repo, opts) {
-  if (!repo || !opts.buildId) throw new Error('用法: background <repo> --build-id <id> [--branch <branch>] [--timeout N] [--log-dir DIR]');
+  if (!repo || !opts.buildId) throw new Error('用法: background <repo> --build-id <id> [--branch <branch>] [--interval-min 10] [--timeout N] [--quiet]');
+  const pollSec = resolveBackgroundPollSec(opts.intervalMin);
   const logDir = opts.logDir || DEFAULT_LOG_DIR;
   ensureDir(logDir);
   const target = opts.buildId;
@@ -347,6 +478,7 @@ function cmdBackground(repo, opts) {
   const metaPath = path.join(logDir, `${baseName}.json`);
   const readyPath = path.join(logDir, `${baseName}.ready.json`);
   const alertPath = path.join(logDir, `${baseName}.alert.json`);
+  const statePath = path.join(logDir, `${baseName}.state.json`);
   const currentPath = path.join(logDir, 'ci-watch-current.json');
   const eventPath = path.join(logDir, `ci-watch-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.jsonl`);
   const runId = `${Date.now()}-${process.pid}-${Math.random().toString(16).slice(2, 10)}`;
@@ -355,7 +487,7 @@ function cmdBackground(repo, opts) {
     const existingPid = Number(fs.readFileSync(pidPath, 'utf8').trim());
     try {
       process.kill(existingPid, 0);
-      console.log(`BACKGROUND_EXISTS: repo=${repo} pid=${existingPid} meta=${metaPath}`);
+      if (!opts.quiet) console.log(`BACKGROUND_EXISTS: repo=${repo} pid=${existingPid} meta=${metaPath}`);
       return;
     } catch (_) {
       try { fs.unlinkSync(pidPath); } catch (_) { /* 清理陈旧 pid */ }
@@ -369,6 +501,7 @@ function cmdBackground(repo, opts) {
   childArgs.push('--run-id', runId);
   if (opts.branch) childArgs.push('--branch', String(opts.branch));
   if (opts.timeout) childArgs.push('--timeout', String(opts.timeout));
+  childArgs.push('--interval-min', String(pollSec / 60));
 
   const startMeta = {
     type: 'background-start',
@@ -383,8 +516,9 @@ function cmdBackground(repo, opts) {
     metaPath,
     command: [process.execPath, ...childArgs].join(' '),
   };
-  fs.writeFileSync(metaPath, JSON.stringify({ ts: new Date().toISOString(), ...startMeta }, null, 2));
-  fs.writeFileSync(currentPath, JSON.stringify({ ts: new Date().toISOString(), ...startMeta }, null, 2));
+  writeJsonAtomic(metaPath, { ts: new Date().toISOString(), ...startMeta });
+  writeJsonAtomic(currentPath, { ts: new Date().toISOString(), ...startMeta });
+  writeJsonAtomic(statePath, { ts: new Date().toISOString(), ...startMeta });
   appendJsonLine(eventPath, startMeta);
 
   const outFd = fs.openSync(stdoutPath, 'a');
@@ -401,10 +535,16 @@ function cmdBackground(repo, opts) {
   try {
     const latest = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
     if (latest.type === 'background-start' && latest.runId === runId) {
-      fs.writeFileSync(metaPath, JSON.stringify({ ts: new Date().toISOString(), ...meta }, null, 2));
+      writeJsonAtomic(metaPath, { ts: new Date().toISOString(), ...meta });
     }
   } catch (_) { /* child 已落终态时不回写 start，避免覆盖 */ }
-  console.log(`BACKGROUND: repo=${repo} pid=${child.pid} log=${stdoutPath}`);
+  try {
+    const latestState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    if (latestState.type === 'background-start' && latestState.runId === runId) {
+      writeJsonAtomic(statePath, { ts: new Date().toISOString(), ...meta });
+    }
+  } catch (_) { /* child 已推进状态时不覆盖 */ }
+  if (!opts.quiet) console.log(`BACKGROUND: repo=${repo} pid=${child.pid} log=${stdoutPath}`);
 }
 
 async function cmdBackgroundChild(repo, opts) {
@@ -418,13 +558,27 @@ async function cmdBackgroundChild(repo, opts) {
   const readyPath = path.join(logDir, `${baseName}.ready.json`);
   const failedLogPath = path.join(logDir, `${baseName}.failed.log`);
   const alertPath = path.join(logDir, `${baseName}.alert.json`);
+  const statePath = path.join(logDir, `${baseName}.state.json`);
   const eventPath = path.join(logDir, `ci-watch-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.jsonl`);
   const branch = opts.branch || currentBranch(repo);
   const runId = opts.runId || `${Date.now()}-${process.pid}`;
+  const terminalPath = path.join(logDir, `${baseName}-${sanitizeFilePart(runId)}.terminal.json`);
   const logPath = path.join(logDir, `${baseName}.out`);
+  opts.pollSec = resolveBackgroundPollSec(opts.intervalMin);
   ensureDir(logDir);
   fs.writeFileSync(pidPath, `${process.pid}\n`);
-  fs.writeFileSync(readyPath, JSON.stringify({ ts: new Date().toISOString(), type: 'background-ready', runId, repo, buildId: opts.buildId, pid: process.pid }, null, 2));
+  const ready = { ts: new Date().toISOString(), type: 'background-ready', runId, repo, branch, buildId: opts.buildId, pid: process.pid, logPath };
+  writeJsonAtomic(readyPath, ready);
+  writeJsonAtomic(statePath, ready);
+  opts.onState = (event) => writeJsonAtomic(statePath, {
+    ts: new Date().toISOString(),
+    ...event,
+    runId,
+    branch,
+    pid: process.pid,
+    logPath,
+  });
+  let terminalCommitted = fs.existsSync(terminalPath);
   try {
     const build = await cmdWait(repo, opts.buildId, opts);
     let failedTasks = [];
@@ -440,7 +594,7 @@ async function cmdBackgroundChild(repo, opts) {
       }
     }
     const event = {
-      type: 'build-status',
+      type: 'build-terminal',
       runId,
       repo,
       branch,
@@ -454,13 +608,23 @@ async function cmdBackgroundChild(repo, opts) {
       failedTasks: failedTasks.map((task) => ({ name: task.name, result: task.result, logUrl: task.logUrl, captureError: task.captureError })),
       logCaptureError,
     };
-    fs.writeFileSync(metaPath, JSON.stringify({ ts: new Date().toISOString(), ...event }, null, 2));
-    fs.writeFileSync(currentPath, JSON.stringify({ ts: new Date().toISOString(), ...event }, null, 2));
-    appendJsonLine(eventPath, event);
+    const terminal = { ts: new Date().toISOString(), ...event };
+    if (!terminalCommitted) {
+      writeJsonCreateOnce(terminalPath, terminal);
+      terminalCommitted = true;
+    }
+    writeAuxiliary('终态元数据', () => writeJsonAtomic(metaPath, terminal));
+    writeAuxiliary('共享当前状态', () => writeJsonAtomic(currentPath, terminal));
+    writeAuxiliary('逐任务状态', () => writeJsonAtomic(statePath, terminal));
+    writeAuxiliary('事件日志', () => appendJsonLine(eventPath, event));
     if (build?.result !== 'succeeded') {
-      fs.writeFileSync(alertPath, JSON.stringify({ ts: new Date().toISOString(), ...event }, null, 2));
+      writeAuxiliary('失败告警', () => writeJsonAtomic(alertPath, terminal));
     } else {
-      try { fs.unlinkSync(alertPath); } catch (_) { /* 成功终态解除旧告警 */ }
+      writeAuxiliary('旧告警清理', () => {
+        try { fs.unlinkSync(alertPath); } catch (error) {
+          if (error.code !== 'ENOENT') throw error;
+        }
+      });
     }
   } catch (error) {
     const safeError = redactSecrets(error.message);
@@ -476,10 +640,16 @@ async function cmdBackgroundChild(repo, opts) {
       error: safeError,
       logPath,
     };
-    fs.writeFileSync(metaPath, JSON.stringify({ ts: new Date().toISOString(), ...event }, null, 2));
-    fs.writeFileSync(currentPath, JSON.stringify({ ts: new Date().toISOString(), ...event }, null, 2));
-    appendJsonLine(eventPath, event);
-    fs.writeFileSync(alertPath, JSON.stringify({ ts: new Date().toISOString(), ...event }, null, 2));
+    const terminal = { ts: new Date().toISOString(), ...event };
+    if (!terminalCommitted && !fs.existsSync(terminalPath)) {
+      writeJsonCreateOnce(terminalPath, terminal);
+      terminalCommitted = true;
+    }
+    writeAuxiliary('监控异常元数据', () => writeJsonAtomic(metaPath, terminal));
+    writeAuxiliary('监控异常当前状态', () => writeJsonAtomic(currentPath, terminal));
+    writeAuxiliary('监控异常逐任务状态', () => writeJsonAtomic(statePath, terminal));
+    writeAuxiliary('监控异常事件日志', () => appendJsonLine(eventPath, event));
+    writeAuxiliary('监控异常告警', () => writeJsonAtomic(alertPath, terminal));
     process.exitCode = 1;
   } finally {
     try { fs.unlinkSync(pidPath); } catch (_) { /* watcher 已结束或 pid 文件不存在 */ }
@@ -487,54 +657,201 @@ async function cmdBackgroundChild(repo, opts) {
   }
 }
 
-// 解析 flag(--top / --state / --failed / --content / --timeout / --build-id / --run-id / --branch / --log-dir)与位置参数
+function cmdSummary(opts) {
+  const logDir = opts.logDir || DEFAULT_LOG_DIR;
+  if (!fs.existsSync(logDir)) { console.log('[]'); return; }
+  const states = fs.readdirSync(logDir)
+    .filter((name) => name.endsWith('.state.json'))
+    .map((name) => JSON.parse(fs.readFileSync(path.join(logDir, name), 'utf8')))
+    .sort((left, right) => String(right.ts).localeCompare(String(left.ts)));
+  console.log(JSON.stringify(states, null, 2));
+}
+
+function writeStdout(text) {
+  return new Promise((resolve, reject) => {
+    const onError = (error) => {
+      cleanup();
+      reject(error);
+    };
+    const cleanup = () => process.stdout.removeListener('error', onError);
+    process.stdout.once('error', onError);
+    process.stdout.write(text, (error) => {
+      cleanup();
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
+
+async function cmdConsume(opts) {
+  const logDir = opts.logDir || DEFAULT_LOG_DIR;
+  ensureDir(logDir);
+  const ledgerPath = path.join(logDir, 'ci-watch-consumed.json');
+  const lockPath = path.join(logDir, 'ci-watch-consume.lock');
+  const lockId = `${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+  const processStart = processStartFingerprint(process.pid);
+  let lockFd;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      lockFd = fs.openSync(lockPath, 'wx');
+      fs.writeFileSync(lockFd, JSON.stringify({ lockId, pid: process.pid, processStart, ts: new Date().toISOString() }));
+      break;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      const existingState = inspectOwnedLock(lockPath);
+      const existing = existingState.record;
+      const existingRaw = existingState.raw;
+      if (!existingState.reclaimable) {
+        throw new Error(`终态消费正在由其他进程执行: ${lockPath}`);
+      }
+      const reclaimGuardPath = `${lockPath}.reclaim`;
+      let reclaimGuardFd;
+      for (let guardAttempt = 0; guardAttempt < 2; guardAttempt++) {
+        try {
+          reclaimGuardFd = fs.openSync(reclaimGuardPath, 'wx');
+          fs.writeFileSync(reclaimGuardFd, JSON.stringify({ lockId, pid: process.pid, processStart, ts: new Date().toISOString() }));
+          break;
+        } catch (guardError) {
+          if (guardError.code !== 'EEXIST') throw guardError;
+          const guardState = inspectOwnedLock(reclaimGuardPath);
+          if (!guardState.reclaimable) throw new Error(`终态消费锁正在被其他进程回收: ${lockPath}`);
+          let currentGuardRaw = null;
+          try { currentGuardRaw = fs.readFileSync(reclaimGuardPath, 'utf8'); } catch (readError) {
+            if (readError.code !== 'ENOENT') throw readError;
+          }
+          if (currentGuardRaw === null || currentGuardRaw !== guardState.raw) continue;
+          try { fs.unlinkSync(reclaimGuardPath); } catch (unlinkError) {
+            if (unlinkError.code !== 'ENOENT') throw unlinkError;
+          }
+        }
+      }
+      if (reclaimGuardFd === undefined) throw new Error(`无法取得终态消费回收锁: ${lockPath}`);
+      try {
+        let current = null;
+        let currentRaw = null;
+        try {
+          currentRaw = fs.readFileSync(lockPath, 'utf8');
+          if (existing?.lockId) current = JSON.parse(currentRaw);
+        } catch (readError) {
+          if (readError.code !== 'ENOENT') throw readError;
+        }
+        if (currentRaw === null) continue;
+        if (existing?.lockId && current?.lockId !== existing.lockId) continue;
+        if (!existing?.lockId && currentRaw !== existingRaw) continue;
+        try { fs.unlinkSync(lockPath); } catch (unlinkError) {
+          if (unlinkError.code !== 'ENOENT') throw unlinkError;
+        }
+      } finally {
+        fs.closeSync(reclaimGuardFd);
+        try { fs.unlinkSync(reclaimGuardPath); } catch (_) { /* 回收门已释放 */ }
+      }
+    }
+  }
+  if (lockFd === undefined) throw new Error(`无法取得终态消费锁: ${lockPath}`);
+  try {
+    const ledger = fs.existsSync(ledgerPath) ? JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) : {};
+    const terminals = [];
+    const invalidTerminals = [];
+    for (const name of fs.readdirSync(logDir).filter((entry) => entry.endsWith('.terminal.json'))) {
+      try {
+        const event = JSON.parse(fs.readFileSync(path.join(logDir, name), 'utf8'));
+        if (ledger[name] !== event.ts) terminals.push({ name, event });
+      } catch (error) {
+        invalidTerminals.push({ name, error: redactSecrets(error.message) });
+      }
+    }
+    terminals.sort((left, right) => String(left.event.ts).localeCompare(String(right.event.ts)));
+    for (const invalid of invalidTerminals) {
+      console.error(`MONITOR_WARNING: 无法解析终态文件 ${invalid.name}: ${invalid.error}`);
+    }
+    const output = `${JSON.stringify(terminals.map(({ event }) => event), null, 2)}\n`;
+    await writeStdout(output);
+    if (!opts.peek && terminals.length) {
+      for (const { name, event } of terminals) ledger[name] = event.ts;
+      writeJsonAtomic(ledgerPath, ledger);
+    }
+  } finally {
+    fs.closeSync(lockFd);
+    try {
+      const current = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+      if (current.lockId === lockId) fs.unlinkSync(lockPath);
+    } catch (_) { /* 锁已被陈旧锁回收或文件已不存在 */ }
+  }
+}
+
+// 解析 flag(--top / --state / --failed / --content / --timeout / --build-id / --run-id / --branch / --interval-min / --quiet / --peek / --log-dir)与位置参数
 function parseArgs(args) {
   const opts = {};
   const positional = [];
+  const provided = new Set();
+  const nextValue = (flag, index) => {
+    const value = args[index + 1];
+    if (value === undefined || value.startsWith('--')) throw new Error(`参数 ${flag} 缺少值`);
+    return value;
+  };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === '--failed') opts.failed = true;
-    else if (a === '--content') opts.content = true;
-    else if (a === '--top') opts.top = parseInt(args[++i], 10);
-    else if (a === '--state') opts.state = args[++i];
-    else if (a === '--timeout') opts.timeout = parseInt(args[++i], 10);
-    else if (a === '--build-id') opts.buildId = args[++i];
-    else if (a === '--run-id') opts.runId = args[++i];
-    else if (a === '--branch') opts.branch = args[++i];
-    else if (a === '--log-dir') opts.logDir = args[++i];
+    if (a === '--failed') { opts.failed = true; provided.add(a); }
+    else if (a === '--content') { opts.content = true; provided.add(a); }
+    else if (a === '--quiet') { opts.quiet = true; provided.add(a); }
+    else if (a === '--peek') { opts.peek = true; provided.add(a); }
+    else if (a === '--top') { provided.add(a); opts.top = parseInt(nextValue(a, i), 10); i += 1; }
+    else if (a === '--state') { provided.add(a); opts.state = nextValue(a, i); i += 1; }
+    else if (a === '--timeout') { provided.add(a); opts.timeout = parseInt(nextValue(a, i), 10); i += 1; }
+    else if (a === '--interval-min') { provided.add(a); opts.intervalMin = Number(nextValue(a, i)); i += 1; }
+    else if (a === '--build-id') { provided.add(a); opts.buildId = nextValue(a, i); i += 1; }
+    else if (a === '--run-id') { provided.add(a); opts.runId = nextValue(a, i); i += 1; }
+    else if (a === '--branch') { provided.add(a); opts.branch = nextValue(a, i); i += 1; }
+    else if (a === '--log-dir') { provided.add(a); opts.logDir = nextValue(a, i); i += 1; }
+    else if (a.startsWith('--')) throw new Error(`未知参数: ${a}`);
     else positional.push(a);
   }
-  return { opts, positional };
+  return { opts, positional, provided };
+}
+
+function validateCommandArgs(command, positional, provided, expectedCount, allowedFlags, usage) {
+  if (positional.length !== expectedCount) throw new Error(`用法: ${usage}`);
+  for (const flag of provided) {
+    if (!allowedFlags.includes(flag)) throw new Error(`${command} 不支持参数 ${flag}；用法: ${usage}`);
+  }
 }
 
 async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
-  const { opts, positional } = parseArgs(rest);
+  const { opts, positional, provided } = parseArgs(rest);
   switch (cmd) {
     case 'status':
-      if (!positional[0]) throw new Error('用法: status <repo> [--top N] [--state ...]');
+      validateCommandArgs(cmd, positional, provided, 1, ['--top', '--state'], 'status <repo> [--top N] [--state ...]');
       return cmdStatus(positional[0], opts);
     case 'logs':
-      if (!positional[1]) throw new Error('用法: logs <repo> <buildId> [--failed] [--content]');
+      validateCommandArgs(cmd, positional, provided, 2, ['--failed', '--content'], 'logs <repo> <buildId> [--failed] [--content]');
       return cmdLogs(positional[0], positional[1], opts);
     case 'cancel-old':
-      if (!positional[0]) throw new Error('用法: cancel-old <repo>');
+      validateCommandArgs(cmd, positional, provided, 1, [], 'cancel-old <repo>');
       return cmdCancelOld(positional[0]);
     case 'wait':
-      if (!positional[1]) throw new Error('用法: wait <repo> <buildId> [--timeout N]');
+      validateCommandArgs(cmd, positional, provided, 2, ['--timeout'], 'wait <repo> <buildId> [--timeout N]');
       return cmdWait(positional[0], positional[1], opts);
     case 'watch':
-      if (!positional[0]) throw new Error('用法: watch <repo> [--timeout N]');
+      validateCommandArgs(cmd, positional, provided, 1, ['--timeout'], 'watch <repo> [--timeout N]');
       return cmdWatch(positional[0], opts);
     case 'background':
-      if (!positional[0] || !opts.buildId) throw new Error('用法: background <repo> --build-id <id> [--branch <branch>] [--timeout N] [--log-dir DIR]');
+      validateCommandArgs(cmd, positional, provided, 1, ['--build-id', '--branch', '--interval-min', '--timeout', '--quiet', '--log-dir'], 'background <repo> --build-id <id> [--branch <branch>] [--interval-min 10] [--timeout N] [--quiet] [--log-dir DIR]');
+      if (!opts.buildId) throw new Error('用法: background <repo> --build-id <id> [--branch <branch>] [--interval-min 10] [--timeout N] [--quiet] [--log-dir DIR]');
       return cmdBackground(positional[0], opts);
     case 'background-child':
-      if (!positional[0] || !opts.buildId) throw new Error('用法: background-child <repo> --build-id <id> [--timeout N] [--log-dir DIR]');
+      validateCommandArgs(cmd, positional, provided, 1, ['--build-id', '--run-id', '--branch', '--interval-min', '--timeout', '--log-dir'], 'background-child <repo> --build-id <id> [--run-id <id>] [--branch <branch>] [--interval-min 10] [--timeout N] [--log-dir DIR]');
+      if (!opts.buildId) throw new Error('用法: background-child <repo> --build-id <id> [--run-id <id>] [--branch <branch>] [--interval-min 10] [--timeout N] [--log-dir DIR]');
       return cmdBackgroundChild(positional[0], opts);
+    case 'summary':
+      validateCommandArgs(cmd, positional, provided, 0, ['--log-dir'], 'summary [--log-dir DIR]');
+      return cmdSummary(opts);
+    case 'consume':
+      validateCommandArgs(cmd, positional, provided, 0, ['--peek', '--log-dir'], 'consume [--peek] [--log-dir DIR]');
+      return cmdConsume(opts);
     default:
       console.log('SYSV2 ADO Build Monitor (Node.js)');
-      console.log('子命令: status | logs | cancel-old | wait | watch | background');
+      console.log('子命令: status | logs | cancel-old | wait | watch | background | summary | consume');
       console.log('详见 docs/ops/cicd-ado-monitor.md');
       process.exitCode = 1;
   }

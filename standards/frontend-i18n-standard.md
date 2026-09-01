@@ -4,7 +4,7 @@
 >
 > **触发**:SYSV2 i18n 落地实战(SYS.3 / BP / AP / MDM 4 前端 + SYS 后端)2026-05-10 范围争议拨乱 — 涛哥明确"用户输入数据不双语 / 平台固定 UI 必双语"。
 >
-> **适用**:所有 Claude Code 协作的前端项目(React / Vue / Angular)+ 配套后端(.NET / Java / Node)i18n 落地。
+> **适用**:所有 AI Coding Harness 协作的前端项目(React / Vue / Angular)+ 配套后端(.NET / Java / Node)i18n 落地。
 >
 > **核心原则**:用户写啥就显示啥,平台固定 UI 必双语;不翻译用户业务数据,不翻译客户自定义字典。
 

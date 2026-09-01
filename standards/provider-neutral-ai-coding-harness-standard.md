@@ -4,7 +4,7 @@
 
 This standard defines a provider-neutral enterprise AI coding harness for projects that use AI agents to plan, edit, review, verify, recover, and audit engineering work.
 
-Provider-neutral means the harness core is not owned by one runtime. Claude Code, Codex, CI, MCP tools, and future agents are adapters over the same policy, evidence, and gate model.
+Provider-neutral means the harness core is not owned by one runtime. Codex, CI, MCP tools, and future agents are adapters over the same policy, evidence, and gate model. The current local interactive runtime is Codex; historical provider assets may be imported for evidence or migration but are not an active coordination dependency.
 
 ## Scope
 
@@ -13,7 +13,7 @@ Use this standard when a project needs:
 - Multi-agent or AI-assisted coding governance.
 - Evidence-first engineering claims.
 - Reusable review, DB, E2E, git, and recovery gates.
-- Cross-runtime migration between Claude, Codex, CI, and MCP tools.
+- Cross-runtime import or migration between historical provider assets, Codex, CI, and MCP tools.
 - Auditable AI coding records.
 
 This standard does not define customer-specific business logic, database credentials, production access, or compliance deep-review content.
@@ -30,10 +30,10 @@ flowchart TD
   B --> G["Evaluation"]
 
   C --> H["Runtime adapters"]
-  H --> I["Claude"]
-  H --> J["Codex"]
-  H --> K["CI"]
-  H --> L["MCP / tools"]
+  H --> I["Codex native runtime"]
+  H --> J["CI"]
+  H --> K["MCP / tools"]
+  H -. historical import only .-> L["Legacy provider assets"]
 ```
 
 ## Core Concepts
@@ -55,7 +55,7 @@ This baseline is the cross-workspace default for enterprise AI coding work. Proj
 | Layer | Default |
 |---|---|
 | Main session | Owns requirement framing, source-of-truth decisions, plan/spec approval, risk escalation, review synthesis, and final acceptance. |
-| Child execution | Uses CLI, `codex exec`, CI jobs, or bounded agents for implementation, logs, builds, tests, and structured audits. |
+| Child execution | Uses Codex native multi-agent collaboration, CLI, `codex exec`, CI jobs, or bounded agents for implementation, logs, builds, tests, and structured audits. Provider-specific legacy team state is not a coordination source. |
 | Project instructions | Keep repo layout, commands, verification, and do-not rules near the code in `AGENTS.md`; avoid long SOPs. |
 | Standards | Keep cross-project principles, reusable gates, templates, and evaluation rules in `engineering-standards`. |
 | Skills | Keep repeated procedural workflows, especially migration, onboarding, BP auth/menu, CI triage, and harness audits. |
@@ -168,8 +168,8 @@ Gate results should be evidence records, not prose assertions. If a gate is inte
 
 | Adapter | Required Behavior |
 |---|---|
-| Claude | May enforce gates via hooks and agents, but hooks must map back to policy. |
-| Codex | Must execute gates explicitly through checklists and tools when automatic hooks are unavailable. |
+| Codex | Is the active local runtime. Use native multi-agent, `codex exec`, Review, Skills, Plugins, MCP, hooks, and automations according to the official surface model; execute gates explicitly when no deterministic mechanism exists. |
+| Legacy provider assets | Import only when they add verified value. Translate policy into current `AGENTS.md`, standards, Skills, hooks, or tools; do not retain provider-specific team state or environment variables as an active dependency. |
 | CI | Must map policy to deterministic checks and artifacts; start with dry-run before hard gates. |
 | MCP / tools | Must expose narrow, auditable actions and clear outputs. |
 
@@ -192,7 +192,7 @@ After a push starts CI, monitor the pipeline to a terminal state without occupyi
 
 Preferred implementation order:
 
-1. Project-provided `background` subcommand that starts the watcher with a detached process and records PID/log/meta state, e.g. `node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id>` or SRMV2's `node docs/ops/codex-ci-heartbeat.js background <repo> --build-id <id>`.
+1. Bootstrap the global truth-source template `engineering-standards/templates/cicd-ado-monitor.js` into the workspace, then use its `background` subcommand. It starts a detached process, records per-build PID/log/meta/state/terminal artifacts, defaults to a 10-minute interval, and exposes one-time `consume`; project wrappers may remain only for compatibility.
 2. Codex thread/project automation when the monitor should wake the same conversation or run on a schedule.
 3. Shell job under `tmux`/platform-native watcher when already standard for the project.
 4. `nohup <ci-watch-command> ... &` only as a fallback after verifying in the current tool environment that the child process survives the parent command/session.

@@ -11,6 +11,7 @@ mkdir -p "$TEST_HOME"
 HOME="$TEST_HOME" "$STANDARDS_ROOT/templates/bootstrap-workspace.sh" "~/workspace" >/dev/null
 test -f "$TEST_HOME/workspace/AGENTS.md"
 test ! -e "$TEST_HOME/workspace/CLAUDE.md"
+grep -Fx 'docs/ops/ci-watch/' "$TEST_HOME/workspace/.gitignore" >/dev/null
 
 mkdir -p "$TEST_HOME/existing"
 printf 'preserve\n' > "$TEST_HOME/existing/marker"

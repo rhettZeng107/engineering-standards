@@ -115,7 +115,7 @@ SYSV2 SYS 实例:`contentPath="SYS3-Console/JYCoreSysWebApi"`。
    curl --ntlm -u '<MACHINE>\<account>:<pwd>' -s -o /dev/null -w "%{http_code}\n" http://<IIS_HOST>/MsDeployAgentService
    # 401=认证失败(密码/账号/权限) ; 500=认证通过(GET 非 msdeploy 请求才 500)= 凭据 OK
    ```
-4. **监控**(SYSV2):`node docs/ops/cicd-ado-monitor.js watch <repo>` 取 build 最终结果。
+4. **监控**(SYSV2):推送后用`node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id> --branch <branch> --quiet`启动后台 watcher，并在交互边界执行`consume`取得终态；`wait/watch`只用于短时故障诊断。
 
 ---
 
@@ -166,7 +166,7 @@ node docs/ops/cicd-ado-monitor.js cancel-old <repo>   # 保留 queueTime 最新,
 ```
 
 - 无论被取代的旧 build 是 1 个还是多个、`notStarted` 还是 `inProgress`,一律取消(不为已跑一半的过时 build 等结果)。
-- Claude 双推后**自动执行**,Tier 1 自主(可逆 + 队列管理),不问涛哥;节奏 = `push → cancel-old → watch 最新`。
+- Codex 双推后**自动执行**,Tier 1 自主(可逆 + 队列管理),不问涛哥;节奏 = `push → cancel-old → background 指定最新 build → consume 终态`。
 - 适用所有 ADO self-hosted 单/少 worker pipeline(SYSV2 / SRMV2 / MES / TPM / 未来工作区)。
 
 ---

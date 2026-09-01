@@ -181,6 +181,17 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 5. **必须有消费方**:detached watcher 必须绑定 thread/project automation、事件桥或仍在执行的 agent follow-up,由消费方读取终态/告警并进入 self-heal。只写文件、无人读取不算闭环。
 6. **回放门禁**:每类 watcher 初次落地或机制修改后,至少验证一次已完成绿构建、一次已完成红构建(失败日志非空),并模拟或实证一次瞬时网络失败不会退出。
 
+## 修订(2026-08-27)
+
+**背景**:SRMV2 同批 CI 监控时，项目级 watcher 虽可 detached，但默认 20 分钟轮询过迟；主会话又额外启动前台 `wait`，造成进行中状态持续占用对话。并发 watcher 仍共享便利性的 `current` 文件，终态也缺少一次性消费协议。
+
+**修订决策**:
+
+1. **全局真理源**:`engineering-standards/templates/cicd-ado-monitor.js` 是跨工作区实现；bootstrap 后各工作区使用自己的配置与 gitignored 状态目录，不再各自演化平行监控逻辑。项目 wrapper 只作兼容入口。
+2. **默认 10 分钟静默轮询**:`background` 默认每 10 分钟检查一次；queued/notStarted/inProgress 不进入主会话。演示前或故障诊断可显式缩短间隔。
+3. **逐 build 终态事件**:每个 watcher 独立维护 `.state.json` 与 `.terminal.json`；`consume` 以持久游标一次性返回未消费终态，`consume --peek` 只读。共享 `current` 仅兼容，不作并发终审。
+4. **交互纪律**:push 后只启动 detached watcher 并验收 ready/PID/meta；禁止再并行启动长前台 `wait/watch`。主会话仅消费终态、失败取证/自愈或需拍板事件。
+
 ## History
 
 | 日期 | 状态变更 | 备注 |
@@ -188,5 +199,6 @@ push 后 trigger 多次时,Claude 自动 `Cancel-AdoOldBuilds` 留最新一个,�
 | 2026-05-14 | Proposed → Accepted | 涛哥拍板,Phase 1 闭环 task #7/#8/#10 一并落地 |
 | 2026-05-28 | 修订(不改编号) | PAT 路径统一 `~/.claude/ado-pat` + monitor `.ps1→.js` 迁移对照 + build≠部署判定 + 自主查 CI 强制(涛哥拍板) |
 | 2026-06-17 | 修订(不改编号) | build 去重铁律升格 — push 后必 `cancel-old` 留最新、取消其余在途(含 inProgress)+ 扩至全工作区(涛哥拍板) |
+| 2026-08-27 | 修订(不改编号) | 全局模板统一 detached 静默监控，默认 10 分钟，逐 build 终态与一次性 consume |
 | 2026-07-09 | 修订(不改编号) | CI watcher 默认后台机制改为实测 detached/background 或 Codex automation;`nohup` 仅作验证后兜底 |
 | 2026-07-14 | 修订(不改编号) | 增加启动验收、断线续监、红灯日志正文、逐 build 告警与消费方闭环硬门禁 |

@@ -15,9 +15,11 @@
 | 看当前在跑/排队的 build | `node docs/ops/cicd-ado-monitor.js status AI.REACT.MDM.1 --state inProgress` |
 | 看某 build 失败的 task 和日志正文 | `node docs/ops/cicd-ado-monitor.js logs AI.REACT.MDM.1 130 --failed --content` |
 | 连续 push 后留最新一个,cancel 前面冗余 | `node docs/ops/cicd-ado-monitor.js cancel-old AI.REACT.MDM.1` |
-| 等某 build 跑完(已知 buildId) | `node docs/ops/cicd-ado-monitor.js wait AI.REACT.MDM.1 130` |
-| 双推后盯最新 build 直到完成(无需 buildId) | `node docs/ops/cicd-ado-monitor.js watch AI.REACT.MDM.1` |
-| 后台盯指定 build | `node docs/ops/cicd-ado-monitor.js background AI.REACT.MDM.1 --build-id 130 --branch main` |
+| 故障诊断时前台等待某 build(已知 buildId) | `node docs/ops/cicd-ado-monitor.js wait AI.REACT.MDM.1 130` |
+| 故障诊断时前台等待最新 build(无需 buildId) | `node docs/ops/cicd-ado-monitor.js watch AI.REACT.MDM.1` |
+| 双推后默认静默后台监控指定 build | `node docs/ops/cicd-ado-monitor.js background AI.REACT.MDM.1 --build-id 130 --branch main --quiet` |
+| 查看所有后台任务摘要 | `node docs/ops/cicd-ado-monitor.js summary` |
+| 一次性消费 CI 终态 | `node docs/ops/cicd-ado-monitor.js consume` |
 
 ## 运行环境
 
@@ -67,12 +69,20 @@ node docs/ops/cicd-ado-monitor.js cancel-old AI.REACT.MDM.1
 双推后默认后台监控,不要占住主会话。模板脚本已内置 `background`:
 
 ```bash
-node docs/ops/cicd-ado-monitor.js background AI.REACT.MDM.1 --build-id <buildId> --branch <branch>
+node docs/ops/cicd-ado-monitor.js background AI.REACT.MDM.1 --build-id <buildId> --branch <branch> --quiet
 # 父命令立即返回;PID/log/meta/current state 写入 gitignored 的 docs/ops/ci-watch/
 # child 自己维护 `.pid`/`.ready.json`，每次 attempt 以 `runId` 区分，避免快速终态留下陈旧 PID 或覆盖终态 meta
 # 红灯额外写入 <repo>-<buildId>.failed.log 和 <repo>-<buildId>.alert.json
 # 启动后 60 秒或两个 poll 周期内必须验收 PID 存活 + log/meta 推进或已落终态
 ```
+
+后台默认每 10 分钟检查一次。排队和运行中状态只写 `.out`/`.state.json`，不进入主会话；成功、失败或 monitor error 写不可覆盖的 `<repo>-<buildId>-<runId>.terminal.json`。在合适的交互边界执行：
+
+```bash
+node docs/ops/cicd-ado-monitor.js consume
+```
+
+`consume` 通过进程锁串行领取尚未消费的终态，先成功写出结果再记录消费游标；异常退出遗留的锁会按 PID 与锁龄自动回收，再次执行返回空数组。`consume --peek` 只读预览。演示前或故障诊断可用 `--interval-min 1` 临时加速，不改变默认值；允许范围为 1～1440 分钟，非法值直接拒绝，避免高频轮询。
 
 若该工作区尚未提供 `background` wrapper,可临时用前台命令确认状态,但不得把长时间 `watch` 当作默认主会话等待:
 

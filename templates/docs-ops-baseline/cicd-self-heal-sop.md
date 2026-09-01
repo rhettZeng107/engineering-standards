@@ -93,7 +93,7 @@ CI 自治闭环属于"修复中"动作 — 按 ADR-017 批次任务,**不打断�
 
 ## 与已有 SOP 关联
 
-- `cicd-ado-monitor.js`:提供 `status` / `logs` / `cancel-old` / `wait` / `watch` 子命令(Node.js,跨平台)
+- `cicd-ado-monitor.js`:提供 `status` / `logs` / `cancel-old` / `background` / `summary` / `consume` 子命令；`wait/watch`仅用于短时诊断(Node.js,跨平台)
 - `cicd-ado-monitor.js background` 或项目等价脚本:提供低噪声后台监控,记录 PID/log/meta/current state
 - `cicd-ado-monitor.md`:用法手册
 - `cicd-ado-failure-notification.md`:ADO 邮件订阅(L3 触发时涛哥收到通知)
