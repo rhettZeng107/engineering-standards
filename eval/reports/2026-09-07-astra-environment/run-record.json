@@ -7,7 +7,7 @@
     "riskFlags": ["global_harness", "local_hooks"],
     "tier": "2",
     "startedAt": "2026-09-07",
-    "endedAt": ""
+    "endedAt": "2026-09-07"
   },
   "preflight": {
     "workspaceRoot": "engineering-standards",
@@ -31,8 +31,8 @@
     "review": {"status": "pass", "evidence": ["main-session diff/contract self-check; focused hook technical review fixed one HIGH"]},
     "verification": {"status": "pass", "evidence": ["profile inference", "native inventories", "15 hook tests", "24 retained CR tests", "TOML/YAML parsing"]},
     "e2e": {"status": "skipped", "skipReason": "no business page implementation; HC inspected read-only, not accepted as verified"},
-    "secretScan": {"status": "skipped", "skipReason": "pending final staged scan"},
-    "git": {"status": "skipped", "skipReason": "pending final commit/push verification"}
+    "secretScan": {"status": "pass", "evidence": ["staged added text checked against actual configured secret values and private-key/token patterns; no raw config/log staged"]},
+    "git": {"status": "pass", "evidence": ["content commit 4a08485: HEAD equals upstream and live ls-remote after pull/rebase and push; SSH443 command fallback after port22 transient failure"]}
   },
   "qualityMetrics": {
     "primaryReview": {"firstPass": false, "criticalFound": 0, "highFound": 1, "receipt": "not_required_by_local_policy"},
@@ -42,6 +42,6 @@
   },
   "decisions": ["complex Astra High, other Sol High", "official native hook contract", "independent reviewer only on user request, subject to higher-priority runtime", "field-level impact and dependency coverage", "global rules kept concise"],
   "debt": ["historical missing-rollout index row left intact", "SQL labels share configured target; no DB actions verified", "scheduled audit registration not verified", "native patch preview failure reports unverified; not a complete safety boundary"],
-  "recovery": {"progressPath": "progress.md", "nextAction": "stage, self-review, secret scan, commit/push and independent git verification", "owner": "main_session"},
-  "outcome": {"status": "partial", "verificationSummary": "implementation and targeted verification complete; git closure pending", "leftover": ["next HC delivery must demonstrate real page acceptance; no claimed reduction in rework yet"]}
+  "recovery": {"progressPath": "progress.md", "nextAction": "new session loads rules; HC remains in its original paused task", "owner": "main_session"},
+  "outcome": {"status": "complete", "verificationSummary": "configuration, native inventories, profiles, hooks, field-level CR policy and content commit/push independently verified; closure record is a separate docs commit", "leftover": ["next HC delivery must demonstrate real page acceptance; no claimed reduction in rework yet"]}
 }

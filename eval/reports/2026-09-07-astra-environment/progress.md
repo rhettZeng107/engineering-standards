@@ -1,6 +1,6 @@
 # Astra High 本机 Codex 环境优化
 
-状态：in-progress（实现与验证完成，标准仓提交/推送收口中）。用户要求：按 GPT-6 Astra High 与当前 OpenAI 官方实践检查并优化 CLI、agent、skill、MCP、hook、插件和全局流程，保留完整业务验证能力。
+状态：complete。用户要求：按 GPT-6 Astra High 与当前 OpenAI 官方实践检查并优化 CLI、agent、skill、MCP、hook、插件和全局流程，保留完整业务验证能力。
 
 用户新增拍板（执行中立即登记）：复杂任务默认 `gpt-6-astra` / `high`；其它任务使用 Sol。Sol强度沿用现有常规工作High；确定性检查仍由工具执行。覆盖本次尚未完成的“所有工作统一继承Astra”候选，继续当前配置/规则修复节点，不中断hook兼容工作。验证必须区分CLI启动默认、任务profile与agent继承，不声称提示文字能热切换运行中的主会话。
 
@@ -17,7 +17,7 @@
 1. covered：刷新官方 manual；确认 CLI 0.153.4、默认 gpt-6-astra/high；标准仓 master 干净，SYSV2 既有三份 auth-bridge 文档改动不属于本批。
 2. covered：有效模型目录、指令/技能/agent继承、MCP/插件原生加载、hook信任已检查；automation仅模板，无注册实证。
 3. covered：备份后落实复杂Astra High、其它Sol High；清理强制独立评审冲突，定向禁用2个错误skill，保留功能入口。
-4. in-progress：严格配置、原生config/skills/hooks/MCP接口与两个profile推理验证通过；hook15/15及历史CR24/24通过；最终脱敏自查与标准仓提交推送待收口。
+4. covered：严格配置、原生config/skills/hooks/MCP接口与两个profile推理验证通过；hook15/15及历史CR24/24通过；staged脱敏扫描与自查完成，内容提交4a08485已推送并独立验证HEAD/upstream/远端一致。
 5. covered：报告已记录官方依据、处理/保留/未验范围与恢复路径；交付状态最后更新。
 6. covered：10个文件hook原生apply_patch兼容；不改hook定义/trust/原规则，不能重建时明确未验，继续检查其它独立文件。13类原生差异验证通过。
 7. covered：HC R80只读取证，字段—依赖—DTO/映射—兄弟页面—按钮状态矩阵与部署前验收要求落ADR-008；Reviewer/skill同步。未修HC业务/未部署；新规则后续真实交付效果未验证。
@@ -46,4 +46,6 @@
 - 文档：全局AGENTS 185→183行、16846→16811字节，详细字段依赖SOP集中ADR-008。
 - HC：仅git/rg静态及现有现场记录，未运行HC测试/访问远程/修改业务。
 
-下一步：最终staged自查、提交标准仓、pull/rebase后推送并独立验证；本机私有配置/备份不入公开仓。
+交付：内容提交`4a08485`已完成pull/rebase、push及独立HEAD/upstream/ls-remote一致验证；GitHub 22端口瞬断后本次命令改走SSH443成功，未永久修改SSH或remote配置。仓库无配置CI工作流，本次不涉及业务部署。此收尾记录另作文档提交，最终哈希以git及会话交付回执为准。
+
+后续：新CLI/会话加载新规则；HC仍需在原任务中按字段依赖矩阵完成真实页面验收。本次不自动恢复HC部署。其它保留限制见report.md。
