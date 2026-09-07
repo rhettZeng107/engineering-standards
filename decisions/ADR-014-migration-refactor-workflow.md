@@ -1,5 +1,7 @@
 # ADR-014: AI Coding 工作流 — Front-load + Back-automate(迁移改造路径)
 
+> **2026-09-07流程修订**：按实际迁移范围/契约风险分轨，不按文件数或触发词重复询问。完整基线与E1/E2保留；按可验收业务场景实施、一次最终验收及证据复用遵循[ADR-039](./ADR-039-standard-task-workflow.md)，独立Reviewer仅用户明确要求。旧固定角色/逐Phase审查与本修订冲突处仅供历史追溯。
+
 - **Status**: Accepted
 - **Date**: 2026-05-09
 - **Decider**: 涛哥

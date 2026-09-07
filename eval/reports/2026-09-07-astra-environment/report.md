@@ -100,3 +100,19 @@ Sol强度沿用原常规工作High。当前主会话不会因编辑配置热切�
 - 私有备份：`~/.codex/backups/20260907-astra-audit/`，目录权限0700；`manifest.json`和`hooks-before/manifest.json`记录原路径与SHA256。原配置、原hook和诊断原始输出只保留本机，不入公开仓。
 - 恢复按清单逐文件比较后恢复，避免覆盖备份之后的其它会话改动；删除新增profile前先确认未被使用。不一键覆盖整个Codex目录，不恢复已取消的CR强制策略。
 - 模型/指令/agent/skill目录变更需新开CLI或新会话才能完整加载；现有会话不能声称已重载。
+
+## 后续授权：流程简化与Skills定向优化（2026-09-07）
+
+用户确认实施ADR-039试行方案，并追加Skills加载分析。工作流收敛为一个完整业务批次、一份任务记录、一次最终差异与业务证据验收；提前检查实际依赖及环境，复用有效候选证据，逐仓合并代码/测试/文档提交。独立Reviewer仍仅用户明确要求，字段契约、真实UI往返、迁移完整性及分支/生产边界保留。
+
+- 全局AGENTS保持183行；发现用户目录另有189行历史AGENTS，包含强制Reviewer、旧模型和逐产出提交，已备份并改为4行唯一规则入口。SYSV2仅修改文档即时提交冲突一行，原auth-bridge三份脏文档保留，不纳入本批。
+- 原生app-server `skills/list(forceReload)`：修改前后均186个技能/184启用/0错误；13个修改入口均被重新发现。名称加完整描述字符数44475→43371；这是元数据体积，不是当前prompt token或实测延迟。官方Build skills说明元数据先展示，正文按需读取；初始目录有预算与描述缩短机制，安装数量不等于正文全量加载。
+- 定向修改13个入口：enterprise-ai-coding-harness、legacy-migration、agentic-engineering、blueprint、source-command-plan、verification-loop、coding-standards、strategic-compact、tdd-workflow、ai-regression-testing、continuous-learning、continuous-learning-v2、skill-stocktake；入口合计2940→1049行。迁移编排reference同步当前模型/Goal授权。TDD与sandbox API示例保留为两个条件reference；没有新增脚本/依赖或降低覆盖门。
+- 具体消除：旧模型低档失败后升级、固定时长/函数级重复检查、每个TDD阶段提交、规划后的强制再次确认、所有改动80%覆盖、旧compaction hook安装建议。学习类技能收窄为学习机制审计/设计，历史hook示例不作为活动机制或自动写memory的授权。
+- 未禁用/删除其它技能，未改自动发现策略或插件缓存。gstack生成式长技能及其模板仅抽样评估，暂保留；普通编码按实际目标选择最窄入口，不能叠加同职能流程。未逐一审读全部186份正文，也未取得可靠使用率，不能据此断言冷门技能无用。
+- 验证：原生skill重载零错误、13个入口可见；改动文档差异空白和新增本地链接检查。官方quick_validate.py因本机python缺PyYAML未执行，采用实际CLI解析结果，不把该脚本记为PASS，也未为本次文档验证新增依赖。Skill触发边界做静态场景核对，自动选择的真实命中率及性能尚未测量。
+- 恢复：本机`~/.codex/backups/20260907-workflow-pilot-212400/manifest.json`保留原文件哈希与备份，两个新增reference按清单恢复时单独处理。最终commit/remote与保留脏改核验写同目录外部回执，不为回填hash再生成提交。
+
+观察在落地后的5–10个可比业务批次中进行：首次集成验收、去重产品返工、环境/需求因素、可靠elapsed时间及逃逸观察边界，详ADR-039与现有月度模板。本次文档治理不计入业务样本；既有聚合器只产历史CR指标，未冒称自动支持新指标。没有创建定时任务，未恢复HC业务或部署。
+
+官方依据：[Build skills](https://learn.chatgpt.com/docs/build-skills)、[最佳实践](https://learn.chatgpt.com/guides/best-practices)，本次缓存manual相应段落与本机原生加载已核对。精简正文是减少触发后阅读负担的静态结果，不等于已证明首次成功率提高。

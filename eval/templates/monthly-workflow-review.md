@@ -42,6 +42,16 @@ Use outcome order `C/P/B/X/U = complete/partial/blocked/cancelled/unknown`. Calc
 
 Token, cost, and latency are optional. Include them only when the runtime captured them automatically; never estimate them with another model call.
 
+## 2026-09-07 workflow pilot — first integrated acceptance
+
+Use for the next 5–10 comparable business batches after the approved ADR-039 change. Reuse existing task records; do not create per-edit reports or schedule extra model calls. Exclude this policy-only batch. Compare task classes separately and review with the user after sufficient samples; no speed or success claim before data exists.
+
+| Batch / class / evidence | First integrated acceptance true/false/unknown/blocked | Product fix cycles | Environment failures / scope changes | Requirements clear → accepted commit elapsed / known waits | Escape / observedThrough |
+|---|---|---|---|---|---|
+| | | | | | |
+
+First integrated-acceptance rate = `true / (true + false)` after the first complete agreed integration acceptance set, without product fixes to pass. Show unknown/blocked/excluded counts separately. Partial checks and CR PASS cannot supply this field. Keep the original candidate result when scope changes; never erase a product failure by rebaselining. Deduplicate one fix cycle found by multiple checks. Use timestamps only when reliably recorded, otherwise `unknown`. Existing `aggregate-run-records.mjs` produces the historical metrics above, not this measure; calculate this small pilot table from linked records and show the numerator/denominator explicitly. Retain previous baseline gaps and compare quality/coverage before speed.
+
 ## Evidence-backed findings
 
 | Finding | Evidence | Impact | Confidence |

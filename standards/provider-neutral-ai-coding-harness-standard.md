@@ -52,6 +52,8 @@ flowchart TD
 
 This baseline is the cross-workspace default for enterprise AI coding work. Project-level `AGENTS.md` files may specialize commands, repositories, credentials, and validation surfaces, but should not redefine the core model.
 
+The 2026-09-07 workflow pilot is governed by [ADR-039](../decisions/ADR-039-standard-task-workflow.md): one complete business batch, one compact authoritative task record, and one final acceptance combining staged-diff self-review with valid verification evidence. Research, planning, coding and checking remain responsibilities, not separate ceremonies. Clarify business ambiguity; discover code facts directly. Keep the existing Astra High / Sol High routing and production boundaries.
+
 | Layer | Default |
 |---|---|
 | Main session | Owns requirement framing, source-of-truth decisions, plan/spec approval, risk escalation, review synthesis, and final acceptance. |
@@ -59,7 +61,7 @@ This baseline is the cross-workspace default for enterprise AI coding work. Proj
 | Project instructions | Keep repo layout, commands, verification, and do-not rules near the code in `AGENTS.md`; avoid long SOPs. |
 | Standards | Keep cross-project principles, reusable gates, templates, and evaluation rules in `engineering-standards`. |
 | Skills | Keep repeated procedural workflows, especially migration, onboarding, BP auth/menu, CI triage, and harness audits. |
-| Hooks/rules/CI | Enforce mechanical checks: secret scan, destructive command guard, pull-before-push, production write guard, migration verify, and review gates. |
+| Hooks/rules/CI | Enforce mechanical checks: secret scan, destructive command guard, pull-before-push, production write guard and migration verify; no mandatory independent-review receipt. |
 | Memory | Helps recall preferences and pitfalls; it is never the only source for required policy or current facts. |
 
 ## Multi-Repo Preflight
@@ -75,6 +77,8 @@ Standard, migration, cross-repo, DB, auth, production, deployment, and long-runn
 | Dirty state | local changes classified as user/Codex/generated/unknown before edits. |
 | Instruction chain | nearest `AGENTS.md` plus relevant global/project standards. |
 | Verification plan | build/test/E2E/DB/API/browser/CI commands that match the risk track. |
+
+Check availability of the actual runtime, account and necessary business data early. Record facts once in the existing task record; do not create a separate preflight document when the same evidence is already present.
 
 Do not claim commit, push, sync, deployment, or CI closure from the action command itself. Use independent verification commands.
 
@@ -121,7 +125,7 @@ If LSP is unavailable, use text search plus line reads and mark the evidence as 
 | Track | Trigger | Required Output |
 |---|---|---|
 | Simple | Small reversible edit with no contract, DB, auth, production, or cross-project risk | Evidence anchor, minimal change, minimal verification; one staged-diff review for code/executable config, zero agent review for ordinary docs/text |
-| Standard | Contract, DB schema, auth, multi-file, or business feature work | Complete contract lock, coverage record, plan, evidence, review gate, verification, run record when useful |
+| Standard | Business behavior or contract changes, DB/auth risk, cross-stack dependencies, or uncertain requirements; file count is not a trigger | One existing task record containing the complete affected contract, implementation steps, acceptance and evidence; expand Spec/Plan only for migration, architecture, complex or long-running work |
 | Migration | Legacy modernization or functional skeleton migration | Complete baseline lock, source/equivalence matrix, coverage record, staged plan, E1/E2 or equivalent verification |
 
 ### Scope Completeness Gate for Standard and Migration Tracks
@@ -129,7 +133,7 @@ If LSP is unavailable, use text search plus line reads and mark the evidence as 
 - Do not let an agent downgrade known or agreed scope into an MVP, minimal demo, reduced field set, happy-path-only slice, fixture shell, or placeholder integration. An explicitly approved prototype or phase is allowed only when the complete known target and remaining contract items stay recorded and it is not reported as overall completion.
 - Standard-track contract lock must cover the maximum verified union within the agreed affected business boundary: roles, scenarios, fields, actions, states, exceptions, integrations, menu/auth entry points, and acceptance cases evidenced by the request, supplied artifacts, and current code/DB/API behavior.
 - Migration-track baseline and equivalence matrices must enumerate the complete source surface page by page, action by action, field by field, API by API, menu by menu, and data rule by data rule, while preserving non-conflicting target enhancements. A migrated subset is not an equivalent migration.
-- Phased implementation is allowed only after the full contract is locked. For a single-batch task, the spec acceptance matrix may serve as the coverage record; a separate ledger is required only for multi-batch work. Every tracked contract item has a stable ID, batch assignment, acceptance case, evidence, and one of `covered`, `pending`, `blocked`, or `approved-defer`. Missing external dependencies default to `blocked` and become `approved-defer` only after explicit user approval. A batch is `batch-complete` when all items it committed to are covered. The module is `in-progress` during execution, `partial` after a batch closes while any total-contract item is not covered, and `complete` only when no items remain. If the user explicitly redefines the baseline, `approved-defer` items move with decision/evidence pointers to a parent or backlog ledger and are never silently deleted.
+- Phased implementation is allowed only after the full contract is locked. The existing task/spec acceptance matrix is the coverage record for one batch; multiple batches need a shared ledger rather than copies. Prove one complete representative business round-trip before extending sibling entry points, while retaining every agreed scenario. Every tracked contract item has a stable ID, batch assignment, acceptance case, evidence, and one of `covered`, `pending`, `blocked`, or `approved-defer`. Missing external dependencies default to `blocked` and become `approved-defer` only after explicit user approval. A batch is `batch-complete` when all items it committed to are covered. The module is `in-progress` during execution, `partial` after a batch closes while any total-contract item is not covered, and `complete` only when no items remain. Rebaseline decisions move deferred items with evidence to the parent/backlog ledger; they never silently delete them.
 - When an external contract is unavailable, internally owned capabilities independent of that contract must be complete. Fields, states, mappings, and write requests that depend on the missing contract must not be guessed. Existing or contractually required user-visible entry points provide disabled state, pending/error feedback, and no-fake-success behavior; a task with no UI surface instead provides a stable capability state or error code plus audit evidence. External-related items keep the module from overall completion until closed or explicitly moved by a baseline decision.
 - This is a business-scope completeness rule, not permission for unrelated features or abstractions. Reuse and the smallest necessary code change remain the implementation default.
 
@@ -156,6 +160,10 @@ Gate results should be evidence records, not prose assertions. If a gate is inte
 - Ordinary docs, text, and non-executable configuration need deterministic checks. High-risk contracts require stronger source evidence, counterexamples and targeted verification, not automatic additional agents.
 - Static contract review and real UI E2E cover different failure modes; retaining both where required is not duplicate review.
 - Page changes use ADR-008's field-level change-impact and end-to-end contract checks: current lookup dependencies, cascading/null/refill/save behavior, DTO/mapping/persistence, sibling consumers and action routes. Read related unchanged code; keep dependency and field/action coverage evidence. A mocked test or successful deployment is not real page acceptance.
+
+Before coding, put the dependency and field/action matrix in the existing record; distinguish hidden-but-preserved fields, fields no longer editable in this entry, and business deletion. Reproduced escaped defects need regression at the layer that failed. Verification is impact-based: affected routes/consumers and applicable auth, CRUD, failures, upload and localization, not every unrelated feature. Migration E1/E2 and actual page acceptance remain required.
+
+Reuse verification only with evidence of candidate identity, relevant dependency/runtime identity, command, scope and result. A changed relevant input invalidates that result; shared infrastructure or rebase changes may widen regression. Review consumes still-valid results rather than rerunning all commands. Each changed repository commits the accepted code/tests/docs batch together and verifies configured remotes separately. Preserve unrelated dirty work. Store final commit hashes in an external execution receipt or query Git, without recursive closeout commits.
 
 ### Adaptive migration completeness and adversarial review
 
@@ -231,9 +239,9 @@ Run an official-practice audit before changing global Codex workflow or at least
 
 ## Run Record
 
-Standard and migration work should produce a run record when the work spans multiple steps, agents, repositories, or gates.
+Use one authoritative task record. Ordinary changes can combine scope, implementation and acceptance in an existing note; short work may remain in the session. Do not create a separate document for each logical stage.
 
-Run record is mandatory for:
+Durable evidence and continuation are required for:
 
 - Migration track.
 - Cross-repository implementation or verification.
@@ -253,7 +261,7 @@ Minimum fields:
 - Debt and recovery hint.
 - Outcome summary.
 
-Use `progress.md` for human-readable continuation and `run-record.template.json` when the task needs machine-readable audit or downstream reporting.
+Use an existing `progress.md` or task document for human-readable continuation; an existing `.continue-here.md` should point to it. Add `run-record.template.json` only when machine-readable audit/downstream reporting needs it. If JSON is required by an existing migration/CI mechanism, keep it and link evidence rather than copying narrative state. Subagents or multiple steps alone do not require a second copy of the same record.
 
 ### Quality event recording
 
@@ -268,6 +276,8 @@ Record quality data only when a gate changes state or a batch closes. Do not tur
 | E2E product rework cycle | One correction cycle caused by a real product defect found by E2E. Environment, transport, fixture, and test-infrastructure failures are counted separately. |
 | Rebaseline count | A locked spec, contract, or migration baseline had to be amended and re-locked because verified facts or approved scope changed. |
 | High-severity escape | A HIGH/CRITICAL defect is discovered after a gate that should have detected it already reported PASS. Record the escaped gate, discovery stage, and evidence. |
+
+For the 2026-09-07 pilot, use ADR-039's first **integrated acceptance** result, deduplicated product-fix cycles, separate environment/scope changes, reliably captured requirement-to-accepted-commit elapsed time and escape observation boundaries. Record once at gate transition/batch close in the existing record. Primary-review first pass remains a historical auxiliary metric, not a substitute for business acceptance. The current JSON aggregator does not compute the new pilot measure; use the explicitly labeled pilot table in the monthly template and show unknowns.
 
 `progress.md` contains only a compact snapshot and a pointer to the run record. The run record is the machine-readable source for aggregation. Use `not_observed` plus `observedThrough=pre_commit|ci|deployment|production` for a high-severity escape that has not been seen yet; do not present a task-close zero as a permanent no-escape claim. Preserve `not_required`, `blocked`, `not_evaluable`, and `unknown` instead of coercing them to PASS or zero.
 
@@ -289,7 +299,7 @@ Projects should maintain golden tasks that cover:
 Recommended metrics:
 
 - Completion rate.
-- First-pass review rate.
+- First integrated-acceptance pass rate; keep historical review rate separately labeled.
 - High-severity review escape rate.
 - E2E pass rate.
 - Retries per task.
