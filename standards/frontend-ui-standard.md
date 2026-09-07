@@ -30,7 +30,7 @@
 
 **设计标杆**:`AI.REACT.SYS.3/src/views/HREmp/index.jsx`(员工档案页 — List Page 标准实现)
 
-新建 / 重构 / 迁移**列表页**默认套用,不需要单独 spec 拍板;违反标准 = `code-reviewer` HIGH。
+新建 / 重构 / 迁移**列表页**默认套用，不需要单独spec拍板；问题按实际业务影响定级，纯视觉约定偏差不自动判HIGH。
 
 ## 1. 技术栈基线
 
@@ -92,9 +92,9 @@ options={{
 
 ## 6. 字段大小写 + 空值
 
-- **PascalCase / camelCase 双兼容**:`r.empId ?? r.EmpId`(应对后端不一致)
-- **空值显示**:统一 `—`(em dash 长破折号),不显示 `null` / `undefined` / 空字符串
-- **空态行**:render 函数兜底 `(v) => v ?? "—"`
+- **字段以实际契约为准**：先核对DTO、响应投影/映射和实际JSON。只有已证实存在两种历史响应时，才在明确适配边界兼容PascalCase/camelCase；不对所有字段盲目追加`??`掩盖契约错误。
+- **空值显示**：已确认允许为空的业务值统一显示`—`；字段不存在、映射失败或实体关键字段全空是验收失败，不能用占位符包装成正常空态。
+- **字段/按钮变更**：执行[ADR-008字段级影响闭环](../decisions/ADR-008-end-to-end-8-checks.md)，包含兄弟页面、DTO/映射、编辑保留及按钮路由；布局精简不能默认为数据契约精简。
 
 ## 7. 状态徽章 / Status Badge
 
@@ -241,7 +241,7 @@ SYS.3 当前 60 处 `PrivateProTableAutoHeight` 用法可在后续独立 spec `2
 - ❌ 不 hardcode 颜色值(必须用 CSS 变量)
 - ❌ 不嵌套 `Card`/`Collapse` 等多层壳(用 `ListPage` 平铺)
 - ❌ 不直接用静态 `import { message } from "antd"`(用 `App.useApp()`)
-- ❌ 不写裸 PascalCase 字段访问(必须双兼容 `??`)
+- ❌ 不猜字段大小写或盲加`??`兜底；依据§6核对实际契约，历史兼容必须有证据
 - ❌ 不用 `react-cookie` / `redux` 等老依赖维护新页面状态(用 `useState` / `useContext` / `useOrgContext`)
 - ❌ **不引入 `@org/private-antd-components` 私有库**(新前端 / 重构前端;SYS.3 后续按独立 spec 迁出)
 - ✅ 加中文注释说明非典型实现(如 `toolBarRender={() => []}` 的由来)

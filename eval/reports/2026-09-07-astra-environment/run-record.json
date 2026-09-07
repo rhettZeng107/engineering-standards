@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "0.5",
+  "task": {
+    "id": "2026-09-07-astra-environment",
+    "title": "Codex环境优化与字段级CR质量改进",
+    "track": "standard",
+    "riskFlags": ["global_harness", "local_hooks"],
+    "tier": "2",
+    "startedAt": "2026-09-07",
+    "endedAt": ""
+  },
+  "preflight": {
+    "workspaceRoot": "engineering-standards",
+    "repos": [
+      {"path": "engineering-standards", "role": "standards", "branch": "master", "dirtyClassification": "clean"},
+      {"path": "SYSV2", "role": "root-workspace", "dirtyClassification": "user", "action": "preserved existing auth-bridge docs"},
+      {"path": "HC", "role": "reference", "dirtyClassification": "unknown", "action": "read-only case inspection; no changes"}
+    ],
+    "completionClaimsRequireIndependentVerification": true
+  },
+  "sourcesRead": ["current OpenAI manual", "global AGENTS", "live Codex config/agent/skill/hook metadata", "HC R80 git and progress"],
+  "evidence": [
+    {"claim": "CLI and effective config load", "method": "test", "anchor": "codex --strict-config doctor --json; native config/read", "result": "Sol/high; only historical rollout-index warning"},
+    {"claim": "Both requested model routes execute", "method": "test", "anchor": "codex exec -p sol|astra --ephemeral -s read-only", "result": "ROUTE_OK; startup model and high verified"},
+    {"claim": "Native inventory loads", "method": "api_response", "anchor": "skills/list; hooks/list; mcpServerStatus/list", "result": "184/186 skills enabled; 30/34 hooks enabled, all trusted; MCP tool discovery succeeds"},
+    {"claim": "File hook compatibility", "method": "test", "anchor": "node --test ~/.codex/hooks/codex-file-hook-adapter.test.js", "result": "15 passed; 13 native differential cases"},
+    {"claim": "Historical CR code retained without re-enabling", "method": "test", "anchor": "core-code-review-gate.test.js; native hooks/list", "result": "24 passed; three handlers disabled"},
+    {"claim": "HC case root-cause evidence", "method": "text_search", "anchor": "report.md HC section; MDM b9a9f83 and working diff", "result": "field/DTO mismatch, retired lookup, sibling async guard, route-state mismatch; static only"}
+  ],
+  "gates": {
+    "review": {"status": "pass", "evidence": ["main-session diff/contract self-check; focused hook technical review fixed one HIGH"]},
+    "verification": {"status": "pass", "evidence": ["profile inference", "native inventories", "15 hook tests", "24 retained CR tests", "TOML/YAML parsing"]},
+    "e2e": {"status": "skipped", "skipReason": "no business page implementation; HC inspected read-only, not accepted as verified"},
+    "secretScan": {"status": "skipped", "skipReason": "pending final staged scan"},
+    "git": {"status": "skipped", "skipReason": "pending final commit/push verification"}
+  },
+  "qualityMetrics": {
+    "primaryReview": {"firstPass": false, "criticalFound": 0, "highFound": 1, "receipt": "not_required_by_local_policy"},
+    "rework": {"reviewCycles": 1, "verificationCycles": 0, "e2eProductCycles": 0, "rebaselineCount": 0},
+    "e2e": {"status": "not_required", "attempts": 0, "evidence": ["HC UAT remains unverified in this task"]},
+    "highEscape": {"status": "not_observed", "count": 0, "observedThrough": "pre_commit", "evidence": ["hook HIGH fixed before final candidate"]}
+  },
+  "decisions": ["complex Astra High, other Sol High", "official native hook contract", "independent reviewer only on user request, subject to higher-priority runtime", "field-level impact and dependency coverage", "global rules kept concise"],
+  "debt": ["historical missing-rollout index row left intact", "SQL labels share configured target; no DB actions verified", "scheduled audit registration not verified", "native patch preview failure reports unverified; not a complete safety boundary"],
+  "recovery": {"progressPath": "progress.md", "nextAction": "stage, self-review, secret scan, commit/push and independent git verification", "owner": "main_session"},
+  "outcome": {"status": "partial", "verificationSummary": "implementation and targeted verification complete; git closure pending", "leftover": ["next HC delivery must demonstrate real page acceptance; no claimed reduction in rework yet"]}
+}

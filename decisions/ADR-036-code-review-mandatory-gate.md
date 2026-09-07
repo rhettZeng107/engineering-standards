@@ -1,4 +1,4 @@
-# ADR-036: Code Review 强制门禁 — CR 是 commit 门禁,非自觉建议
+# ADR-036: 提交前自查与验证，独立评审按需
 
 - **Status**: Accepted
 - **Date**: 2026-05-28
@@ -6,6 +6,20 @@
 - **Scope**: 跨项目(SYSV2 / SRMV2 / HC / 未来 MES/WMS/EAM/TPM 等所有工作区)
 
 ---
+
+## 当前决策（2026-09-07修订）
+
+涛哥明确取消强制独立Reviewer。本机以主会话检查最终staged diff、本地build/test及适用的真实页面E2E作为提交前质量要求；只有用户明确要求时调用独立Reviewer，不再索取`CR-GATE/CR-REPO`回执。不按文件/Phase重复全量自查；修复后重跑受影响检查。
+
+执行顺序：最小验证 → stage最终候选 → 主会话检查diff与凭证 → commit → 独立命令验证git状态。保留密钥扫描、完整业务契约、鉴权四条、生产/破坏性操作授权和推送边界。移除固定评审agent不代表移除反例分析或运行验证；高风险首先补足证据与针对性测试。
+
+本机review gate的提交拦截、编辑跟踪、SubagentStop回执三个handler保持禁用，历史实现保留便于追溯。更高优先级运行时要求仍须遵循并说明来源，不将其回写为本地默认强制策略。
+
+为什么调整：固定agent/回执流程与用户当前授权冲突，且agent调用本身不能证明业务正确。官方建议提供清晰验收、测试和diff检查，并提供按需Review功能，没有要求每次提交固定独立agent。参见[官方最佳实践](https://learn.chatgpt.com/guides/best-practices)、[官方Hooks](https://learn.chatgpt.com/docs/hooks)。
+
+替代方案：保留固定独立评审会继续增加流程重复；彻底取消自查/测试会丢失质量证据。因此采用主会话自查、必要验证和用户按需独立评审。后续按run record的返工与缺陷证据评估，不能仅凭模型升级宣称缺陷率下降。
+
+以下保留旧决策背景和机制，仅用于追溯；与本节冲突时不再执行。
 
 ## Context(背景 / 为什么需要决策)
 

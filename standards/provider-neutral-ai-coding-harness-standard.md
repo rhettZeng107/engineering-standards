@@ -95,12 +95,13 @@ Keep `.planning/codebase/` when a workspace already uses it. It is optional non-
 |---|---|
 | Deterministic discovery, LSP, build/test, formatting, hashes, manifests | Tools or scripts; do not spend higher model reasoning on deterministic checks. |
 | Small reversible work | Current main session directly; do not spawn only to lower model cost. |
-| Contract-locked, bounded mechanical coding and test additions only | Terra Medium. Do not route other implementation, analysis, integration, review, or cross-contract work to Terra. |
-| Cross-file implementation, normal frontend/backend integration, compiler-error repair, non-mechanical implementation after contract lock, ordinary final review | Sol High. |
-| Cross-repo contract analysis, architecture, DB schema, auth, production, external integration, high-impact non-deterministic disputes and high-risk review | Sol xhigh. |
+| Routine implementation, fixes, tests, docs and small config changes with clear boundaries | GPT-5.6 Sol High. Independent routine subtasks within complex work may use this route. |
+| Cross-repo contracts, architecture, DB/auth/production risk, migration completeness, external integration, difficult diagnosis, uncertain multi-step integration, global harness changes | GPT-6 Astra High. Judge complexity by dependencies and uncertainty, not file count. |
 | Luna | Not used for enterprise project work. |
 
 Build, test, LSP, DB, API, browser, E2E, and git evidence always outrank model judgment.
+
+The user's explicit model selection overrides these defaults. Keep ordinary CLI startup on Sol High and provide `astra` and `sol` profile files. An existing main session does not switch models because instructions or config files change: use the client model selector or an explicitly targeted bounded subagent. Omitted custom-agent settings inherit the parent; set both model and effort when assigning a different route. Do not silently substitute Terra or increase to xhigh/max/ultra. Keep context and compaction defaults from the actual CLI model catalog unless an evaluated workload justifies an override; API maximum context is not a CLI default.
 
 ## Code Navigation
 
@@ -150,16 +151,16 @@ Gate results should be evidence records, not prose assertions. If a gate is inte
 
 ### Risk-triggered review routing
 
-- Use one primary reviewer per independently deliverable staged batch. A language, DB, architecture, or security specialist replaces the generic reviewer; it is not added by default.
-- Add a second focused review only for a second independent high-risk domain, unresolved CRITICAL/HIGH findings, scope expansion, or substantial rework. File count alone is not an architecture-review trigger.
-- Ordinary docs, text, and non-executable configuration need deterministic checks but no reviewer agent. Long-lived business contracts and ADRs use one risk-appropriate primary reviewer; dual review is reserved for external/irreversible contracts, auth/compliance, or destructive production/DB decisions.
-- A review receipt must bind reviewer completion, PASS verdict, repository, and the staged diff hash. Starting a reviewer, completing an implementation agent, or modifying the staged diff after review cannot satisfy the gate.
+- The main session inspects the final staged diff and verification evidence for each deliverable batch. Recheck affected behavior after fixes; do not repeat a full review per file or phase.
+- Independent reviewers run only when explicitly requested by the user. Choose a relevant specialist for that request; no mandatory second reviewer or CR-GATE/CR-REPO receipt is required by this standard. A higher-priority runtime requirement still applies and must be disclosed.
+- Ordinary docs, text, and non-executable configuration need deterministic checks. High-risk contracts require stronger source evidence, counterexamples and targeted verification, not automatic additional agents.
 - Static contract review and real UI E2E cover different failure modes; retaining both where required is not duplicate review.
+- Page changes use ADR-008's field-level change-impact and end-to-end contract checks: current lookup dependencies, cascading/null/refill/save behavior, DTO/mapping/persistence, sibling consumers and action routes. Read related unchanged code; keep dependency and field/action coverage evidence. A mocked test or successful deployment is not real page acceptance.
 
 ### Adaptive migration completeness and adversarial review
 
 - Run deterministic inventory, reference, field, route, menu, API, schema, build, and E2E gates first. Deterministic failures block directly and do not vote.
-- Run one independent critic over the normalized manifest and evidence delta. If it finds a gap, the source/contract changes, or the unit is Tier 3 high risk, resolve the finding and run another focused critic; the final critic round must be dry.
+- The main session checks the normalized manifest and evidence delta with a counterexample checklist. Resolve all gaps and record the final dry result. An independent critic agent runs only on explicit user request; removing mandatory delegation does not remove completeness evidence.
 - Require two distinct evidence-lens votes only when a claim is both non-deterministic and high impact, including source/ref selection, exclusion, semantic conflict, customer integration, half-finished source classification that changes scope, and irreversible DB decisions. Both must confirm; any refutation keeps the claim disputed.
 - Ordinary `migrate-equivalent` and mechanically proven rows do not vote. A third vote is not a default tie-breaker; unresolved evidence conflict returns to the human decision owner.
 - Keep one final code review per migration batch plus E1/E2. Baseline adversarial review validates source truth; final code review validates implementation, so they are not interchangeable.

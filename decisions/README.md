@@ -100,7 +100,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-033](ADR-033-governance-layering-and-reduction.md) | 治理分层金字塔 + 减法纪律 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-034](ADR-034-observability-apm-lite-standard.md) | APM-lite 应用层可观测体系工程标准 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-035](ADR-035-lsp-subclaude-gateway.md) | LSP Sub-Claude Gateway — Multi-repo workspace 的 LSP 使用模式 | Accepted | 2026-05-27 | 跨项目 | 本仓 |
-| [ADR-036](ADR-036-code-review-mandatory-gate.md) | 代码评审强制 commit 门禁(hook BLOCK) | Accepted | 2026-05-28 | 跨项目 | 本仓 |
+| [ADR-036](ADR-036-code-review-mandatory-gate.md) | 提交前自查与验证，独立评审按需 | Accepted | 2026-09-07 修订 | 跨项目 | 本仓 |
 | [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md) | 跨前后端契约锁定责任归属(本体锁,非 subagent) | Accepted | 2026-06-01 | 跨项目 | 本仓 |
 | [ADR-038](ADR-038-subapp-master-data-via-api-not-direct-table.md) | 子应用主数据消费 API 不直查共享表 + 业务重建 | Accepted | 2026-06-15 | 跨项目 | 本仓 |
 | [ADR-039](ADR-039-standard-task-workflow.md) | 标准任务工作流 — 6 阶段主线(调研→实证→判断→处理→检查→汇报) | Accepted | 2026-06-15 | 跨项目 | 本仓 |

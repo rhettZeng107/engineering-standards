@@ -91,10 +91,11 @@ project_map:
 model_routing:
   deterministic_work: "tools_or_scripts"
   small_reversible_work: "current_main_session"
-  contract_locked_bounded_mechanical_coding_and_test_additions_only: "terra_medium"
-  cross_file_integration_compiler_repair_non_mechanical_implementation_and_ordinary_review: "sol_high"
-  cross_repo_contract_architecture_db_auth_production_external_integration_and_high_risk_review: "sol_xhigh"
-  terra_other_work: "not_used_for_implementation_analysis_integration_review_or_cross_contract_work"
+  ordinary_bounded_implementation_fixes_tests_docs_config: "gpt-5.6-sol_high"
+  complex_contract_architecture_db_auth_production_migration_integration_harness: "gpt-6-astra_high"
+  explicit_user_model_selection_wins: true
+  agent_omitted_model_inherits_parent: true
+  running_main_session_auto_switch: false
   luna: "not_used_for_enterprise_project_work"
   runtime_evidence_overrides_model_judgment: true
 
@@ -134,25 +135,22 @@ gates:
   pre_commit:
     code_review_required_for_code_changes: true
     review_candidate: "staged_diff"
-    primary_reviewer_count: 1
+    review_owner: "main_session"
+    independent_reviewer: "explicit_user_request_only"
     specialist_replaces_generic: true
-    second_review_triggers:
-      - "second_independent_high_risk_domain"
+    focused_recheck_triggers:
       - "critical_or_high_rework"
-      - "scope_expansion"
-      - "substantial_rework"
+      - "scope_or_contract_change"
     ordinary_docs_review_required: false
-    receipt_fields:
-      - "repo"
-      - "staged_diff_hash"
-      - "reviewer"
-      - "verdict"
+    independent_receipt_required: false
     secret_scan_required: true
     verification_required: true
   migration:
     source_inventory_required: true
     equivalence_review_required: true
     deterministic_gate_before_llm: true
+    counterexample_review_owner: "main_session"
+    independent_critic_agent: "explicit_user_request_only"
     default_critic_rounds: 1
     additional_critic_triggers:
       - "critic_found_gap"
