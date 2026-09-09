@@ -2,6 +2,7 @@
 
 - 状态:Accepted
 - 日期:2026-06-18
+- 当前适用范围（2026-09-09修订）：早期Claude/Anthropic机制、模型、独立verifier投票及路径仅为历史理由；当前执行以Codex运行时、最近AGENTS和本ADR末尾修订为准，不从旧G5重建已停用评审门禁。
 - 关联:ADR-009(CLAUDE.md 精简 cheatsheet)/ ADR-015(事实驱动)/ ADR-017(批次自治)/ ADR-031(progress 接续 = 官方 long-running harness 同源)/ ADR-014(迁移轨,G5 重构对象)/ ADR-035(LSP = just-in-time retrieval)
 - 官方来源(2026-06-18 实证):
   - building-effective-agents(workflows vs agents + 5 模式 + 3 原则)
@@ -73,3 +74,25 @@
 
 - OpenAI `AGENTS.md`:合并顺序、默认 32 KiB、接近目录优先和 nested 拆分。<https://learn.chatgpt.com/docs/agent-configuration/agents-md>
 - OpenAI Codex best practices:短而准确优于长而模糊;过大时引用任务特定文件,重复流程转 skill。<https://learn.chatgpt.com/guides/best-practices>
+
+## 修订（2026-09-09：项目特化保留、专项按需与Memory生命周期）
+
+### 原因与选择
+
+同一要求在全局、项目、Memory和历史任务中并行维护，会增加解释冲突。删除全部提醒容易丢危险操作边界；只加“简单任务忽略”无法撤回已加载文本。因此采用一个正文维护源＋任务触发入口，不追求零重复或统一全部项目交付顺序。
+
+### 归属
+
+- 全局AGENTS保留完整范围、授权、证据、批次交付、验收硬要求及明确触发器。字段/E2E、鉴权、符号导航、地图维护与质量观察的详细检查项移到本机`~/.codex/workflow-details.md`命中章节；下沉不是豁免。
+- 项目AGENTS保留真理源、固定分支/远端、环境、交付前置、阶段性豁免及已批准的模型试验。全局减载不得将HC候选UAT顺序套到SYSV2/SRMV2，也不得取消WMSV2暂停/阶段性CI豁免或MESV1本地根仓约定。
+- ADR记录原因、替代和归属，不维护第二份操作清单；Skill/Runbook提供命中任务后的步骤，不承载另一套权限或活跃业务状态。
+- Memory保留稳定偏好；已固化政策缩为主题/工作区/权威路径索引；历史任务保留证据和当时例外并标历史。不要把“完成任务免一次E2E”变成未来默认，不删除暂停/禁止/未完成合同。生成状态不直接改，用户明确授权后仅通过允许的更新入口提出小更新，并单独确认生成是否生效。
+- 一份progress承载当前执行状态，接续只指向它；无法唯一确定任务时进入只读对账/任务选择，而非用mtime或旧build号制造下一动作。CLI/Desktop接管须确认原执行者暂停及候选/证据交接。
+
+### 落地与验证边界
+
+2026-09-09先修工作区执行歧义与恢复入口，再移动全局专项细则及提交Memory分层更新。保留64KiB上限、运行模型配置、hook与业务门禁；不批删低频能力，不新增自动重建/轮询任务。
+
+验收采用迁出检查项逐条比对、入口/链接检查、简单文档/字段/鉴权/接续/现场等场景路由和项目特化保留检查。后续5–10个可比业务批次按轨观察输入Token（可取时区分缓存）、重复验证、返工及逃逸；没有数据记unknown，不以字节下降或零事故证明费用下降或安全门禁可删。
+
+官方依据：Codex手册本轮刷新，Best practices 1788–2019、AGENTS 22760–22912、Memories 25191–25300；[任务专项引用](https://learn.chatgpt.com/guides/best-practices)、[启动时的指令链](https://learn.chatgpt.com/docs/agent-configuration/agents-md)、[Memory为召回与生成状态](https://learn.chatgpt.com/docs/customization/memories)。本节规定本地治理，不声称产品会自动热替换已有会话或立即重生成Memory。

@@ -227,6 +227,8 @@ Codex baselines should follow the official surface split. Repeated workflow shou
 
 **Baseline rule**:when the same instruction or workflow repeats twice, decide whether it belongs in `AGENTS`, config, skill, MCP, hook, automation, `codex exec`, review, or memory. Promote it there, then remove duplicated prose from chat-era rules.
 
+**Ownership clarification (2026-09-09)**: one maintained rule body, with short risk reminders and explicit task-triggered links where needed; not zero repetition. Preserve approved project source/branch/environment/delivery exceptions and model experiments. Memory lifecycle and current-state ownership follow [ADR-044](../decisions/ADR-044-anthropic-methodology-alignment.md)'s 2026-09-09 revision; historical task exceptions are not future instructions. Moving a checklist out of AGENTS must retain its mandatory trigger and complete applicable checks.
+
 ## Codex Official-Practice Audit
 
 Run an official-practice audit before changing global Codex workflow or at least monthly:
