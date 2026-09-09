@@ -1,6 +1,6 @@
 # Frontend UI V2(Atlas)标准 — 业务页三范式
 
-> 状态:正式(2026-06-12)。来源:ADR-032(V2 Atlas 设计语言)+ HC 项目首建落地(spec `HC/docs/superpowers/specs/2026-06-11-hcv2-ui-v2-upgrade`,A/B/C 三 Phase 全量实施,~40 页改造实战沉淀)。
+> 状态:正式(2026-06-12；2026-09-09统一业务抽屉为框架内路由独立页)。来源:ADR-032(V2 Atlas 设计语言)+ HC 项目首建落地(spec `HC/docs/superpowers/specs/2026-06-11-hcv2-ui-v2-upgrade`,A/B/C 三 Phase 全量实施,~40 页改造实战沉淀)。
 > 参考实现(真理源):`engineering-standards/references/v2-components/`(SectionCard / StepAnchorNav / InlineDetailTable / V2States / **FileUploader / ImportModal**(+ FileUploader.css)+ v2-components.css + v2-tokens.css)。消费仓 copy 落地,CR 用 `diff -r` 比对,禁私有 npm 源。
 > 适用栈:React 18 + antd 5 + @ant-design/pro-components 2.8.x(craco/CRA 或同类)。
 
@@ -46,16 +46,16 @@
 ## 4. 表单范式(L2)— 形态判定决策树(实战沉淀,按序判定)
 
 1. **List 页** → 保 List 标准骨架,**禁重排**(仅吃 token)。
-2. **简单 Form(≤10 字段且无明细表)** → 保原 Modal/Drawer 骨架,仅吃 token,禁加装饰段。
-3. **单调用方表单**(列表行点开,数据自给:有 get-by-id 或可 state 传递)→ **整页路由化**:删 Drawer 壳 → 页面容器(canvas 背景 + max-width ~1200 居中 + 面包屑/标题/返回/保存)+ SectionCard 编号分段 + 顶部 StepAnchorNav + V2States 三态;入口改 navigate,返回 `navigate(-1)`(列表重挂载自动刷新 — **提交后列表回刷依赖重挂载,行为差异需 UAT 确认**)。
-4. **多调用方共享 Drawer / 嵌套 Drawer 链 / 新建流传整对象无 id** → **禁路由化**(会断回调链/快照驱动/嵌套闭环),改 **Drawer 内分段**:Drawer 体内套 SectionCard 编号段;**不加 StepAnchorNav**(Drawer 内 window scroll-spy 失效 = 死控件);调用方契约(`item/open/onCancel/onReload`)零改动。
+2. **轻量对话框**(确认、提示、导入或≤10字段且无明细表，原本就是Modal) → 保普通 Modal，仅吃 token，禁加装饰段；这类短事务不属于业务页面。
+3. **原Drawer/宽Modal承载的新增、编辑、详情或流程页** → 统一转为**Main/门户框架内的子应用路由独立页**：列表用`navigate(route)`进入，返回用`navigate(-1)`或显式来源路由；不打开新浏览器页或Main平行菜单页签，不用遮罩、Drawer或覆盖式全屏Modal承载。按route id重取数以支持刷新/深链，保存成功返回列表并刷新。
+4. **路由页样式与操作** → 沿用V2询价单基线：canvas背景 + 最大化利用框架可用宽度 + 面包屑/标题/右上角操作区 + 适用的StepAnchorNav + SectionCard编号分区 + V2States三态。左右安全边距统一允许5–15px，采购等宽表单默认8–12px；不对表单/明细页设置1200px等固定窄宽上限，仅纯阅读型内容可有证据地限宽。新增为`[返回][保存]`；编辑为`[返回][删除][保存]`；详情为`[返回]+已授权业务动作`。不在返回旁再加同义关闭。
 5. **多 Tab 大页(每 Tab 独立 save)** → 原地分段:保留 Tabs 与各 save 模型,Tab 内容拆 SectionCard;最长 Tab 可加 StepAnchorNav(锚点只在该 Tab 内渲染,防点锚点滚到不存在的 id)。
 
 **铁律**:0 字段口径变更(payload 组装/字段 name/columns dataIndex/endpoint+HTTP 动词与改造前逐项一致,作 CR 机器门);只动布局容器层。
 
 ## 5. 详情范式(L3a)
 
-- 只读页内容块按既有分组套 `SectionCard`(编号 1..N);保持现有形态(Drawer 子组件留壳)。
+- 只读页内容块按既有分组套 `SectionCard`(编号 1..N)；原Drawer详情按§4改为框架内路由独立页，不保留侧滑壳或全屏Modal壳。
 - **嵌套卫生**:被父级 import 的 detail 组件**不自包 SectionCard**(由调用方分段),先 grep 消费方再决定 — 防双重/三重嵌套段头。
 - 禁自创段/占位段(ADR-032 字段要"活",禁占位符)。
 
@@ -65,6 +65,7 @@
 2. 响应式 + 浏览器缩放 **125%/150%** 无重影错位(sticky 锚点条重点风险面,E2E 加 `document.body.style.zoom` 断言)。
 3. 两仓/多端同构:组件目录 `diff -r` 退出码 0;ConfigProvider token 集字段级一致。
 4. build 0 error + 字体体积门 + 外网请求 0。
+5. 原Drawer页面必须在Main框架内完成路由进入/返回/刷新恢复；桌面、移动及125%/150%缩放下，页头、步骤条、SectionCard、表格和操作区不重叠，水平可用空间无无效大留白。
 
 ## 7. 高频坑清单(HC 实战 CR 抓出,新项目必读)
 

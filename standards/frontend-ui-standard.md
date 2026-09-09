@@ -22,7 +22,7 @@
 
 | 页面类型(术语) | 特征 | 示例 |
 |---|---|---|
-| **Form Page**(Single Form / Edit Drawer / Detail View / Master-Detail Form) | 单/多 form / Drawer / Modal,**无 Table** | `material/edit.jsx` / `supplier/edit.jsx` |
+| **Form Page**(Single Form / Edit Route / Detail Route / Master-Detail Form) | Main框架内单/多form路由页；短事务可用Modal | `material/edit.jsx` / `supplier/edit.jsx` |
 | **Dashboard**(KPI Board / Analytics Page) | 卡片网格 + 图表 + 数据可视化 | `Dashboard/index.jsx` / `Workbench` |
 | **Wizard**(Multi-step Flow / Stepper Page) | 多步骤 Step + Next/Prev | 数据导入向导 |
 | **Upload Page**(File Upload / Import / Export) | Dropzone + FileList + Progress | `BasicDataImport/index.jsx` |
@@ -106,9 +106,13 @@ options={{
 - 颜色用 `var(--sys-text-primary)` / `var(--sys-text-secondary)` / `var(--sys-text-tertiary)` 等 token,**不 hardcode 颜色值**
 - 自动支持 dark/light 主题切换
 
-## 9. 编辑 Modal / Drawer
+## 9. 新增 / 编辑 / 详情路由页
 
-- `<Modal destroyOnClose width={640}>` 默认宽度 640(复杂表单可调)
+- 原Drawer或宽Modal承载的新增、编辑、详情和流程页，统一改为当前Main/门户框架内的子应用路由独立页；不打开新浏览器窗口或新页签，不使用遮罩、侧滑Drawer或覆盖式全屏Modal伪装独立页。
+- 页面样式以V2询价单为基准：浅色canvas、占满Main可用内容区且左右仅保留5–15px安全边距（宽表单建议8–12px）、顶部面包屑+业务标题+右上角操作区、需要时使用StepAnchorNav，主体按SectionCard编号分区；表单/明细页不设固定最大宽度，内容跟随页面滚动，不再维护弹窗内层滚动。
+- 新增页右上角固定`[返回][保存]`；从列表进入的编辑页固定`[返回][删除][保存]`，删除必须有二次确认；只读详情页为`[返回]+该单据已授权业务动作`。不在“返回”旁重复提供同义“关闭”。
+- 保存/删除成功后返回来源列表并刷新；直接刷新或深链访问必须可以按route id重新取数，不得只依赖`location.state`的临时行对象。未保存内容的返回拦截与浏览器历史语义保持一致。
+- 确认、提示、导入及无明细的短事务仍可使用普通`<Modal destroyOnClose width={640}>`，不得把普通确认弹窗误扩成业务页。
 - `<Spin spinning={loading}>` 包内容载入态
 - `<Alert type="info" showIcon style={{marginBottom: 12}}>` 顶部提示
 - 字段联动 `Form.useWatch("fieldName", form)` + `useMemo` 派生选项
@@ -249,7 +253,7 @@ SYS.3 当前 60 处 `PrivateProTableAutoHeight` 用法可在后续独立 spec `2
 
 ## 适用扩展(后续按需扩 spec)
 
-- 详情 Drawer 标准(目前用 Modal,后续可能扩 Drawer 标准)
+- 路由独立页的统一页头、返回层级和未保存确认组件
 - Form 验证错误展示(目前 antd Form `rules` 默认,可扩自定义错误样式)
 - 批量操作 Bar(选中后底部浮起操作栏)
 - 空态 Empty 标准(目前 ProTable 默认,可扩自定义插画)

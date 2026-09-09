@@ -143,27 +143,28 @@
 
 ### 3.5 编辑（Edit）
 
-**容器**：右侧 `<EditDrawer>`（**不用 antd Modal**，除非历史原因或字段联动深度耦合）。
+**容器**：当前Main/门户框架内的React路由独立页。原`<EditDrawer>`/宽Modal必须迁为路由；不打开新浏览器窗口，字段和保存契约不变。
 
 ```jsx
-<EditDrawer
-  open={open}
-  title={editId ? "编辑 XXX" : "新增 XXX"}
-  size="sm" | "md" | "lg"           // 480 / 720 / 1080，默认 sm
-  onClose={...}
-  onSubmit={...}
-  submitting={saving}
-  loading={loadingDetail}
->
-  <Form form={form} layout="vertical">
-    {/* 表单内容 */}
-  </Form>
-</EditDrawer>
+const navigate = useNavigate();
+const [searchParams] = useSearchParams();
+const editId = searchParams.get("id");
+
+return (
+  <BusinessRoutePage
+    breadcrumb={["业务管理", editId ? "编辑 XXX" : "新增 XXX"]}
+    title={editId ? `单号: ${recordNo}` : "单号: 保存后自动生成"}
+    onBack={() => navigate(-1)}
+    onDelete={editId ? handleDelete : undefined}
+    onSave={handleSave}
+  >
+    <StepAnchorNav items={anchorItems} />
+    <SectionCard no={1} title="基本信息">...</SectionCard>
+  </BusinessRoutePage>
+);
 ```
 
-**底部按钮**：固定 `[取消][保存]`，提交中 `maskClosable=false`。
-
-参考实现：[`SYSV2 src/components/EditDrawer/EditDrawer.jsx`](../../AI.REACT.SYS.3/src/components/EditDrawer/EditDrawer.jsx)
+**页头按钮**：新增`[返回][保存]`；编辑`[返回][删除][保存]`，删除使用Popconfirm/Modal.confirm。不再增加同义“关闭”。页面占满Main可用宽度，左右安全边距5–15px；确认、提示、导入等短事务仍使用普通Modal。
 
 ### 3.6 删除 / 危险操作（Destructive）
 
@@ -334,7 +335,7 @@ customOffsetHeight={baseOffsetHeight + 170 + 56}
 
 ### 7.1 主 CTA 强制"动词+业务名词"
 
-**禁止**裸用"提交" / "保存" / "确认" / "Submit" / "Save" / "OK"；必须替换业务名词：
+**禁止**在一般动作中裸用"提交" / "保存" / "确认" / "Submit" / "Save" / "OK"；必须替换业务名词：
 
 | 模板 | 例 |
 |---|---|
@@ -343,7 +344,7 @@ customOffsetHeight={baseOffsetHeight + 170 + 56}
 | `确认{业务名词}` | 确认接受变更 / 确认收货 |
 | `下一步：{下一步名词}` | 下一步：公司资料 |
 
-**例外**：取消 / 关闭 / 返回 / 上一步 等导航单词允许裸用。
+**例外**：取消 / 关闭 / 返回 / 上一步等导航单词允许裸用；§3.5 Main框架内新增/编辑路由页的统一页头动作按契约使用“保存”。
 
 ### 7.2 空状态
 
@@ -482,8 +483,8 @@ antd `Upload` / `Image` / `<img>` 不走 axios 拦截器！需手动注入鉴权
 - ❌ 新组件 / 页面 CSS 不允许硬编码颜色值（必须 `var(--sys-*)`）
 - ❌ 列表页禁止 `toolBarRender={false}`（用 `() => []`）
 - ❌ 列表页 columns 操作列宽不允许混用（项目内必须统一，160 / 项目自定）
-- ❌ 编辑容器禁止用 antd Modal（必须 EditDrawer，除历史耦合）
-- ❌ 主 CTA 文案禁止裸用"提交" / "保存"（必须"动词+业务名词"）
+- ❌ 新增、编辑、详情或流程业务页禁止使用侧滑Drawer、固定窄宽Modal或覆盖式全屏Modal（统一为Main框架内路由独立页）
+- ❌ 一般主 CTA 文案禁止裸用"提交" / "保存"（必须"动词+业务名词"）；§3.5统一新增/编辑页头的“保存”除外
 - ❌ 删除 / 危险动作禁止无二次确认（Popconfirm 或 Modal.confirm）
 - ❌ Filters 段超过 6 个 chip（改路由子页）
 - ❌ 引入第二套图标库（`@ant-design/icons` 单一）
@@ -501,7 +502,7 @@ antd `Upload` / `Image` / `<img>` 不走 axios 拦截器！需手动注入鉴权
 - [ ] 是否配置 `options={{reload, density, setting:{draggable, checkable}}}`？
 - [ ] 过滤区 `optionRender` 是否调换为 `[重置, 查询]`？
 - [ ] 是否提供 `collapseRender` 自定义中文"展开/收起"文案？
-- [ ] 编辑是否用 `<EditDrawer>`（不用 Modal）？
+- [ ] 原Drawer/宽Modal业务页是否已使用Main框架内路由独立页，且新增/编辑/详情页头按契约显示返回、删除、保存或已授权业务动作？
 - [ ] 删除 / 危险动作是否 `<Popconfirm>` 包裹？
 - [ ] 主 CTA 文案是否"动词+业务名词"？
 - [ ] 行内操作列宽是否项目内统一？
