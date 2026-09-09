@@ -1,6 +1,7 @@
 # ADR-029: 工作区治理三层模型与新工作区 bootstrap 模板
 
 - **Status**: Accepted
+- **当前执行入口（2026-09-09）**：以文末最新修订和 [bootstrap guide](../standards/workspace-bootstrap-guide.md) 为准；旧 Claude/Qwen/GSD/superpowers 操作段只作历史，不再用于新建。
 - **Date**: 2026-05-18
 - **Decider**: 涛哥
 - **Scope**: 跨项目(所有工作区:SYSV2 / HC 已有 + 计划中的 SRMV2 及未来新工作区)
@@ -128,10 +129,17 @@
 
 **保留边界**:三层治理、最近指令优先、项目特化不重复全局规则等核心决策不变；旧 Claude/Qwen 模板仅作兼容参考，不再是默认 bootstrap 输出。
 
-## History(变更轨迹)
+## 修订 2026-09-09 — 中性目录与按需记录
+
+涛哥批准：仅后续新工作区采用 `docs/decisions/`、`docs/runbooks/`、`docs/tasks/`。任务需要时在 `docs/tasks/<YYYY-MM-DD-topic>/` 聚合 spec/plan/progress；简单任务可不用文件，长任务只有一个状态真理源。bootstrap 不创建 `.planning/`、`docs/superpowers/`、地图、空任务/评审/Memory 或归档树。已有工作区目录与链接完全保留，不因本次更新自动迁移。
+
+初始化继承当前主会话最终 diff 自查与适用验证；独立 Reviewer 仅用户点名或更高优先级运行时要求。项目模板记录特化交付顺序和各仓固定远端；不把模板变成全局规则副本。工程标准、本机 Skill、团队便携 Skill 和生成/安装测试同步验证。
+
+## 变更轨迹
 
 | 日期 | 状态变更 | 备注 |
 |---|---|---|
 | 2026-05-18 | Proposed → Accepted | 涛哥拍板,SRM 迁移新建 SRMV2 工作区驱动 |
 | 2026-06-18 | Accepted(修订) | multi-repo 工作区层细化为「工作区根 + 仓级」两落点;Claude 官方按需加载 + AGENTS.md import 桥接;涛哥拍板 |
 | 2026-08-19 | Accepted(修订) | Codex-first 最小 bootstrap：AGENTS 为主、provider-neutral 项目地图、禁止自动写个人 memory/hooks/Qwen/GSD/ops 基线 |
+| 2026-09-09 | Accepted(修订) | 后续新工作区使用中性任务聚合目录；已有目录不迁移；入口、Skill、模板与测试同步 |

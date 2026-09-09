@@ -23,10 +23,14 @@
 
 ## Workflow specialization
 
-- Required history/ADR/spec sources: <paths>
-- Required semantic navigation: <LSP/tool and solution>
-- Required reviewers: <language/DB/security/architecture triggers>
-- Required progress/run-record location: <path or not applicable>
+- Task-triggered ADR/spec sources: <paths and when needed; not a mandatory history bundle>
+- Semantic navigation: <LSP/tool and solution, when relevant>
+- Verification specialization: <project-specific checks; inherit review policy, do not add default reviewers>
+- Task records: <docs/tasks/YYYY-MM-DD-topic/ when needed; spec/plan/progress are not a mandatory bundle>
+- Authoritative task record: <one progress path for long work, or session plan for short work>
+- Continuation entry: <thin pointer to current record, or not needed>
+- Delivery order by batch: <local checks, candidate/UAT prerequisites if any, commit/push, CI and final acceptance; do not guess>
+- Remote targets: <per-repo authorized targets; no remote means local commit only>
 - Optional project-map navigation: <paths if useful; never a blocking or truth-source requirement>
 
 ## Verification

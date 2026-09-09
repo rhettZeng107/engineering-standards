@@ -22,13 +22,12 @@ Workspace instructions specialize the upper layers; they do not copy them wholes
 <workspace>/
 ├── AGENTS.md
 ├── .gitignore
-├── .planning/codebase/
 ├── docs/decisions/
-├── docs/ops/
-└── docs/superpowers/{specs,backlog,_archive}/
+├── docs/runbooks/
+└── docs/tasks/
 ```
 
-`docs/superpowers` is a historical directory convention for spec/plan artifacts. It does not require a plugin with that name. `.planning/codebase/` starts empty and is populated only from real project evidence.
+For new workspaces from 2026-09-09, task files live together under `docs/tasks/<YYYY-MM-DD-topic>/` only when needed: `spec.md` describes scope/acceptance, `plan.md` holds steps and `progress.md` owns long-task state. Short work can use the session plan; do not create empty task files. Completed tasks stay in place with an explicit status. Do not generate `.planning/`, `docs/superpowers/`, a project map, or a second archive/backlog tree. Existing workspace layouts and links are unchanged; this revision does not authorize migration of their directories.
 
 The default bootstrap does not create or modify:
 
@@ -57,11 +56,11 @@ Legacy provider files remain optional compatibility adapters. A stale Claude/Qwe
 
 ## Workflow defaults inherited by a new workspace
 
-- Simple track: evidence anchor, small change and minimal verification; ordinary docs need no agent review, while code/executable configuration gets one staged-diff review before commit.
-- Standard track: complete known scope, contract lock, plan, evidence, risk-appropriate primary review and real verification.
-- Migration track: deterministic inventory/equivalence gates first; one initial independent critic, with reruns only after a gap, source/contract change or Tier 3 trigger; two evidence-lens votes only for high-impact non-deterministic claims.
-- Long-lived ADRs/business contracts use one primary review. A second review is reserved for independent high-risk domains, unresolved HIGH findings, external/irreversible contracts, auth/compliance or destructive production/DB decisions.
-- Monthly workflow review evaluates completion, rework, first-pass review, escaped HIGH, E2E, rebaseline, environment failures and cost trend before retaining or removing rules.
+- Classify by business risk, contract impact and uncertainty, not file count. Simple reversible work loads only relevant boundaries and direct consumers; being inside a migration workspace does not make a text edit a migration batch.
+- Inherit review, migration and model policy from the current instruction chain and [Harness standard](provider-neutral-ai-coding-harness-standard.md), rather than copying it into every generated workspace. Main-session final diff self-review is the default; independent Reviewer only on explicit user request or a higher-priority runtime requirement.
+- Keep one authoritative task record; continuation files are thin pointers, not another plan. Machine-readable records are added only for an actual consumer.
+- Record each project's delivery order explicitly: verification, any candidate deployment/UAT prerequisites, commit, sync/push, CI and final acceptance as applicable. Preserve approved project exceptions. A repo without remotes needs only a local commit; root and nested repos close independently.
+- Observe acceptance and rework using the existing monthly template; do not treat historical review PASS counts as business acceptance.
 
 See `provider-neutral-ai-coding-harness-standard.md` and `legacy-migration-playbook.md` for the full policy.
 

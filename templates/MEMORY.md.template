@@ -1,70 +1,18 @@
-# {{WORKSPACE_NAME}} Memory Index
+# {{WORKSPACE_NAME}} 可选召回索引
 
-> {{WORKSPACE_NAME}} 工作区独立 memory(SessionStart 由 `core-fact-driven-prelude.js` 注入事实驱动自检卡片)。
-> 引用源:全局 `~/.codex/AGENTS.md` + 跨项目 `engineering-standards/decisions/ADR-*.md` + 本工作区 `docs/decisions/ADR-*.md`。
-> **整理原则**:已锚点 ADR-NNN 的条目应改为ADR引用，同语义条目应合并；仅在涛哥明确授权或已授权 automation 中，才整理获批的 curated memory，Codex管理资产只报告不直接改写。
-> **保留原则**:本工作区特化反模式 / 实证案例锚点 / 外部资源 / 本工作区踩坑沉淀。
-> **维护规范**:见 `engineering-standards/standards/memory-maintenance-standard.md`(跨项目工程标准,中性表述,不绑定具体工作区)。
+> 仅在明确授权后用于人工维护的项目文档；不是 Codex 生成式 MEMORY.md 的替换模板，不由 bootstrap 默认创建，不宣称自动注入。
+> 当前政策读取最近 AGENTS 和其引用的标准；维护方法见 engineering-standards/standards/memory-maintenance-standard.md。
 
----
+## 稳定偏好
 
-## 🔝 置顶 — 事实驱动 / Claim 来源(永久置顶,SessionStart 强提醒)
+<!-- 仅简短有效偏好及适用范围；不重复已有规则正文。无内容可省略本节。 -->
 
-> 长会话 / 评估 / 批判 / 给方案 场景必读。SessionStart hook `core-fact-driven-prelude.js` 也会注入同等内容到 system reminder。
+## 当前规则索引
 
-- **ADR-015** — 事实驱动 4 步硬规则:实证 → 基于事实 → 拍板 → 严执行
-- **ADR-030 A3** — Claim 来源标注机制:任何 claim 标 `file:line` / API / Bash / DB;假设与实证分区
-- **ADR-018** — 决策授权三档:Tier 1 自主 / Tier 2 简洁拍板 / Tier 3 多选项 + 落 ADR
+<!-- 主题 | 适用范围 | 真实存在的权威路径。路径须校验，不预填虚构 curated-memory 或 Hook。 -->
 
-**触线即自报**:答复中违反 ADR-015 / ADR-030 A3 → 第一句标明,不藏不绕。
+## 历史证据索引
 
----
+<!-- 日期 | 任务 | 来源/候选 | 当时结果与例外。标明历史，不生成当前下一动作。 -->
 
-## 工作区特化沉淀
-
-<!-- 列本工作区独有的反模式 / 实证案例锚点。已锚 ADR 的条目应改为 ADR 引用；实际整理仍受顶部授权边界约束。 -->
-
-(空 — 本工作区启动后逐步沉淀)
-
-## 工作流 / 协作偏好 / 边界决策
-
-<!-- 协作风格 / Tier 边界微调 / 沟通节奏等。 -->
-
-(空)
-
-## Spec / Plan / 评审 / Review
-
-<!-- spec 启动 / plan 拆分 / 评审节奏的工作区特化偏好。 -->
-
-(空)
-
-## 事实驱动 / 实证 / Debug
-
-<!-- 工作区内具体技术域的实证规则(消费端 vs 被消费端、平台机制实证等)。 -->
-
-(空)
-
-## E2E / 集成验证
-
-(空)
-
-## 编码路由 / Agents / Models
-
-(空)
-
-## DB / SQL / 安全
-
-(空)
-
-## CI/CD / 监控 / Dev Server
-
-(空)
-
----
-
-## 使用说明(给 Codex)
-
-1. 只有涛哥明确要求记入 memory 时，才按当前 Codex memory 扩展入口落档；普通纠正更新本轮 Plan、适用规则或项目文档
-2. 本索引文件超过 **200 行** 时只报告阈值；仅在涛哥明确要求或已授权 automation 中，才按 `memory-maintenance-standard.md` 整理获批的 curated memory
-3. 工作区 memory 数超过 **50 个** 时只报告阈值；仅在涛哥明确要求或已授权 automation 中，才按维护规范整理获批的 curated memory
-4. **不写 user_role.md / 通用工作流(已在全局 AGENTS.md)/ 已锚 ADR 的规则**
+当前状态见项目唯一任务记录；不要在此复制 plan/progress。提交更新输入、正文已验证、后续召回已验证分别报告，不混称“已生效”。

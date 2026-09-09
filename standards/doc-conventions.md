@@ -1,5 +1,19 @@
 # 文档目录规范 / Doc Directory Convention
 
+## 当前约定（2026-09-09，仅后续新工作区）
+
+默认只创建 `docs/decisions/`（长期决策）、`docs/runbooks/`（按需操作手册）、`docs/tasks/`（任务记录）。不再生成 `.planning/`、`docs/superpowers/` 或平行 specs/plans 根目录。
+
+需要文件的任务在 `docs/tasks/<YYYY-MM-DD-topic>/` 聚合：spec.md 写范围/约束/验收，plan.md 写步骤和任务清单，progress.md 承载长任务当前状态、阻塞、证据与下一动作。它们按需要创建，不是强制三件套；简单可逆任务可用会话计划。分轨按风险/契约/不确定性，不按文件数。
+
+有 spec 时 plan 回链；长任务只有一份当前状态，接续入口仅放指针。大合同或证据可按需拆同目录文件，不默认建逐阶段评审记录。完成后标状态并原地保留，不自动移动或创建归档树。业务门禁和项目特化不因目录调整而改变。
+
+**已有工作区不更新布局、不迁移记录、不改旧链接。** 以后如需迁移目录，另行授权并核查消费者。初始化步骤以 [workspace-bootstrap-guide.md](workspace-bootstrap-guide.md) 为准。
+
+## 历史约定（以下保留追溯，不作为新工作区执行指令）
+
+下文旧目录、按文件数量分轨、逐阶段评审及 Memory feedback 引用均已被当前规则替代；不得据此自动创建新资产。
+
 > **2026-05-03 涛哥拍板**:`docs/superpowers/plans/` 和 `docs/superpowers/specs/` 改"每个主题独立目录"结构,周边文件聚拢便于跟踪。
 >
 > 新建 plan/spec **必须直接走单目录**,不要再写扁平。

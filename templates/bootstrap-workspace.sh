@@ -48,12 +48,9 @@ fi
 
 mkdir "$TARGET_PATH"
 mkdir -p \
-  "$TARGET_PATH/docs/superpowers/specs" \
-  "$TARGET_PATH/docs/superpowers/backlog" \
-  "$TARGET_PATH/docs/superpowers/_archive" \
   "$TARGET_PATH/docs/decisions" \
-  "$TARGET_PATH/docs/ops" \
-  "$TARGET_PATH/.planning/codebase"
+  "$TARGET_PATH/docs/runbooks" \
+  "$TARGET_PATH/docs/tasks"
 
 cp "$TEMPLATES_DIR/workspace-AGENTS.md.template" "$TARGET_PATH/AGENTS.md"
 
@@ -67,7 +64,7 @@ cat > "$TARGET_PATH/.gitignore" <<'EOF'
 *.key
 .codex/
 .claude/
-docs/ops/ci-watch/
+docs/runbooks/ci-watch/
 
 # OS/editor
 .DS_Store

@@ -1,7 +1,7 @@
 # 老项目迁移改造手册(Legacy Migration Playbook)
 
 > 决策依据:[ADR-028](../decisions/ADR-028-legacy-migration-baseline-two-step.md)(迁移基线与两步走)+ [ADR-014](../decisions/ADR-014-migration-refactor-workflow.md)(迁移轨工作流)。
-> 适用:所有老项目迁移改造(SYS / MDM 已做 + SRM / MES / WMS / EAM / TPM 计划)。
+> 适用：老项目迁移改造；具体项目阶段、源分支与部署环境以最近 AGENTS 和当前 progress 为准，不以本文历史实例判断。
 > 配套:[frontend-ui-standard.md](frontend-ui-standard.md)(前端统一 4 标准)、[subapp-onboarding-guide.md](subapp-onboarding-guide.md)。
 
 ---
@@ -19,7 +19,7 @@
 |---|---|---|---|---|---|
 | **0 立项·基线声明** | spec 声明四项基线(后端运行时 / 前端工具链 / 工程标准 / 源仓分支范围) | ADR-028 §1 | §2 | — | 基线四项已声明 |
 | **1 源工件盘点** | 产 old 源工件清单(逐页/逐接口标 完好/半成品/坏)+ 老视图逐行提 UI 功能清单(本体锁定作契约锁基准)+ **壳层 layouts 功能去留表**；另产 `current-new-only` 清单，登记没有 old 对应行的 new 页面/字段/自动化/工程增强 | ADR-028 §3 · ADR-037 | §3.1 | — | old 清单全标状态;UI 功能清单 + 壳层去留表 + current-new-only 清单齐 |
-| **2 前期实证·完整性审计** | **机器确定性 gate 优先**:old→new 全覆盖 + current-new-only delta；六维证据归一化后跑 1 个独立 critic；仅“非确定性且高影响”判断两票；**产迁移矩阵表 + `completeness-sweep.json`**(允许 `old=N/A` 的 new-only 行) | ADR-014(修订 2026-08-19) | **§3.0** / §3.6 | migration-audit + bounded critic/selective vote | 六维证据齐、gap 全解决、最终 critic dry、所需高风险票一致 |
+| **2 前期实证·完整性审计** | **机器确定性 gate 优先**:old→new 全覆盖 + current-new-only delta；六维证据归一化后由主会话按反例清单查漏；仅“非确定性且高影响”判断两票；**产迁移矩阵表 + `completeness-sweep.json`**(允许 `old=N/A` 的 new-only 行) | ADR-014(修订 2026-08-19) | **§3.0** / §3.6 | migration-audit + 主会话反例/高影响证据核对 | 六维证据齐、gap 全解决、最终反例检查无未解决 gap、所需高风险票一致 |
 | **3 Front-load 风险审查** | E2E 双层风险审查 + 功能骨架等价审查(spec 内嵌) | ADR-014 §1 | — | — | 涛哥校验整体策略(非逐条) |
 | **4 STEP1 分模块迁移** | 按契约锁 + 范式 1:1 等价移植落盘(批量同构页并行) | ADR-028 §2/§6 · ADR-037 | §3.2 | **migration-fanout** | Back-automate 自治(中断白名单 3 类,ADR-014 §2) |
 | **5 四层等价 DoD 门** | ①工具链 ②UI工程标准 ③功能骨架(对 UI 功能清单逐项打钩)④入口可达 — 四层逐项核 | ADR-028 §2 | §3.2 | — | 四层全过 |
@@ -41,7 +41,7 @@
 
 1. **完整性是迁移第一性问题** —— 本质风险不是「迁错」,是「漏迁/半迁而不自知」;故审计方向恒为 **old→new 全覆盖**(老仓全量清单逐项在新平台找落点),**禁 new→old**(逐文件确认来源天然看不见「老仓有、新平台无」整类)。
 2. **「迁完」是四层闭环,非单层达标** —— 后端✅≠迁完;后端✅+前端桩 / 前端✅+后端老系统 / 代码✅+菜单漏种 均为半迁中间态,任一层断 = 用户用不了 = 没迁完。
-3. **单视角必有盲区 → 异质证据优先、选择性对抗** —— 先用多源枚举/合同/字段/菜单/路由机器门覆盖六维，再用 1 个独立 critic 查漏；只有机器不能裁决且影响高的结论才做两票。独立性来自不同证据 lens，不来自同模型重复采样。**机制 > 努力**。
+3. **单视角必有盲区 → 异质证据优先、选择性对抗** —— 先用多源枚举/合同/字段/菜单/路由机器门覆盖六维，再由主会话按反例清单查漏；只有机器不能裁决且影响高的结论才做两票。独立性来自不同证据 lens，不来自同模型重复采样。**机制 > 努力**。
 4. **坑在基准埋下、验收才查太晚 → 重心前移到建基准** —— 对抗/投票放在锁契约前,验收只赴约打钩。
 5. **动态编排 > 固化脚本** —— 据本次现状 inline 编排 Workflow,预存脚本只作起点模板,不套死 args 黑盒。
 6. **源基线先收口再迁** —— Fork 保留全分支并展示活动度,不得自行默认排除 customer 分支;多版本仓 diff 实证谁更全,最终源范围由项目决策者拍板;基线不锁干净不开迁(§2 + ADR-028)。
@@ -82,17 +82,19 @@
 
 ## 3. STEP 1 — 基线迁移
 
-### 3.0 前期实证阶段:机器确定性 gate + 自适应 Critic/投票(ADR-014 修订 2026-08-19)
+### 3.0 前期实证阶段:机器门 + 主会话反例与两证据检查（2026-09-09）
 
-> 源工件盘点 / 完整性审计 / 基准对抗的执行顺序固定为：机器多源枚举与规范化合同 → 1 个独立 critic → 仅高影响非确定性判断两票。Canonical 六维不可缩减，但不再等同于固定六个 Agent 调用；机器证据不足且维度独立时才用 bounded subagent 或 `codex exec` 补位。
+> 源工件盘点 / 完整性审计 / 基准对抗的执行顺序固定为：机器多源枚举与规范化合同 → 主会话反例检查 → 仅高影响非确定性判断核对两个不同证据来源。Canonical 六维不可缩减，但不再等同于固定六个 Agent 调用；机器证据不足且维度独立时才用 bounded subagent 或 `codex exec` 补位。
+
+独立 Reviewer/Critic 仅用户点名或更高优先级运行时要求；两证据不等于两个 agent。`critic`/`dry`/`votes` 等现有机器字段继续保留，其证据可由主会话真实核对产生，不伪造独立审查者。下述机器门、合同覆盖、反例与字段证据不因评审机制调整失效。新工作区记录目录按 [文档规范](doc-conventions.md)，已有项目路径不搬迁。
 
 **四条硬规则**:
 
-> **2026-08-19 成本优化覆盖口径**:以下历史条目中的固定 N-agent fan-out、连续 2 轮 dry 和广泛多数投票不再作为当前门禁。当前顺序是：`contract/completeness/field-diff/migration-gate` 机器覆盖 canonical 六维 → 对 compact manifest/delta 跑 1 个独立 critic → 仅“非确定性且高影响”判断做两个不同证据 lens 的一致票。首次 critic 即 dry 可停；发现 gap、源/合同变化或 Tier 3 高风险才解决后定向复查。六维是覆盖要求，不等于固定六个 Agent。
+> **当前成本优化口径（2026-09-09，承接 2026-08-19）**:以下历史条目中的固定 N-agent fan-out、连续 2 轮 dry 和广泛多数投票不再作为当前门禁。当前顺序是：`contract/completeness/field-diff/migration-gate` 机器覆盖 canonical 六维 → 主会话核对 compact manifest/delta 与反例清单 → 仅“非确定性且高影响”判断做两个不同证据 lens 的一致票。首次检查无未解决 gap 即可收口；发现 gap、源/合同变化或 Tier 3 高风险才解决后定向复查。六维是覆盖要求，不等于固定六个 Agent。
 
-1. **动态编排优先**:主会话按本次迁移现状编排三层机制：**deterministic sweep** 用脚本/合同覆盖 canonical 六维；**independent critic** 对压缩后的 manifest/delta 查漏，首次 dry 即可收口；**selective adversarial verify** 只对高影响非确定性判断启用两个不同证据 lens，任一反证即 `disputed`。Critic 发现 gap、源/合同变化或 Tier 3 风险时，解决后定向复查；普通等价项、机械字段和确定性失败不投票。预存的 `tools/migration-audit/{migration-audit,baseline-adversarial}.workflow.js` 是参考实现/起点模板，不是固定 fan-out 黑盒。
+1. **动态编排优先**:主会话按本次迁移现状编排三层机制：**deterministic sweep** 用脚本/合同覆盖 canonical 六维；**主会话反例检查** 对压缩后的 manifest/delta 查漏，无未解决 gap 即可收口；**selective adversarial verify** 只对高影响非确定性判断启用两个不同证据 lens，任一反证即 `disputed`。检查发现 gap、源/合同变化或 Tier 3 风险时，解决后定向复查；普通等价项、机械字段和确定性失败不投票。预存的 `tools/migration-audit/{migration-audit,baseline-adversarial}.workflow.js` 是参考实现/起点模板，不是固定 fan-out 黑盒。
 2. **审计方向以 old→new 全覆盖为主,辅以 current-new-only 保留扫描**:以**老仓全量清单为锚**逐项在新平台找落点,禁止用 new→old 替代主完整性审计；同时独立枚举当前 new 的页面/字段/自动化/工程能力,对没有 old 对应项的 delta 建 `old=N/A` 行,防止 new-only 增强在迁移中被误删。
-3. **强制产物 = 规范化迁移合同 + 完整性收敛记录**:逐**页面/字段/接口/Service/Repository/数据库表视图存储过程**建立稳定 ID,同时记录 new 现有能力、分类与最终目标。`migration-matrix.json` 只存基线决策,页面/UI 操作/API/字段/Service/菜单/壳层/集成拆成 8 个合同集合;每个源工件声明主合同维度并须被同行记录引用,每个矩阵行八维均须 `covered` 或有证据的 `not-applicable`。不可缩减的 canonical 六维、已解决 gap 与 critic 轮次写入 `completeness-sweep.json`;critic 发现必须转同轮 gap、绑定矩阵与解决证据,不得后续静默清空;最终 1 轮 dry 才允许锁。实现证据单独写 `migration-progress.json`。`codex-migration-audit contract + completeness + lock` 绿后才锁为契约基准(ADR-037);`spec.md`、完整性产物与逐字段 coverage 均属于哈希锁输入:
+3. **强制产物 = 规范化迁移合同 + 完整性收敛记录**:逐**页面/字段/接口/Service/Repository/数据库表视图存储过程**建立稳定 ID,同时记录 new 现有能力、分类与最终目标。`migration-matrix.json` 只存基线决策,页面/UI 操作/API/字段/Service/菜单/壳层/集成拆成 8 个合同集合;每个源工件声明主合同维度并须被同行记录引用,每个矩阵行八维均须 `covered` 或有证据的 `not-applicable`。不可缩减的 canonical 六维、已解决 gap 与 critic 轮次写入 `completeness-sweep.json`;检查发现必须转同轮 gap、绑定矩阵与解决证据,不得后续静默清空;最终 1 轮 dry 才允许锁。实现证据单独写 `migration-progress.json`。`codex-migration-audit contract + completeness + lock` 绿后才锁为契约基准(ADR-037);`spec.md`、完整性产物与逐字段 coverage 均属于哈希锁输入:
 
 | old 源工件(页/字段/接口) | new 现有能力 | 分类 | 最终目标 | 后端实装 | **前端真实装(非桩)** | 菜单种子 | 操作员可用 | 对抗投票 |
 |---|---|---|---|---|---|---|---|---|
@@ -111,7 +113,7 @@
 
 4. **「前端真实装(非桩)」专项检测**(治设备手册类桩):① service import 是否错配自身模块 ② 表单字段数 vs 后端 DTO ③ 子表/树形结构是否存在。任一异常 = 桩 = 未迁。
 
-**触发**:迁移启动前置(扫存量盲区,产矩阵)/ 每模块 STEP1 验收前(复扫该模块四列)/ 完结 DoD(矩阵全绿才宣告迁完)。**机制必须保留机器六维覆盖 + 独立 critic + 选择性高风险两票；合同/字段/所需风险票未过硬门不得锁基准。**普通等价项和确定性失败不投票。
+**触发**:迁移启动前置(扫存量盲区,产矩阵)/ 每模块 STEP1 验收前(复扫该模块四列)/ 完结 DoD(矩阵全绿才宣告迁完)。**机制必须保留机器六维覆盖 + 主会话反例检查 + 高影响两证据核对；合同/字段/所需风险票未过硬门不得锁基准。**普通等价项和确定性失败不投票。
 
 > **机器门补充(减法,ADR-014 修订 2026-06-22)**:可机器判的高频坑下沉为一个能跑的门 `tools/migration-audit/migration-gate.sh` —— **Gate0 枚举完整性**(老仓 `Controllers`+`Views`+`Scripts` 三源 vs 新前端,零黑名单:暴露 `Home`/统计/看板等非 CRUD 漏页,失效模式④;传 `legacy_roots_csv` 第4参启用,传 `coverage_file` 第5参升硬 gate)+ Gate1 前端桩(Edit import 的 service 不含自身/聚合模块=疑似复制桩;**前缀放行为弱判据,真实装仍以迁移矩阵「前端真实装」列+本体字段数核对为准**,MED)+ Gate2 后端归属(前端 api 寻址含老后端 marker)+ Gate3 路由孤儿(弱信号)。**CI / 迁移收尾必跑,退出码非 0 即红**。本次对 TPM 实跑精准抓出设备手册桩 `views/Manual/components/Edit`(0 误报)+ 老后端残留 2 处;Gate0 抓出 `Home`/`LubricationStatistics` 等非 CRUD 漏页。**「一个能跑的门 > 人工记一长串坑」**;坑库见 §5(4 失效模式)。
 
@@ -134,7 +136,7 @@
 - **状态判定**:`完好` = 源工件功能完整可用;`半成品` = 未完成的开发态;`坏` = 有缺陷/报错。
 - **半成品识别**是迁移轨等价审查的硬补丁 —— 等价审查只比「迁移前后一致」,抓不到「源工件本就半成品」。清单这一步专门兜它。
 
-> **基准选择性 adversarial 门(2026-08-19,ADR-014 修订)**:源工件/UI 清单和退化判定先过确定性 gate；机器能裁决的漏项、字段、菜单、路由和普通等价行直接按 gate 结果处理。只有源/ref 选择、`exclude-proven-dead`、`conflict-old-wins`、半成品分类改变范围、语义冲突、客户集成等“非确定性且高影响”判断才派两个不同证据 lens 去 refute；两票必须一致,任一反证即 disputed。audit 查「漏」,selective adversarial 查「高影响误判」；STEP1 验收仍按已确认 checklist 赴约打钩。
+> **基准选择性 adversarial 门(2026-08-19,ADR-014 修订)**:源工件/UI 清单和退化判定先过确定性 gate；机器能裁决的漏项、字段、菜单、路由和普通等价行直接按 gate 结果处理。只有源/ref 选择、`exclude-proven-dead`、`conflict-old-wins`、半成品分类改变范围、语义冲突、客户集成等“非确定性且高影响”判断才由主会话用两个不同证据来源核对反例；两票必须一致,任一反证即 disputed。audit 查「漏」,selective adversarial 查「高影响误判」；STEP1 验收仍按已确认 checklist 赴约打钩。
 
 ### 3.2 四层等价 DoD —— 逐项核对
 
@@ -192,7 +194,7 @@
 
 **纪律**:迁移基准复盘产「三方交叉异常清单」→ 逐项拉平 → 零异常才认定基准达成 → 才允许在此基准上做升级改造/全局规划。**禁**在异常未清零的基准上叠加新功能(否则异常累积、用户无法操作、业务逻辑无法确认)。锚点见 §5 坑 8(外协单元菜单种子整组漏种即此类基准异常)。
 
-> **完整性审计机器化(ADR-014 修订 2026-08-19)**:本节三方交叉 + §3.1 源工件/壳层枚举 + §5 坑 8-11 统一由 deterministic gate 和规范化合同承载六维覆盖，再由 1 个独立 critic 查“漏维/中间态/无证完成”。首次 dry 可收口；发现 gap 后修复并定向复查。迁移启动前置 / 每模块 STEP1 验收前 / 完结 DoD 强制跑；gap 清单交本体决策。
+> **完整性审计机器化(ADR-014 修订 2026-08-19)**:本节三方交叉 + §3.1 源工件/壳层枚举 + §5 坑 8-11 统一由 deterministic gate 和规范化合同承载六维覆盖，再由主会话查“漏维/中间态/无证完成”。首次 dry 可收口；发现 gap 后修复并定向复查。迁移启动前置 / 每模块 STEP1 验收前 / 完结 DoD 强制跑；gap 清单交本体决策。
 
 ---
 
@@ -243,7 +245,7 @@
 
 迁移一个模块,按序走:
 
-0. [ ] **前期实证**:机器 gate 完成 old→new 六维覆盖 + `current-new-only` 保留扫描；对 compact manifest 跑 1 个独立 critic,仅高影响非确定性判断两票；**产迁移矩阵表**(允许 `old=N/A` 的 new-only 行,含后端·前端真实装非桩·菜单·可用覆盖列),最终 critic dry 且所需票一致后锁基准
+0. [ ] **前期实证**:机器 gate 完成 old→new 六维覆盖 + `current-new-only` 保留扫描；主会话检查 compact manifest 与反例清单,仅高影响非确定性判断两票；**产迁移矩阵表**(允许 `old=N/A` 的 new-only 行,含后端·前端真实装非桩·菜单·可用覆盖列),最终反例检查无未解决 gap 且所需票一致后锁基准
 0b. [ ] **确定性机器门必跑**(退出码非0即红,补 workflow 漏跑风险):`migration-gate.sh`(Gate0 枚举完整性 / Gate1 前端桩 / Gate2 后端归属)+ `field-diff.sh`(核心实体 老DTO×新DTO **字段并集 diff**,抓后端字段漏迁如设备父子;`.field-coverage` 登记消解)。CI / 迁移收尾必跑(§3.0 机器门补充)
 1. [ ] 产 old 源工件清单(完好/半成品/坏)+ `current-new-only` 清单；每行用 canonical enum 分类:`conflict-old-wins / merge-union / keep-new-enhancement / fix-source-defect / exclude-proven-dead`
 2. [ ] 老视图(cshtml 等)源工件**逐行提取 UI 功能清单**(每列/每按钮/每弹窗/每必填)作契约锁基准,贯穿提取→派单实现 1:1 对照→验收打钩全程(持有完整上下文的主会话锁定,§3.2 铁律)

@@ -6,7 +6,9 @@
 
 ## 解决什么
 
-MDM→SRM→TPM 三次迁移的高代价坑同属一类 —— **完整性盲区**:整模块后端漏迁 / 壳层功能随 layout 整删 / 菜单种子整组漏种。当前默认先用确定性合同/字段/菜单/路由 gate 覆盖 canonical 六维，再运行一个独立 critic；本目录旧 Workflow 仅在机器证据不足时作 bounded 兼容模板:
+MDM→SRM→TPM 三次迁移的高代价坑同属一类 —— **完整性盲区**:整模块后端漏迁 / 壳层功能随 layout 整删 / 菜单种子整组漏种。当前默认先用确定性合同/字段/菜单/路由 gate 覆盖 canonical 六维，再由主会话按反例清单核对；独立 Reviewer/Critic 仅用户点名或更高优先级运行时要求。本目录旧 Workflow 仅在机器证据不足且运行时可用时作兼容模板，不默认启动固定 agent 扇出。
+
+机器字段 `criticRounds`/`dry`/`votes` 保留兼容；记录真实检查及不同证据，不伪造独立 agent 身份。下表的 critic 指完整性检查角色，不强制第二会话。
 
 | 模式 | 作用 |
 |---|---|
@@ -35,7 +37,7 @@ args 见 workflow 文件头注释。关键:`apiAddrFiles` / `oldBackendMarkers` 
 | | migration-audit | baseline-adversarial |
 |---|---|---|
 | 查什么 | **漏**(completeness):哪些维度/模块没枚举 | **误判**(correctness):枚举了但判错 |
-| 模式 | deterministic coverage + one independent critic | 仅高影响非确定性判断，2 个不同证据 lens 一致确认 |
+| 模式 | deterministic coverage + 主会话反例检查 | 仅高影响非确定性判断，2 个不同证据来源一致确认 |
 | 防的坑 | 整模块漏迁 / 壳层整删 / 菜单漏种 | 坑 2 半成品当完好、坑 10 退化产物当设计意图 |
 | 触发 | 启动前置 / 每模块验收 / 完结 DoD | 建基准时(源工件清单/退化判定/UI 清单锁定前) |
 
@@ -49,7 +51,7 @@ Codex 不直接运行 Claude `Workflow({ parallel, agent, schema })`;迁移轨�
 
 ```bash
 tools/migration-audit/codex-migration-audit.js init \
-  --target docs/superpowers/specs/2026-07-xx-xxx-migration \
+  --target docs/tasks/2026-09-xx-xxx-migration \
   --batch-id 2026-07-xx-xxx-migration \
   --title "XXX Migration"
 ```
