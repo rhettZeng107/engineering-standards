@@ -1,86 +1,58 @@
-# Frontend UI V2(Atlas)标准 — 业务页三范式
+# Frontend UI V2（Atlas）标准
 
-> 状态:正式(2026-06-12；2026-09-09统一业务抽屉为框架内路由独立页)。来源:ADR-032(V2 Atlas 设计语言)+ HC 项目首建落地(spec `HC/docs/superpowers/specs/2026-06-11-hcv2-ui-v2-upgrade`,A/B/C 三 Phase 全量实施,~40 页改造实战沉淀)。
-> 参考实现(真理源):`engineering-standards/references/v2-components/`(SectionCard / StepAnchorNav / InlineDetailTable / V2States / **FileUploader / ImportModal**(+ FileUploader.css)+ v2-components.css + v2-tokens.css)。消费仓 copy 落地,CR 用 `diff -r` 比对,禁私有 npm 源。
-> 适用栈:React 18 + antd 5 + @ant-design/pro-components 2.8.x(craco/CRA 或同类)。
+> 状态：正式。适用于 React 18、antd 5 与 `@ant-design/pro-components` 项目。
+> 本文只规定 V2 的强制边界；列表交互细则直接引用
+> [`frontend-ui-standard.md`](frontend-ui-standard.md) 与
+> [`react-ui-guidelines.md`](react-ui-guidelines.md)，不在三份文档中重复维护。
+> 共享组件真理源：`references/v2-components/`。
 
-## 1. Token 层(L1,全量换肤)
+## 1. 适用原则
 
-- 基线 = `v2-tokens.css`(CSS 变量:品牌靛蓝 `--v2-brand #1e4d8c` / 画布 `--v2-canvas #f5f6f8` / 语义色 ok·warn·err·info / 圆角 r-s·m·l / 阴影 sh-1·2·pop / 字族)。入口 import,层叠到 `:root`。
-- antd 5 `ConfigProvider` token 映射(两端字段级一致):`colorPrimary/colorLink #1e4d8c`、`colorSuccess #0f9d6e`、`colorWarning #c2740c`、`colorError #d14343`、`colorInfo #2563eb`、`borderRadius 7`、`colorBgLayout #f5f6f8`、`colorText #14233b`、`fontFamily`(见 §2)。
-- **按钮语义色(强制)**:以 V2 token 驱动 antd `Button`,不得页面级 hardcode 操作按钮颜色。新增 / 保存 / 提交 / 发布 / 批量发起等主动作统一 `type="primary"`;删除 / 作废 / 关闭 / 驳回 / 移出等破坏性或高风险动作统一 `danger` 或 `color="danger"`;导出 / 查看 / 编辑 / 取消 / 重置 / 查询等普通动作使用默认按钮、`type="link"` 或文本链接,只吃 `ConfigProvider` token。操作列不按业务含义随意上多色,确需强调时优先用语义 `Tag`/`StatusPill`,不要给每个行内按钮单独染色。
-- **回滚开关**:theme 文件保留 LEGACY 常量 + 单变量(`V2_ENABLED`)切换;注意 less modifyVars 经构建期注入,**翻开关后需 rebuild**(token 层 runtime 即时)— 回滚 SOP 必须写明。
-- 品牌色派生进 `rgba()` 用 `--v2-brand-rgb: 30, 77, 140`;hover 变体 `--v2-brand-soft-2`。禁页面级 hardcode 色值,既有 hardcode 在换肤批清剿(`grep` 旧主色 0 残留作机器门)。
+- 新建、重构和迁移页面默认按 V2 落盘。迁移不得只搬业务功能、旧布局或技术栈，再把 UI V2 留作后续美化。
+- 页面必须先判定为列表页、独立业务路由页、短事务 Modal 或看板/报表，再套对应范式；不得用 V2 页头、颜色或卡片替代完整页面范式。
+- 业务字段、按钮、校验、请求和保存契约不得因布局升级被删减。真实保存、持久化、回显和失败路径仍按项目验收标准执行。
 
-## 2. 字体
+## 2. Token 与基础组件
 
-- 标题 `--v2-font-heading`:**Sora**(600/700);单号/数字列 `--v2-font-mono`:**JetBrains Mono**(400/500)。latin subset woff2 本地打包(@fontsource 提取,合计 <80KB),`font-display: swap`,**禁外网 CDN**(`grep googleapis` 0 命中作门)。
-- 中文正文按 ADR-032 §2 **默认 Noto Sans SC**;**内网/零体积部署降级备选**(HC 方案):不打包中文字体,系统栈 `"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif` — 降级备选不覆盖默认。
-- 数字列等宽:`.v2-num { font-variant-numeric: tabular-nums }`。
+- 入口统一引入 `v2-tokens.css`，并将品牌色、语义色、圆角、画布、文字和字体映射到 antd `ConfigProvider`；页面不得硬编码主题色。
+- 主动作使用 `type="primary"`；删除、作废、驳回等危险动作使用 `danger`；普通查看、编辑、导出、返回使用默认按钮或链接。操作列不得用无业务含义的多色按钮。
+- 业务页复用 `SectionCard`、`StepAnchorNav`、`InlineDetailTable` 和 `V2States`；禁止自造同职能组件或用空卡片冒充业务分区。
 
-## 3. 四组件 API(参考实现为准)
+## 3. 列表页（强制）
 
-| 组件 | 职责 | 关键 props |
-|---|---|---|
-| `SectionCard` | 编号圆徽章段头 + 白卡片分段容器 | `no` / `title` / `desc` / `extra` / `id`(锚点) |
-| `StepAnchorNav` | sticky 编号锚点条(scroll-spy + 平滑滚动,可跳读非强制向导) | `items[{key,title,targetId}]`(**须 useMemo/模块级常量**)/ `offsetTop` |
-| `InlineDetailTable` | EditableProTable 薄封装(整宽虚线「+ 添加行」) | 透传 + `addText` / `recordCreatorProps` |
-| `V2States` | 三态(空/错误/加载骨架),禁白屏 | `type` / `title` / `description` / `action` / `rows` |
-| `FileUploader` | 统一附件上传(拖拽+点选,移植 SYSV2 MDM VUpload)— 见 §3.1 | `mode('compact'\|'dragger')` / `dataFlow('action'\|'defer'\|'base64')` / `accept` / `maxSize` / `maxCount` / `multiple` / `value` / `onChange` / `enableImagePreview` |
-| `ImportModal` | 统一 Excel 导入(下载模板→拖拽/点选上传→后端解析或前端 XLSX)— 见 §3.1 | `open` / `templateUrl` / `parseMode('backend'\|'frontend')` / `onSuccess` / `onClose` |
+列表页的定义、布局和交互以
+[`frontend-ui-standard.md`](frontend-ui-standard.md) 与
+[`react-ui-guidelines.md`](react-ui-guidelines.md) 为唯一细则来源，并至少满足：
 
-## 3.1 附件上传 / 导入标准(强制 — 拖拽+点选,移植 SYSV2 MDM VUpload)
+1. 使用 `ListPage` 四段式：标题与主操作、可选快捷筛选、字段过滤与工具栏、表格与分页。不得用多层 `Card`、手写搜索条或页面级 `Spin` 替代该结构。
+2. 主表使用 `ProTable` 或项目自包含的 `AutoHeightProTable`。查询条件声明在 `columns`，使用字段级、带标签的过滤控件；`search.labelWidth="auto"`，提供重置、查询及适用的展开/收起。
+3. 显式保留刷新、密度和列设置三图标。`toolBarRender={() => []}`，不得设为 `false`；列设置须支持显隐和拖拽排序，宽表按业务需要支持固定列。
+4. 每列声明稳定 `width`；编号、时间、状态等常用列保持一致口径。操作列固定在右侧、宽度统一，查看/编辑/删除及状态动作的顺序和危险色遵循 React 列表标准。
+5. 新增、导入、批量操作等页面级动作放在 `ListPage.Title.extra`；不得挤入 ProTable 内部工具栏。空、错、加载使用 `V2States`，接口异常不得伪装成空数据。
 
-> 来源:涛哥 2026-06-22 拍板锁定(HC 项目实战:plain `<Upload>` 只点选退化被抓)。**所有附件上传 / 文件导入入口默认走统一组件,禁退化为 HC 老栈的「只点选 input/button」。**
+普通 antd `Table` 只适用于看板内部摘要表、表单明细表或无分页/无 CRUD 工具栏的非列表型局部表格；不得用于规避列表页标准。
 
-- **铁律(拖拽+点选)**:任何附件上传 / 导入入口**必须同时支持拖拽(drag-drop)+ 点选(click)**,底座用 antd `Upload.Dragger`(原生双支持),**禁** plain `<Upload><Button>选择文件</Button></Upload>`(只点选)或裸 `<input type="file">`。视觉/交互移植参考 **SYSV2 MDM VUpload**。
-- **统一组件,禁各页自造**:
-  - 附件上传 → `FileUploader`(`components/upload/FileUploader.jsx`)。形态 `mode`:`compact`(行内,文案「点击或拖拽上传」)/ `dragger`(大拖拽区,文案「拖拽文件到此处,或 点击选择」)。
-  - Excel 导入 → `ImportModal`(`components/upload/ImportModal.jsx`,内含 Dragger「点击或拖拽 Excel 文件到此区域」+ 模板下载 + 解析预览)。
-  - 自造 plain Upload = 退化,CR 必拦(grep `<Upload\b`(非 `Upload.Dragger`)+ `type="file"` 作机器门)。
-- **三数据流(FileUploader.dataFlow)**:`action`(antd 直传 ExtendDoc)/ `defer`(暂存原始 File 交父组件提交)/ `base64`(转码交父提交)。按场景选,默认 `action`。
-- **能力基线(移植 VUpload)**:文件卡片(类型彩标 / 图片缩略图)+ 删除 + 下载预览 + 体积校验(`maxSize` MB)+ `maxCount`/`multiple` 约束 + 卸载释放本地 blob URL 防泄漏。
-- **value 形状(承 §7 坑)**:受控 `value` 项须含**顶层** `fileId`(`{uid,name,fileId,url?,status,...}`),不止 `.response.fileId`,否则已传文件下载链接失效。
-- **parity / 迁移红线**:迁移 HC 页面时,若 hcv2 已有上传增强(拖拽+点选),**保留增强不照搬 HC 退化**(详 legacy-migration-playbook「增强保留」原则)。
+## 4. 新增、编辑、详情与流程页（强制）
 
-## 4. 表单范式(L2)— 形态判定决策树(实战沉淀,按序判定)
+- 原 Drawer 或宽 Modal 中的新增、编辑、详情、主从和流程业务，统一改为 Main/门户框架内的子应用路由独立页。列表通过 `navigate(route)` 进入，页面按 route id 重新取数，支持刷新和深链。
+- 独立页使用画布背景，利用 Main 可用宽度，左右安全边距 5–15px；顶部包含面包屑、标题、说明和右上角操作区，主体按业务分组使用 `SectionCard`，长页面按需使用 `StepAnchorNav`。
+- 新增页右上角为 `[返回][保存]`；编辑页为 `[返回][删除][保存]`；详情页为 `[返回]+已授权业务动作`。返回采用 `navigate(-1)` 或明确来源路由；不得同时提供同义“返回”和“关闭”。
+- 保存成功返回来源列表并触发刷新；未保存返回、并发冲突、加载错误和无权限必须有明确反馈。不得只依赖 Drawer 内存或 `location.state` 维持页面数据。
+- 确认、提示、导入以及无明细且不超过 10 个字段的短事务可保留普通 Modal；不得把覆盖式全屏 Modal 当作独立页。
 
-1. **List 页** → 保 List 标准骨架,**禁重排**(仅吃 token)。
-2. **轻量对话框**(确认、提示、导入或≤10字段且无明细表，原本就是Modal) → 保普通 Modal，仅吃 token，禁加装饰段；这类短事务不属于业务页面。
-3. **原Drawer/宽Modal承载的新增、编辑、详情或流程页** → 统一转为**Main/门户框架内的子应用路由独立页**：列表用`navigate(route)`进入，返回用`navigate(-1)`或显式来源路由；不打开新浏览器页或Main平行菜单页签，不用遮罩、Drawer或覆盖式全屏Modal承载。按route id重取数以支持刷新/深链，保存成功返回列表并刷新。
-4. **路由页样式与操作** → 沿用V2询价单基线：canvas背景 + 最大化利用框架可用宽度 + 面包屑/标题/右上角操作区 + 适用的StepAnchorNav + SectionCard编号分区 + V2States三态。左右安全边距统一允许5–15px，采购等宽表单默认8–12px；不对表单/明细页设置1200px等固定窄宽上限，仅纯阅读型内容可有证据地限宽。新增为`[返回][保存]`；编辑为`[返回][删除][保存]`；详情为`[返回]+已授权业务动作`。不在返回旁再加同义关闭。
-5. **多 Tab 大页(每 Tab 独立 save)** → 原地分段:保留 Tabs 与各 save 模型,Tab 内容拆 SectionCard;最长 Tab 可加 StepAnchorNav(锚点只在该 Tab 内渲染,防点锚点滚到不存在的 id)。
+## 5. 上传与导入（强制）
 
-**铁律**:0 字段口径变更(payload 组装/字段 name/columns dataIndex/endpoint+HTTP 动词与改造前逐项一致,作 CR 机器门);只动布局容器层。
+- 所有附件上传统一使用 `FileUploader`，所有 Excel/批量导入统一使用 `ImportModal`；底层必须是 antd `Upload.Dragger`，同时支持拖拽和点选。
+- 禁止裸 `<input type="file">`、只点选的 plain `<Upload>` 或页面自造上传器。组件必须覆盖文件类型、大小、数量、上传状态、删除、下载/预览和错误反馈。
+- `FileUploader` 按场景使用 `action`、`defer` 或 `base64` 数据流；受控值必须在顶层保留 `fileId`。`ImportModal` 必须提供模板、上传、解析/预览、逐行错误和成功后的刷新语义。
 
-## 5. 详情范式(L3a)
+## 6. 验收门
 
-- 只读页内容块按既有分组套 `SectionCard`(编号 1..N)；原Drawer详情按§4改为框架内路由独立页，不保留侧滑壳或全屏Modal壳。
-- **嵌套卫生**:被父级 import 的 detail 组件**不自包 SectionCard**(由调用方分段),先 grep 消费方再决定 — 防双重/三重嵌套段头。
-- 禁自创段/占位段(ADR-032 字段要"活",禁占位符)。
+- 静态检查：列表页具有 `ListPage`、`ProTable` 字段过滤、三图标和统一操作列；业务 Drawer/宽 Modal 为独立路由；上传入口只使用统一 Dragger 组件。
+- 行为检查：从真实门户菜单进入；查询/重置/分页/列设置、CRUD、返回、刷新恢复、上传成功和失败均可操作；关键列使用真实数据且不为空或 `-`。
+- 视觉检查：桌面及适用移动端在 100%、125%、150% 缩放下无重叠、截断和无效大留白；固定列、横向滚动和操作区可用。
+- 工程检查：build/test 通过，外网字体请求为零，主题 token 无页面级硬编码。任一适用项未覆盖时，页面不得标记为 UI V2 完成。
 
-## 6. 硬验收(ADR-032 两条 + 实战补充)
+## 7. 迁移要求
 
-1. 字段要"活":真实业务字段,禁占位符冒充(CR 必查)。
-2. 响应式 + 浏览器缩放 **125%/150%** 无重影错位(sticky 锚点条重点风险面,E2E 加 `document.body.style.zoom` 断言)。
-3. 两仓/多端同构:组件目录 `diff -r` 退出码 0;ConfigProvider token 集字段级一致。
-4. build 0 error + 字体体积门 + 外网请求 0。
-5. 原Drawer页面必须在Main框架内完成路由进入/返回/刷新恢复；桌面、移动及125%/150%缩放下，页头、步骤条、SectionCard、表格和操作区不重叠，水平可用空间无无效大留白。
-
-## 7. 高频坑清单(HC 实战 CR 抓出,新项目必读)
-
-| 坑 | 症状 | 规避 |
-|---|---|---|
-| **回填时序**(2×CRITICAL+1×HIGH) | loading 期 early-return(V2States 替换表单)时 `formref.current` 为 null,`?.setFieldsValue` 被静默吞 → 编辑态字段全空 | 回填放表单挂载后 effect:`useEffect(() => { if (!loading && data) formref.current?.setFieldsValue(data) }, [loading, data])` |
-| **明细数据源误读**(CRITICAL) | 接口返回扁平行数组被误当 `json[0].entries` → 明细永空 | 改造前先实证响应形状(读后端投影/同源消费方),全量数组单独 state |
-| FileUploader value 形状(HIGH) | 简化传裸 state 丢顶层 `fileId` → 已传文件下载链接失效 | value 项须含顶层 `fileId`(不止 `.response.fileId`) |
-| 锚点数组引用不稳(MED) | items 每 render 新数组 → 滚动监听反复重绑 | useMemo 或模块级常量 |
-| 占位死段(ADR-032 违规) | agent 凭空加「预留扩展」空段 | 派单 prompt 明令禁止 + CR 必查 |
-| 旧色 hardcode 残留 | 页面 inline style 写死旧主色 | 换肤批全仓 grep 清剿 → `var(--v2-brand)` 等 |
-| 共享页样式隐式耦合(LOW) | 整页容器类(如 `quote-edit-page`)跨模块复用但不 import 其 css | 提取共享 `v2-edit-page.css` 显式 import(或接受先例并登记) |
-
-## 8. 实施编排建议(多 agent 并行)
-
-- 表单重排派 frontend-developer(HC 实战:qwen 表单重排 2 HIGH 前科);只读卡片化可派 qwen(prompt 带「禁自创段/禁自包壳」判例)。
-- 路由文件(App.js / react-router.js)由编排方统一落,agent 只报需求 — 防多 agent 写冲突与撞名(先 grep 既有路由)。
-- 每波:前置实证(单/多调用方+SKIP 判定)→ 落盘 → 统一 build → CR(0 字段口径作 CRITICAL 线)→ commit → 冒烟(渲染+分段+缩放断言)。
+迁移项目必须把“源功能等价”和“目标 UI V2 符合性”作为同一迁移单元的两个并列合同：源页面清单保证不漏业务，本文及其列表细则保证目标形态。两者同批编码、同批提交、同批 E2E；任何一项未通过，迁移状态只能是 `partial`、`pending` 或 `blocked`，不得记为 `complete`。
