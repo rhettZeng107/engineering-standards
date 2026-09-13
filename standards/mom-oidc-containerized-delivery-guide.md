@@ -358,6 +358,7 @@ Authentication__SysOidc__RequireHttpsMetadata=true
 ### 5.6 10.28 SSH 部署账户
 
 - 统一部署用户名：`webdeploy`。
+- 当前集成主机已创建该账户（UID 1001），属于 `sudo` 组但不属于 `docker` 组；容器管理必须通过受控 `sudo` 执行。不得仅为省去 `sudo` 把账户加入 `docker` 组，因为 Docker daemon 权限等价于主机 root 能力。
 - 首选认证方式：由平台管理员把产品组 SSH 公钥安装到 10.28 的 `webdeploy` 账户，并按最小权限配置 Docker 部署能力。
 - 必须使用密码的自动化场景：从 ADO Secret 变量 `DEPLOY_SSH_PASSWORD` 或企业密码库在运行时注入；禁止写入仓库、Dockerfile、compose、流水线明文、日志或交接文档。
 - 开发机临时运维：凭据存本机系统 Keychain/凭据管理器，执行时即时读取；不得复制到 shell history。
