@@ -86,3 +86,13 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 **关键机制**:`@module:<name>` 页级标签→本次提交 diff 选跑；`routes.config` 按实际增删的 `manifestPath` 映射到对应模块，不因菜单文件整体变更扩大为全菜单；后端契约改→**后端 pipeline 绿后 REST queue 消费前端 pipeline + 传 affectedModules→前端定向**(机制 B，详 [ADR-046](../decisions/ADR-046-cross-repo-contract-driven-e2e-trigger.md))；**后端 floor**(API-Health)所有后端必跑。
 
 > 后端 post-deploy 也要 floor:`dotnet test`(pre-deploy 门,SYS 范式)+ **API-Health Verify**(post-deploy,swagger 200 硬断言 + manifest 非空,TPM 范式)。MDM/SRM/MES 后端现缺,按本标准补。
+
+## 8. 主 CI 与次级环境/容器发布顺序
+
+存在 IIS + Docker、10.8 + 10.28 或其他双通道时，同一批次按目标提交串行发布：
+
+1. 双推后锁定各仓目标 SHA，并监控该 SHA 的主 CI；Build、Deploy、定向 E2E 全部达到 `completed/succeeded` 才算主通道终态。
+2. 主 CI 未终态、目标 SHA 不一致或任一 stage 红灯时，不启动次级环境更新；先按自愈手册处理并重新取得目标提交终态。
+3. 主 CI 成功后，以同一 SHA 构建/取得次级环境载荷，只更新本批授权的服务或容器，不顺带滚动共享栈和未授权应用。
+4. 次级环境部署后复跑与 CI 相同的 `floor + 本次改动页面 + 直接关联项`，并补 API 健康、版本/SHA、容器状态和真实 UI 语义证据；`running/healthy`、首页 200 或旧绿 CI 不能单独判定完成。
+5. 两个通道分别记录提交、构建/镜像标识、终态与验收结果；生产发布仍需遵守项目授权边界，不因测试双通道自动获得授权。
