@@ -128,6 +128,8 @@ If LSP is unavailable, use text search plus line reads and mark the evidence as 
 | Standard | Business behavior or contract changes, DB/auth risk, cross-stack dependencies, or uncertain requirements; file count is not a trigger | One existing task record containing the complete affected contract, implementation steps, acceptance and evidence; expand Spec/Plan only for migration, architecture, complex or long-running work |
 | Migration | Legacy modernization or functional skeleton migration | Complete baseline lock, source/equivalence matrix, page-level UI V2 contract/evidence, coverage record, staged plan, E1/E2 or equivalent verification |
 
+Frontend page coding adds the UI V2 gate to every track, including Simple. Track selection may reduce process overhead, but it never reduces the applicable page contract or page-level acceptance evidence.
+
 ### Scope Completeness Gate for Standard and Migration Tracks
 
 - Do not let an agent downgrade known or agreed scope into an MVP, minimal demo, reduced field set, happy-path-only slice, fixture shell, or placeholder integration. An explicitly approved prototype or phase is allowed only when the complete known target and remaining contract items stay recorded and it is not reported as overall completion.
@@ -148,7 +150,7 @@ If LSP is unavailable, use text search plus line reads and mark the evidence as 
 | DB review | Schema, migration, SQL, data correction, or DB contract |
 | Production guard | Any production write; destructive production operations require explicit human approval |
 | E2E | Cross-frontend/backend, auth, menu, deployment, or UI workflow |
-| Migration UI V2 | Before frontend coding, classify every affected page and bind the applicable V2 contract; before batch acceptance, require page-level static and real-UI evidence from the V2 standard |
+| Frontend UI V2 | Any frontend page coding in any track: before coding, classify every affected page and bind the applicable V2 contract; before batch acceptance, require page-level static and real-UI evidence from the V2 standard |
 | Git verify | After commit and after push |
 | Recovery | Multi-turn work, interruption, or resume command |
 
@@ -162,7 +164,7 @@ Gate results should be evidence records, not prose assertions. If a gate is inte
 - Static contract review and real UI E2E cover different failure modes; retaining both where required is not duplicate review.
 - Page changes use ADR-008's field-level change-impact and end-to-end contract checks: current lookup dependencies, cascading/null/refill/save behavior, DTO/mapping/persistence, sibling consumers and action routes. Read related unchanged code; keep dependency and field/action coverage evidence. A mocked test or successful deployment is not real page acceptance.
 
-Before coding, put the dependency and field/action matrix in the existing record; distinguish hidden-but-preserved fields, fields no longer editable in this entry, and business deletion. For migration frontend work, classify each affected page and bind the applicable [`frontend-ui-v2-standard.md`](frontend-ui-v2-standard.md) requirements before editing: list pages implement the V2 list structure during coding, business Drawer/wide-Modal flows become in-Main routes, and uploads use the shared Dragger components. Do not schedule these as post-migration polish. Reproduced escaped defects need regression at the layer that failed. Verification is impact-based: affected routes/consumers and applicable auth, CRUD, failures, upload and localization, not every unrelated feature. Migration E1/E2 and actual page acceptance remain required; missing UI V2 evidence keeps the migration batch incomplete.
+Before coding, put the dependency and field/action matrix in the existing record; distinguish hidden-but-preserved fields, fields no longer editable in this entry, and business deletion. For any frontend page coding in any track, classify each affected page and bind the applicable [`frontend-ui-v2-standard.md`](frontend-ui-v2-standard.md) requirements before editing: list pages implement the V2 list structure during coding, business Drawer/wide-Modal flows become in-Main routes, and uploads use the shared Dragger components. Do not schedule V2 conformance as later polish or waive it for a small change, an existing legacy page, or a field/API-only request. Reproduced escaped defects need regression at the layer that failed. Verification is impact-based: affected routes/consumers and applicable auth, CRUD, failures, upload and localization, not every unrelated feature. Migration work additionally retains E1/E2 and source-equivalence acceptance; missing UI V2 evidence keeps every affected track batch incomplete.
 
 Reuse verification only with evidence of candidate identity, relevant dependency/runtime identity, command, scope and result. A changed relevant input invalidates that result; shared infrastructure or rebase changes may widen regression. Review consumes still-valid results rather than rerunning all commands. Each changed repository commits the accepted code/tests/docs batch together and verifies configured remotes separately. Preserve unrelated dirty work. Store final commit hashes in an external execution receipt or query Git, without recursive closeout commits.
 
