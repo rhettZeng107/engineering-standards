@@ -113,6 +113,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-046](ADR-046-cross-repo-contract-driven-e2e-trigger.md) | 跨仓契约驱动的部署后 E2E 触发(后端改→触发消费前端 L1 定向)— 落地 ADR-045 §3;实证 ADO 2020+ 三机制后选 B(后端 pipeline 绿后 REST queue 受影响消费前端 + 传 affectedModules);consumers manifest 落后端仓;否决 A 声明式(过度触发/无定向)/ C UI(不可审计) | Accepted | 2026-06-18 | 跨项目 | 本仓 |
 | [ADR-047](ADR-047-bp-subapp-bridge-v1.md) | BP 子应用认证桥 v1：BP 独占持久 JWT、ACK/版本化上下文、统一 401 判活与 N/N-1 迁移 | Accepted | 2026-07-14 | 跨项目 | 本仓 |
 | [ADR-048](ADR-048-app-family-multi-runtime-publishing.md) | 应用家族单身份多运行时发布：AppName 合并边界、原子聚合 manifest 与可逆回滚 | Accepted | 2026-07-14 | 跨项目 | 本仓 |
+| [ADR-049](ADR-049-mom-oidc-containerized-delivery.md) | MOM 子应用统一 OIDC 与容器化交付：SYS IdP、Discovery/JWKS、Bridge V1、10.28 容器、10.31 网关及退出 JYInfo/10.8 IIS | Accepted | 2026-09-14 | 跨项目 | 本仓 |
 
 ---
 
@@ -126,8 +127,8 @@ Deprecated   → 废弃但未被取代
 | **项目地图** | 025·026(~~013 归档~~) | 自适应维护 + MECHANISMS 第8维(013 已 Superseded by 025) |
 | **迁移轨** | 014·028 → [playbook §0](../standards/legacy-migration-playbook.md) | 014 怎么执行 / 028 做什么算完;总入口 playbook §0 |
 | **交付验证** | 008·024·022·034 | E2E 8项 / 三轨分级 / CICD监控 / APM-lite |
-| **安全鉴权** | 007·047 | 鉴权 4 条刚性 / BP 子应用内存态认证桥与上下文判活 |
-| **子应用集成** | 011·012·038·047·048 | BP门户边界 / 接入SOP / 主数据走API / v1认证桥 / 单身份多运行时发布 |
+| **安全鉴权** | 007·047·049 | 鉴权 4 条刚性 / BP 子应用内存态认证桥与上下文判活 / SYS OIDC资源服务器标准 |
+| **子应用集成** | 011·012·038·047·048·049 | BP门户边界 / 接入SOP / 主数据走API / v1认证桥 / 单身份多运行时发布 / OIDC与容器交付 |
 | **前端工程标准** | 020·023·032 | i18n范围 / 4基建标准 / UI V2 Atlas |
 | **AI工程工作流** | 003·035·037·043 | 编码路由 / LSP网关 / 契约锁归属 / on-prem服务器SSH运维 |
 | **工作纪律/决策授权** | 005·017·018·036·042 | 全新部署剔运维 / 批次节奏 / 授权三档 / CR门禁 / 推前必同步禁裸force |

@@ -1,5 +1,7 @@
 # 自托管 Agent → 内网 IIS 部署标准(On-Prem IIS Deploy Standard)
 
+> **适用边界更新（2026-09-14）**：本标准仅服务尚未容器化的存量应用。新建应用和完成迁移的MOM应用统一按[ADR-049](../decisions/ADR-049-mom-oidc-containerized-delivery.md)及[OIDC与容器化部署手册](mom-oidc-containerized-delivery-guide.md)发布到10.28容器并经10.31网关暴露；完成容器验收后必须退出10.8 IIS发布链。
+
 > 决策依据:[ADR-040](../decisions/ADR-040-cicd-onprem-iis-deploy-channel.md)。
 > 适用:所有「ADO self-hosted Agent → 内网 IIS」部署的项目 —— SYSV2(6 仓)/ MES(2 仓)/ 未来 WMS / EAM / TPM。
 > 用法:各工作区 Claude 按本标准改 `azure-pipelines.yml` 部署步骤;MES 团队共享同一份。

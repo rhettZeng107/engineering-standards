@@ -1,6 +1,6 @@
 # 子应用接入业务门户(BP)标准手册
 
-> **状态**:Reference Verified v2.0(2026-07-15；APS 功能 happy-path 已验证，全协议推广门禁待完成)
+> **状态**:Reference Verified v2.1(2026-09-14；OIDC与容器交付以ADR-049及配套手册为准)
 > **适用范围**:任何要嵌入业务门户(BP)的子应用 — MDM ✅ 已接入(参考实现)/ SRM / MES / EAM / ...
 > **维护规则**:接入流程或契约变更 → 必新建 ADR + 旧条目标 `Superseded by ADR-XXX`,不可改写历史
 > **设计标杆**:MDM 子应用(`AI.Extend.MDM.1` 后端 + `AI.REACT.MDM.1` 前端)
@@ -1089,21 +1089,17 @@ function PreloadHost() {
 
 ---
 
-### 附录 M. 子应用后端 JWT 签名 key 与 SYS 同族对齐(验 BP token)
+### 附录 M. 子应用 API 的 SYS OIDC 验签
 
-> 2026-06-18 TPM B 方案沉淀。BP 业务请求带的是 **SYS 签发的 BP token**(BP 登录走 SYS `OAuthController`,HS256,claims `iss=aud=JYInfo`+PlantCode+LoginUserName)。子应用后端 `[Authorize]` 必须用**与 SYS 同族的签名 key** 验签,否则 **CORS 全对、token 全带,业务请求仍 401**(附录 L 与本附录是 BP 业务 200 的两道独立闸门:CORS 过 ≠ 鉴权过)。
+> **Superseded by ADR-049（2026-09-14）**：本附录原 `JYInfo/HS256/共享签名密钥`方案只保留为历史故障背景，禁止新接入或复制。当前标准见 [MOM OIDC 统一认证与容器化部署详细手册](mom-oidc-containerized-delivery-guide.md)。
 
-**规则**:
-- 子应用后端验签 key(`JwtOptions:SecurityKey` → `IssuerSigningKey`)必须 == SYS 签发 BP token 的 key(JY 同族共享)。**勿沿用脚手架/模板默认值** —— TPM 首落地即因 `SecurityKey` 抄自老仓模板残值致**全量业务 401**(CORS/token 链全对,极易误判)。
-- `ValidIssuer`/`ValidAudience` 也须 = SYS 签发值(默认 `JYInfo`);`ValidateLifetime` 默认开。
-- 真 key 由 SYS 运行时从 **Consul `Jwt:SecretKey`** 取(子应用仓读不到);基准对照**已工作子应用后端**硬编码 `IssuerSigningKey`(如 MDM `Program.cs`)。明文 key 全族共享属已知 compliance-debt,接入文档不复述明文。
-- 字符串编码坑:SYS 签发用 `Encoding.ASCII`、子应用验签常用 `Encoding.UTF8` —— 纯 ASCII 字符 key 两者字节相同无碍;含非 ASCII 字符时须一致。
+当前强制规则：
 
-**确诊/对齐方法(确定性,不依赖 Consul)**：通过隔离测试账号的登录 API 或 BP 顶层运行时内存临时取得 JWT，本地逐 candidate key 重算 HS256(`HMAC-SHA256(header.payload, key)` base64url 比 token 末段 sig)，**命中者即真 key**。禁止从子应用 localStorage 取 token，也禁止把 token 写入日志、截图或文档。
-
-**401 边界取证(不臆测哪一层)**:JwtBearer 把失败原因写进响应 **`WWW-Authenticate`** 头 —— `error_description="The signature key was not found"`=key 错 / `"The token expired"`=过期 / 无该头=没带 token。配 token claims 解码(iss/aud/exp)一次定位是签名 key 还是 iss/aud/exp/缺 token。
-
-**验收(CR HIGH + 真机)**:BP 真机逐菜单 walk,业务 `[Authorize]` 端点返 **200**(非仅 swagger);若 401,先读 `WWW-Authenticate` 头判失败类型再修。TPM 2026-06-18:改回同族 key 后逐菜单 41×业务 200、0 鉴权失败。
+- Access Token 为 SYS 签发的非对称签名 JWS，`typ=at+jwt`；资源服务器通过 HTTPS Discovery/JWKS 取得公开签名密钥，不共享 SYS 私钥或 HMAC 密钥。
+- BP 嵌入资源服务器校验 `issuer=https://172.21.10.31/sys`、`audience=business-portal`、scope 含 `sys.api`、`portal=business`、`BusinessPortalAccess=true` 和非空 `PlantCode`。
+- Token 签名/issuer/audience/type/lifetime 无效返回 401；有效身份但无门户、菜单、角色或组织权限返回 403。
+- 诊断可读取脱敏后的 `WWW-Authenticate` 与 header/claim 元数据，但不得输出 Token、Cookie 或 Authorization header。
+- `JYInfo` 仅允许尚未迁移的存量消费者使用显式 legacy 开关；单应用迁移验收后关闭自身开关，全体消费者归零后由 SYS 删除旧端点和密钥。
 
 ---
 
@@ -1123,9 +1119,9 @@ function PreloadHost() {
 
 #### O.1 token 与组织上下文
 
-- BP 是 plant-scoped access JWT 的唯一持久拥有者；嵌入子应用只在内存保存当前上下文，不写 localStorage、sessionStorage、cookie、IndexedDB 或 URL。
-- BP JWT 的业务 claims 至少包含 `LoginUserName`、`PlantCode`、`BusinessPortalAccess`、`EmpId`、`EmpCode`、签发/受众/到期信息；没有实际员工编号时 `EmpCode` 必须是空字符串，不得省略或伪造。
-- 子应用后端必须验证 JWT 签名、issuer、audience、lifetime、`BusinessPortalAccess=true` 与非空 `PlantCode`；显式 `X-Plant-Code` 与 claim 不一致时返回 403。
+- BP 是业务槽 OIDC Access Token 的唯一持久拥有者；嵌入子应用只在内存保存当前上下文，不写 localStorage、sessionStorage、cookie、IndexedDB 或 URL，且永不接收 Refresh Token。
+- 业务 Token 必须符合 ADR-049：签名 JWS `typ=at+jwt`、audience=`business-portal`、scope 含 `sys.api`，并携带 `portal=business`、`BusinessPortalAccess=true`、`PlantCode` 及 Token V2 追踪 claim。可选人员字段不得伪造。
+- 子应用后端通过 Discovery/JWKS 验证 JWT 签名、issuer、audience、type、lifetime、scope、门户职责与非空 `PlantCode`；显式 `X-Plant-Code` 与 claim 不一致时返回 403。
 - 组织切换时 token 与 PlantCode 必须作为同一个原子上下文发送；子应用不得把新 token 与旧 PlantCode 拼接使用。
 
 #### O.2 v1 握手与消息边界
@@ -1172,6 +1168,7 @@ APS 参考实现：`AppName=aps`、门户根“APS高级计划排程”；5041 �
 | 2026-06-18 | 1.4 | **新增附录 M 子应用 JWT 签名 key 与 SYS 同族对齐**(TPM P5 实证:`JwtOptions:SecurityKey` 抄模板残值致 CORS/token 全对仍全量业务 401):验签 key 须 == SYS 签发 BP token 的 key(勿用脚手架默认值);真 token 本地 HS256 反推确诊 + `WWW-Authenticate` 头判失败类型;与附录 L CORS 为 BP 业务 200 两道独立闸门 |
 | 2026-06-18 | 1.5 | **新增附录 N 子应用 i18n locale 自托管**(TPM 实证:loadPath 指 BP 门户 /Static → SPA fallback → 全 t() key 裸显中英混杂):loadPath 须指子应用自己 base + 自带 locale 文件;部署后 curl 验 application/json;E2E 加 i18n 视觉校验(截图地面真值,ADR-024 ⑥) |
 | 2026-07-14 | 2.0 | **ADR-047/048 + 附录 O**：生产嵌入升级为 BpSubAppBridge v1；BP 独占持久 JWT，子应用内存态、精确 source/origin、ready/ACK、版本化上下文与 401 判活；新增单 AppName 多模块/多运行时原子发布标准，并以 APS 5041/5042 双后端真实 BP E2E 作参考实现 |
+| 2026-09-14 | 2.1 | **ADR-049**：附录 M 由 JYInfo/HS256 共享密钥迁移为 SYS OIDC Discovery/JWKS；附录 O 对齐签名 `at+jwt`、业务 audience/scope 与 Refresh Token 不下发边界 |
 
 ---
 
@@ -1182,6 +1179,8 @@ APS 参考实现：`AppName=aps`、门户根“APS高级计划排程”；5041 �
 - [ADR-008:端到端交付 8 项核对](../decisions/ADR-008-end-to-end-8-checks.md) — 技术契约 4 + 业务连通 4
 - [ADR-047:BP 子应用认证桥 v1](../decisions/ADR-047-bp-subapp-bridge-v1.md) — token/组织上下文、401 判活与 N/N-1 协议迁移
 - [ADR-048:应用家族单身份多运行时发布](../decisions/ADR-048-app-family-multi-runtime-publishing.md) — AppName 合并边界、原子 manifest 与发布回滚
+- [ADR-049:MOM 子应用统一 OIDC 与容器化交付](../decisions/ADR-049-mom-oidc-containerized-delivery.md) — 资源服务器、JYInfo 退出、10.28 容器与10.31网关标准
+- [MOM OIDC 统一认证与容器化部署详细手册](mom-oidc-containerized-delivery-guide.md) — TPM/MES/AIOS 等产品组执行入口
 - **ADR-006:SubApp 跨进程鉴权 IP allowlist** — 当前为 SYSV2 项目级 ADR(`SYSV2/docs/decisions/ADR-006-...md`,该项目内可达);其他项目接入时**沿用同模式**(IP allowlist 中间件 + 本手册附录 C 范式),若多项目实际接入后存在共性需求,由后续 ADR 升级到本仓 `decisions/`
 - [frontend-ui-standard.md](frontend-ui-standard.md) — antd 5 + ProTable 列表页统一标准(子应用 UI 一致性)
 - [doc-conventions.md](doc-conventions.md) — spec/plan/ADR 命名约定
