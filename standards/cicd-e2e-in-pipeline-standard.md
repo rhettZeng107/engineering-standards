@@ -20,7 +20,7 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 | # | 坑 | 规则 |
 |---|---|---|
 | 1 | **dev render OK ≠ prod render OK** | E2E 必须打**部署后的 prod 环境**(`E2E_TARGET` = 部署 URL),禁只用 dev server 验。dev 掩盖 minify/ErrorBoundary/数据态差异。 |
-| 2 | **CI smoke ≠ 页面渲染** | smoke 之外必须有页面级 render 断言(boot 壳子 + render-walk 逐页)。 |
+| 2 | **CI smoke ≠ 页面渲染** | smoke 之外必须对本次改动及关联页面执行 render/交互断言。 |
 | 3 | **共享 Table dataSource 无数组守卫 → 单点崩全站** | 前端编码标准:Table/列表 dataSource 必 `Array.isArray(x)?x:[]`(见 `react-ui-guidelines.md`);E2E render-walk 兜底拦截。 |
 | 4 | **POST 被 IIS 降级 / 端点 5xx** | 部署后验关键 POST verb 不被重定向降级;E2E 捕获业务 5xx。 |
 | 5 | **render-walk `goto` 路由 + 注入 token 绕过菜单 ≠ 入口可达** | 验收方(涛哥)只在部署环境以**操作用户视角**验收(登录门户 → 点菜单 → 进页面)。CI E2E 必**全检 ADR-008 #5 入口可达性全链**(路由→菜单种子→权限码→登录看到→渲染)**并确保绿**:有菜单的应用必加 **critical-menu-walk**(从门户菜单树**点进**目标页断言可达),**禁只** `goto` 路由 + 注入 token(漏菜单种子 / 权限码 —— SRM 外协单元1-3 代码迁完、render-walk 22/22 绿,却因菜单种子整组漏种门户点不进,即此漏)。 |
@@ -66,23 +66,23 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 - [ ] **改动模块:critical-business-display 已验标题/主键、关键字段、状态、关联对象、数量一致性;0 个未定义值/裸 key/数据空壳**
 - [ ] Table dataSource 数组守卫(编码标准)
 - [ ] 钩子 `cicd-e2e-stage-guard` 未报缺 stage
-- [ ] **E2E job `timeoutInMinutes ≥ 60`**(全量套件留余量;分层后 L0/L1 远低于此)
+- [ ] **E2E job `timeoutInMinutes ≥ 60`**(为真实登录、保存重读及关联页留余量，不代表扩大为全菜单)
 
 ---
 
-## 7. 分层定级(替代人工测试,ADR-045)
+## 7. 按提交影响面验收(ADR-045)
 
-> 目标:部署后 E2E 替代人工逐页 QA;首发全量、日常增量只测受影响面、异常自治修。详 [ADR-045](../decisions/ADR-045-post-deploy-e2e-tiered-scoping-governance.md) + SYSV2 spec `2026-06-18-post-deploy-e2e-tiered-scoping`。
+> 目标:部署后 E2E 验证本次提交及必要关联项；全菜单巡检作为独立专项，不混入普通提交门禁。详 [ADR-045](../decisions/ADR-045-post-deploy-e2e-tiered-scoping-governance.md)。
 
 | 层 | 触发 | 跑什么 |
 |---|---|---|
 | **L0 核心 floor** | **每次部署无条件** | 前端 boot+i18n-mix+quality+核心导航 smoke(登录+进 3-5 主菜单页);**后端 API-Health**(swagger 200 + menu/manifest 非空,TPM 范式) |
-| **L1 定向** | diff 只碰单模块(非共享层) | L0 + 该 `@module` 逐页 render+视觉 + 前后端契约关联页 |
-| **L2 全量逐页** | 首发 / 碰共享层 / 判不准 / 夜间 | L0 + 全菜单逐页 render+视觉+**截图**(替代人工) |
+| **L1 定向** | diff 可映射到明确模块及共享消费者 | L0 + 改动模块、共享消费者及前后端契约关联页 |
+| **专项全量** | 手工点名、独立计划或周期性健康巡检 | 全菜单逐页 render+视觉+截图；结果单独归档，不冒充某次提交验收 |
 | **L3 自愈** | 任一层红 | `cicd-self-heal-sop` 三层分流 |
 
-**两个保险(强制)**:① L0 永远跑 ② 改动路径自动定级 + **判不准默认 L2**(共享层 `components/v2/layouts/router/locales/request 封装/构建配置` 命中即 L2;未映射模块/首发 → L2)。
+**两个保险(强制)**:① L0 永远跑；② 改动路径必须映射到直接模块和关联模块。共享层 `components/v2/layouts/router/locales/request`、构建配置和菜单路由必须在 `tier-config.json` 显式维护消费者；判不准直接使影响范围计算失败并补映射，禁止回退全菜单，也禁止只跑 floor 冒充页面验收。
 
-**关键机制**:`@module:<name>` 页级标签(目录名=模块)→ diff 选跑;`menu-manifest.json` diff 出新页=首发→L2(前端 manifest 不进 git 时由 routes.config/无基线两保险兜,首发逐页落后端 manifest publisher,详 ADR-045 §修订);后端契约改→**后端 pipeline 绿后 REST queue 消费前端 pipeline + 传 affectedModules→前端 L1 定向**(机制 B,consumers manifest 落后端仓 `pipeline-e2e/contract-consumers.json`,详 [ADR-046](../decisions/ADR-046-cross-repo-contract-driven-e2e-trigger.md);本期做,不留二期);**后端 floor**(API-Health)所有后端必跑。
+**关键机制**:`@module:<name>` 页级标签→本次提交 diff 选跑；`routes.config` 按实际增删的 `manifestPath` 映射到对应模块，不因菜单文件整体变更扩大为全菜单；后端契约改→**后端 pipeline 绿后 REST queue 消费前端 pipeline + 传 affectedModules→前端定向**(机制 B，详 [ADR-046](../decisions/ADR-046-cross-repo-contract-driven-e2e-trigger.md))；**后端 floor**(API-Health)所有后端必跑。
 
 > 后端 post-deploy 也要 floor:`dotnet test`(pre-deploy 门,SYS 范式)+ **API-Health Verify**(post-deploy,swagger 200 硬断言 + manifest 非空,TPM 范式)。MDM/SRM/MES 后端现缺,按本标准补。

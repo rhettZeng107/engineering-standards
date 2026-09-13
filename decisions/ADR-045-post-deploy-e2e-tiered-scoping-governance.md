@@ -113,6 +113,12 @@ per-push 封顶后,弱化保险②的**全部兜底押在夜间 L2 接得住**�
 
 TPM 前端 `feature/vite` 先落地(dev/feature 分支,未上 master/生产,跨切面回归延迟到夜间可接受)。**其他工作区按需采纳**;**生产分支慎用 per-push 封顶**(弱化保险②;若用必先接夜间红检测闭环)。原 ADR Decision「两个保险」对未采纳封顶的工作区不变。
 
+## 修订(2026-09-13)—常规 CI 只验本次修改及关联项
+
+涛哥明确修订交付口径：CI E2E 验收不是全菜单只读巡检。常规提交固定执行 `@floor + 本次改动页面 + 必要关联页面`；共享组件、service、路由和菜单变更必须通过显式影响映射展开到直接消费者。未知影响应让范围计算失败并补映射，不再以 L2 全菜单兜底，也不得只跑 floor 冒充页面验收。
+
+全菜单走查保留为手工点名、独立计划或周期性健康巡检，使用单独的触发参数和结果记录；它不属于某次业务提交的完成门禁，不能用其结果替代本批影响面验收。此前“首发/共享层/判不准自动 L2”及“夜间 L2 是 per-push 封顶前提”的规则由本修订取代；后端 API-Health floor、真实 BP 入口、错误路径和跨仓 `affectedModules` 定向触发继续保留。
+
 ### 实证 vs 假设(ADR-015)
 
 - **[实证]** `tier-decide --self-test` 25 过(封顶/forceFull 豁免/判不准保留模块 grep/非法 maxTier 不封顶)/ `playwright.config` + `azure-pipelines.yml` 语法 OK / architect + code-reviewer 双 CR **APPROVE 0 HIGH**(限定「4 修正点全落实、保险①无损」范围)。注:#2 首发豁免 / #4 retries:1 为 CR **后**回修(响应 code-reviewer findings / architect MED-2),以 self-test 25 过为据,未经 reviewer 单独复审。

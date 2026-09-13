@@ -19,10 +19,10 @@
 ## 1. 层一:分层定级(每个前端仓)
 
 1. **3 个 floor spec**:`pipeline-e2e/tests/` 下确保有 boot / quality / i18n-mix(或等价;双语豁免 i18n 的仓用 i18n 切换;后端壳类用 shell)。给 **describe 标题**末尾加 ` @floor`(例:`test.describe('XX critical boot @floor', ...)`)。
-2. **拷 `tier-decide.mjs`**:本目录 `tier-decide.mjs` → 各前端 `pipeline-e2e/`。`node tier-decide.mjs --self-test` 应 17/17。
+2. **拷 `tier-decide.mjs`**:本目录 `tier-decide.mjs` → 各前端 `pipeline-e2e/`。补 `tier-config.json` 的共享文件/路由→模块映射，并执行 `node tier-decide.mjs --self-test`。
 3. **E2E stage 接线**(`azure-pipelines.yml`):
    - E2E job 的 `checkout: self` 把 `fetchDepth: 1` → `fetchDepth: 2`(tier-decide 要 HEAD~1)。
-   - 「Run E2E」步换成分层块(`$E2E_TIER`/`$E2E_GREP` 由 tier-decide 出):grep **必经 `$env:E2E_GREP` 注入**(playwright.config.ts 读 `process.env.E2E_GREP`)再 `npx playwright test`,**禁 CLI `--grep "@floor|$grep"`** —— 含 `|` 在 PowerShell→npx 泄漏成 shell 管道符 → reporter EPIPE 假崩(见标准 §2#6)。L0 设 `$env:E2E_GREP='@floor'` / L1 设 `$env:E2E_GREP="@floor|$grep"`(双引号才插值)/ L2 设 `$env:E2E_GREP=''`(空=全量)。
+   - 「Run E2E」步固定为 `@floor + tier-decide 输出的 @module`。grep **必经 `$env:E2E_GREP` 注入**(playwright.config.ts 读 `process.env.E2E_GREP`)再 `npx playwright test`,**禁 CLI `--grep "@floor|$grep"`** —— 含 `|` 在 PowerShell→npx 泄漏成 shell 管道符 → reporter EPIPE 假崩(见标准 §2#6)。未映射共享文件/菜单路由直接失败并补 `tier-config.json`；不得以空 grep 运行全菜单。
 
 ### 1.1 门户登录 wujie 子应用 floor 的稳定化(TPMV2 实证,3 个真坑,务必照做)
 
@@ -75,5 +75,5 @@
 
 - **pilot → fanout**:先 1 后端 → 1 前端打通(含真改 Controller 验 firing:日志见 `✅ queued <repo> runId=...` + 前端 run Build/Deploy SKIPPED + E2E 跑),再 fan out 其余。
 - **每步双推 + watch**;红则按 `docs/ops/cicd-self-heal-sop.md` 自愈。
-- **@module(L1 真定向)**:有页级 module spec 的仓(如 SRM Buyer `m03-batch*`)给 describe 打 `@module:<目录名>`;无则保持 @floor 降级。
+- **@module 真定向**:页级 spec 给 describe 打 `@module:<目录名>`；共享文件和路由必须声明关联模块。缺标签/映射直接修配置，不能降级为全菜单或只跑 floor 冒充页面验收。
 - 完结回灌:更新本工作区 spec/进度 + 若发现新坑补本 cookbook。

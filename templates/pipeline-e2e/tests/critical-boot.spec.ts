@@ -9,7 +9,7 @@ setupDiag();
 // E2E_ROOT_PATH:子应用子路径(如 /srm/ /MDM/),external 根站点用 '/'(默认)
 const ROOT = process.env.E2E_ROOT_PATH || '/';
 
-test.describe('critical boot(部署壳子)', () => {
+test.describe('critical boot(部署壳子) @floor', () => {
   test(`${ROOT} 启动 — bundle + #root + 无 MIME 错配 / ErrorBoundary`, async ({ page }) => {
     const pageErrors: string[] = [];
     const resourceErrors: string[] = [];

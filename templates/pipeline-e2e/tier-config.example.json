@@ -1,0 +1,25 @@
+{
+  "moduleRoots": ["src/views/", "src/pages/"],
+  "appCodeRoot": ["src/", "public/"],
+  "requireImpactMap": [
+    "^src/components/",
+    "^src/services/",
+    "^src/routes\\.config\\.mjs$"
+  ],
+  "impactMap": [
+    {
+      "pattern": "^src/components/SharedTable\\.",
+      "modules": ["orders", "receipts"]
+    },
+    {
+      "pattern": "^src/services/orders\\.",
+      "modules": ["orders"]
+    }
+  ],
+  "routeImpactMap": [
+    {
+      "pattern": "^/orders(?:/|$)",
+      "modules": ["orders"]
+    }
+  ]
+}

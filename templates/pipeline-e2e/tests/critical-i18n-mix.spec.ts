@@ -16,7 +16,7 @@ setupDiag();
 // 本应用合法英文白名单(首跑后按命中补;COMMON_ALLOW 已含 MDM/SRM/API/KPI/版本号等通用缩写)
 const APP_ALLOW: (string | RegExp)[] = [];
 
-test.describe('critical 中英混杂(zh-CN 部署后)', () => {
+test.describe('critical 中英混杂(zh-CN 部署后) @floor', () => {
   test('菜单/标签/列头无原始 key / 未渲染插值 / 纯英文残留', async ({ page, context }) => {
     await context.clearCookies();
     // 改成本应用测试账号;子应用换部署入口 goto(无 token 走查壳子)

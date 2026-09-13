@@ -3,13 +3,15 @@
 > 标准:`standards/cicd-e2e-in-pipeline-standard.md` · 决策:ADR-024(修订)
 > 由来:SYSV2 MDM pipeline-e2e + SRMV2 部署 10.8 踩坑(dev render OK 但 prod build 崩 10 菜单)沉淀。
 
-## 用法(新前端仓 3 步)
+## 用法(新前端仓 4 步)
 
 1. **拷骨架**:把本目录拷到前端仓根 `pipeline-e2e/`。
 2. **改 spec**:
    - 纯壳子验证 → 留 `tests/critical-boot.spec.ts`(开箱即用,配 `E2E_ROOT_PATH`)。
-   - 要逐页验渲染(推荐,防共享组件崩) → 用 `tests/critical-render-walk.spec.ts`:改 `helpers/login.ts`(二选一鉴权模式)+ pipeline 注入 `E2E_ROUTES`(曾崩溃 + 核心业务路由)。
-3. **接 stage**:把 `templates/azure-pipelines-e2e-stage.snippet.yml` 接到前端 pipeline 的 `DeployTest` 之后,替换 `<E2E_TARGET>/<E2E_API>/<E2E_ROUTES>` 占位。
+   - 每个业务模块的真实页面用例必须带 `@module:<name>`；模块名与目录/影响映射完全一致。
+   - 全菜单 `critical-render-walk` 仅供手工或周期性专项，不进入常规提交门禁。
+3. **配影响映射**:复制 `tier-config.example.json` 为 `pipeline-e2e/tier-config.json`，共享组件、service、router/routes.config 必须显式映射到直接消费模块；未知影响让 CI 失败并补映射，不准回退全菜单。
+4. **接 stage**:把 `templates/azure-pipelines-e2e-stage.snippet.yml` 接到前端 pipeline 的 `DeployTest` 之后,替换 `<E2E_TARGET>/<E2E_API>` 占位。
 
 ## 验证什么(断言)
 
@@ -23,6 +25,7 @@
 ## 关键纪律(否则白做)
 
 - **必须打部署 prod 环境**(`E2E_TARGET` 指部署 URL),**不是 dev server**:dev 掩盖 prod-only 崩溃。
+- 常规提交只跑 `@floor + @module:<本次修改及关联项>`；全菜单巡检是独立专项，不作为本批验收结果。
 - pipeline 跑这套的 stage `continueOnError: false`,**CRASH 即阻断 deploy 视为失败**。
 - Windows 自托管 agent 装 `npx playwright install chromium --with-deps`。
 
