@@ -8,8 +8,8 @@
 ## 1. 硬基线:前端部署 pipeline 必含三段
 
 ```
-Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
-                  (msdeploy + smoke)      (Playwright 打部署 prod URL,CRASH 阻断)
+Stage 1 Build  →  Stage 2 DeployTarget  →  Stage 3 E2EVerify
+                  (容器或 IIS + smoke)       (Playwright 打部署 prod URL,CRASH 阻断)
 ```
 
 - **smoke(index.html 200 + `<div id=root>`)不是 E2E**,只验静态首页可达,**不验 SPA mount + 数据渲染**,不能替代 Stage 3。
@@ -49,6 +49,7 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 |---|---|---|---|
 | external 独立站点 | 自有端口 | `http://<host>:<port>` | `/` |
 | shared_iis 子应用 | 挂 BP 站点 /vdir | `http://<host>:<bp-port>/<vdir>` | `/<vdir>/` |
+| container_gateway | 容器候选 + 统一网关路径 | `https://<gateway>/<app>` | `/<app>/` |
 
 ## 5. 落地(新前端仓)
 
@@ -57,7 +58,7 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 
 ## 6. 自查清单(部署交付前)
 
-- [ ] 前端 pipeline 含 Build + DeployTest + **E2EVerify** 三 stage
+- [ ] 前端 pipeline 含 Build + DeployTarget + **E2EVerify** 三 stage，DeployTarget 与当前真实承载模式一致
 - [ ] E2EVerify 打**部署 prod URL**(非 dev),`continueOnError: false`
 - [ ] critical-boot 通过(壳子 + MIME + #root)
 - [ ] 有业务页:critical-render-walk 覆盖曾崩溃 + 核心路由,**CRASH = 0**
@@ -87,12 +88,12 @@ Stage 1 Build  →  Stage 2 DeployTest  →  Stage 3 E2EVerify
 
 > 后端 post-deploy 也要 floor:`dotnet test`(pre-deploy 门,SYS 范式)+ **API-Health Verify**(post-deploy,swagger 200 硬断言 + manifest 非空,TPM 范式)。MDM/SRM/MES 后端现缺,按本标准补。
 
-## 8. 主 CI 与次级环境/容器发布顺序
+## 8. 容器与 IIS 发布边界
 
-存在 IIS + Docker、10.8 + 10.28 或其他双通道时，同一批次按目标提交串行发布：
+同一应用在同一测试环境只保留一个日常业务发布载荷，先按当前运行实证选择链路：
 
-1. 双推后锁定各仓目标 SHA，并监控该 SHA 的主 CI；Build、Deploy、定向 E2E 全部达到 `completed/succeeded` 才算主通道终态。
-2. 主 CI 未终态、目标 SHA 不一致或任一 stage 红灯时，不启动次级环境更新；先按自愈手册处理并重新取得目标提交终态。
-3. 主 CI 成功后，以同一 SHA 构建/取得次级环境载荷，只更新本批授权的服务或容器，不顺带滚动共享栈和未授权应用。
-4. 次级环境部署后复跑与 CI 相同的 `floor + 本次改动页面 + 直接关联项`，并补 API 健康、版本/SHA、容器状态和真实 UI 语义证据；`running/healthy`、首页 200 或旧绿 CI 不能单独判定完成。
-5. 两个通道分别记录提交、构建/镜像标识、终态与验收结果；生产发布仍需遵守项目授权边界，不因测试双通道自动获得授权。
+1. `containerized`：主 CI 以目标 SHA 构建可追溯镜像/预构建上下文，只更新授权的单个容器服务，随后从统一网关执行 API health、`floor + 本次改动页面 + 直接关联项`；三段全部 `completed/succeeded` 才是终态。
+2. `iis-only`：继续执行 Build → IIS Deploy → 部署地址 E2E；尚未容器化的应用不得因总体策略被提前移除。
+3. 容器化应用不得再向 IIS 同步同一业务包。旧端口如承担跳转、反向代理或未迁消费者的 API 兼容，必须固化为独立基础配置，禁止日常业务 CI 覆盖；消费者完成迁移后再单独下线。
+4. 从 IIS 迁往容器必须先证明容器、网关路由和部署后 E2E 可用，再退出旧发布链；声明已容器化但现场缺容器/路由时保持 `blocked`，不能制造服务中断。
+5. 目标 SHA、镜像 revision、CI buildId 和运行容器必须相互一致；`running/healthy`、首页 200、旧绿 CI 或手工构建不能单独判定完成。共享宿主只允许 `--no-deps` 更新本批服务，不滚动其他工作区或平台基础容器。
