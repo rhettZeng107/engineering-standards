@@ -1,6 +1,7 @@
 # ADR-042 — Git 推送前必同步(pull --rebase before push)+ 禁裸 force(团队多人协作)
 
 - **状态 / Status**:Accepted
+- **后续修订**:[ADR-050](ADR-050-gitea-actions-onprem-container-delivery.md) 将已验收迁移仓的协作真源改为 Gitea；本 ADR 的 rebase、禁裸 force、分支侦察和推后验真继续有效，ADO 真源表述仅适用于尚未迁移的工作区。
 - **日期 / Date**:2026-06-18
 - **决策人**:涛哥(PM)
 - **影响范围**:跨项目工程标准 — 所有双推/单推工作区(SYSV2 / SRMV2 / HC / MESV1 / TPMV2 / MES / WMS / EAM 等)

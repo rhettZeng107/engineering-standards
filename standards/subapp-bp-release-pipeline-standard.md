@@ -1,6 +1,6 @@
 # 子应用发布业务门户(BP)+ CI/CD 流水线标准(编排总纲)
 
-> **状态**:Stable v2.0(2026-09-14,OIDC与容器化交付升级)
+> **状态**:Stable v2.1(2026-09-15,Gitea Actions主交付链升级)
 > **适用范围**:任何要发布到业务门户(BP)并接入内网 CI/CD 的子应用；新建/完成迁移的应用走10.28容器+10.31网关，未容器化存量应用临时保留IIS分支
 > **定位**:**总纲 = 把发布全链 7 环节串成顺序流,每环节一句话 + 指向其 detail doc,不重复细节**。照本文走一遍即"从代码就位到 BP 真机逐菜单 200"全闭环。
 > **维护规则**:流程/契约变更 → 新建 ADR + 旧条目标 `Superseded by`,不改写历史。
@@ -9,7 +9,7 @@
 
 ## 0. 一句话
 
-子应用发布 BP = **菜单经 manifest 自动进 SYS(禁手工种库)+ API按SYS OIDC Discovery/JWKS验签+前后端经ADO部署不可变容器到10.28+10.31网关发布+部署后定向E2E验证真实业务数据**。完整执行合同见 [MOM OIDC 统一认证与容器化部署详细手册](mom-oidc-containerized-delivery-guide.md)。
+子应用发布 BP = **菜单经 manifest 自动进 SYS(禁手工种库)+ API按SYS OIDC Discovery/JWKS验签+前后端经Gitea Actions部署不可变容器到容器平台和统一网关+部署后定向E2E验证真实业务数据**。完整执行合同见 [MOM OIDC 统一认证与容器化部署详细手册](mom-oidc-containerized-delivery-guide.md)及[Gitea Actions内网容器CI/CD标准](gitea-actions-onprem-container-cicd-standard.md)。
 
 ---
 
@@ -23,7 +23,7 @@
 | 4 | **容器拓扑 + 网关** | 前后端不可变镜像部署到10.28，10.31 APISIX提供同源path；容器化后退出10.8 IIS。未容器化存量应用才走MsDepSvc | OIDC容器手册§5-6 · `cicd-onprem-iis-deploy-standard`（仅存量） | 容器healthy + 10.31静态/API探针 + upstream不含10.8 |
 | 5 | **前后端 CI/CD pipeline** | `本地定向验证 → Build/Test → 10.28容器Deploy → 10.31 Verify → 定向E2E`；后端鉴权契约变化触发消费前端 | OIDC容器手册§7 · ADR-045/046 | 精确SHA镜像、消费者触发和业务E2E全绿 |
 | 6 | **部署后自动 E2E(影响面定向,ADR-045)** | **L0 floor**每次跑；再按本次 diff 执行改动页面及共享消费者、菜单/接口关联页的 `@module` 用例。未知影响直接失败并补映射；全菜单走查仅为独立专项，不进入常规提交门禁；`continueOnError:false` | `cicd-e2e-in-pipeline-standard` §7 ·`templates/pipeline-e2e` | 本次影响面全绿,CRASH=0 + 中英混杂=0 |
-| 7 | **CI 监控 + 自愈 + 鉴权门真机验收** | 推送后以`background --build-id ... --quiet`启动后台 watcher,在交互边界用`consume`取得终态,红走`cicd-self-heal-sop`;真机从 BP 跨域打带 JWT 的`[Authorize]`业务端点验200(非仅 swagger) | ADR-022 ·`tools/cicd-ado-monitor.js` ·`subapp-onboarding-guide` 附录 L/M | 逐菜单业务 200 + 0 鉴权失败 + 0 错误 toast |
+| 7 | **CI 监控 + 自愈 + 鉴权门真机验收** | 推送后通过Gitea Actions页面/API监控Run、Jobs、日志和制品到终态，红走`cicd-self-heal-sop`;真机从 BP 跨域打带 JWT 的`[Authorize]`业务端点验200(非仅 swagger) | ADR-022/050 ·Gitea CI/CD标准§8 ·`subapp-onboarding-guide` 附录 L/M | 逐菜单业务 200 + 0 鉴权失败 + 0 错误 toast |
 
 > **顺序约束**:1→2→3 是菜单链(代码→端点→SYS);4→5→6 是部署链(站点→pipeline→E2E);3 与 4 可并行,但 **6 的 menu-walk 要 3(菜单进 BP)+ 5(后端部署)都完成**才能真机验。
 
@@ -71,9 +71,9 @@
 
 ## 6. 关联资源
 
-- **ADR**:ADR-011 / 012 / 038(子应用接入)· ADR-007(鉴权 4 条)· ADR-008 / 024(E2E 8 项核对 + 阶段分级)· **ADR-045(部署后 E2E 分层定级治理 — L0/L1/L2 + 中英混杂门禁 + 后端 floor)**· ADR-022(CI 监控反馈)· ADR-040(MsDepSvc 部署通道)
-- **standards**:`mom-oidc-containerized-delivery-guide`（OIDC与容器目标）·`subapp-onboarding-guide`（菜单/Bridge）·`subapp-menu-manifest-publish`·`cicd-onprem-iis-deploy-standard`（仅未容器化存量）·`cicd-e2e-in-pipeline-standard`
-- **templates / tools**:`templates/subapp-migration-checklist` · `templates/iis-web.config-spa-subapp` · `templates/azure-pipelines-e2e` · `tools/cicd-ado-monitor.js`
+- **ADR**:ADR-011 / 012 / 038(子应用接入)· ADR-007(鉴权 4 条)· ADR-008 / 024(E2E 8 项核对 + 阶段分级)· **ADR-045(部署后 E2E 分层定级治理 — L0/L1/L2 + 中英混杂门禁 + 后端 floor)**· ADR-022(CI 监控反馈)· ADR-040(MsDepSvc 部署通道)· ADR-050(Gitea Actions主交付链)
+- **standards**:`mom-oidc-containerized-delivery-guide`（OIDC与容器目标）·`gitea-actions-onprem-container-cicd-standard`（主CI/CD链）·`subapp-onboarding-guide`（菜单/Bridge）·`subapp-menu-manifest-publish`·`cicd-onprem-iis-deploy-standard`（仅未容器化存量）·`cicd-e2e-in-pipeline-standard`
+- **templates / tools**:`templates/subapp-migration-checklist` · `templates/iis-web.config-spa-subapp` · `templates/pipeline-e2e`
 
 ---
 
@@ -83,3 +83,4 @@
 |---|---|---|
 | 2026-06-18 | 1.0 | 首版(TPM 首落地后沉淀,D2):编排 7 环节顺序流 + 拓扑 A/B 分支 + 三道 backend 隐形闸门(`[NonUnify]`/CORS/JWT key)+ TPM reference 索引;引用现有 detail doc 不重复细节 |
 | 2026-09-14 | 2.0 | ADR-049：目标拓扑升级为SYS OIDC、Bridge V1、10.28容器和10.31网关；JYInfo/HS256及10.8 IIS降为存量迁移参考 |
+| 2026-09-15 | 2.1 | ADR-050：已迁移仓改用Gitea Actions主交付链、独立Runner与Gitea API监控；ADO降为历史只读 |

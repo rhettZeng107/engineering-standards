@@ -3,8 +3,8 @@
 > **适用边界更新（2026-09-14）**：本标准仅服务尚未容器化的存量应用。新建应用和完成迁移的MOM应用统一按[ADR-049](../decisions/ADR-049-mom-oidc-containerized-delivery.md)及[OIDC与容器化部署手册](mom-oidc-containerized-delivery-guide.md)发布到10.28容器并经10.31网关暴露；完成容器验收后必须退出10.8 IIS发布链。
 
 > 决策依据:[ADR-040](../decisions/ADR-040-cicd-onprem-iis-deploy-channel.md)。
-> 适用:所有「ADO self-hosted Agent → 内网 IIS」部署的项目 —— SYSV2(6 仓)/ MES(2 仓)/ 未来 WMS / EAM / TPM。
-> 用法:各工作区 Claude 按本标准改 `azure-pipelines.yml` 部署步骤;MES 团队共享同一份。
+> 适用:仍未容器化且继续采用「ADO self-hosted Agent → 内网 IIS」的存量项目；已按ADR-049/050验收迁移的仓不再适用。
+> 用法:各工作区维护者按本标准改 `azure-pipelines.yml` 部署步骤。
 > **本文不含任何密码 / 密钥**;凭据一律走 ADO 变量组 secret。
 
 ---
@@ -117,7 +117,7 @@ SYSV2 SYS 实例:`contentPath="SYS3-Console/JYCoreSysWebApi"`。
    curl --ntlm -u '<MACHINE>\<account>:<pwd>' -s -o /dev/null -w "%{http_code}\n" http://<IIS_HOST>/MsDeployAgentService
    # 401=认证失败(密码/账号/权限) ; 500=认证通过(GET 非 msdeploy 请求才 500)= 凭据 OK
    ```
-4. **监控**(SYSV2):推送后用`node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id> --branch <branch> --quiet`启动后台 watcher，并在交互边界执行`consume`取得终态；`wait/watch`只用于短时故障诊断。
+4. **监控**(ADO/IIS存量分支):推送后用`node docs/ops/cicd-ado-monitor.js background <repo> --build-id <id> --branch <branch> --quiet`启动后台 watcher，并在交互边界执行`consume`取得终态；`wait/watch`只用于短时故障诊断。
 
 ---
 
@@ -169,7 +169,7 @@ node docs/ops/cicd-ado-monitor.js cancel-old <repo>   # 保留 queueTime 最新,
 
 - 无论被取代的旧 build 是 1 个还是多个、`notStarted` 还是 `inProgress`,一律取消(不为已跑一半的过时 build 等结果)。
 - Codex 双推后**自动执行**,Tier 1 自主(可逆 + 队列管理),不问涛哥;节奏 = `push → cancel-old → background 指定最新 build → consume 终态`。
-- 适用所有 ADO self-hosted 单/少 worker pipeline(SYSV2 / SRMV2 / MES / TPM / 未来工作区)。
+- 适用所有尚未迁移的 ADO self-hosted 单/少 worker IIS pipeline；已迁入Gitea Actions和容器平台的仓按ADR-050执行。
 
 ---
 

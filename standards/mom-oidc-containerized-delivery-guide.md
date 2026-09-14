@@ -395,7 +395,7 @@ Authentication__SysOidc__RequireHttpsMetadata=true
         ↓
 本地受影响页面 E2E（有隔离账号和可用环境时）
         ↓
-commit → pull/rebase → ADO + GitHub 双推
+commit → pull/rebase → Gitea主仓推送
         ↓
 CI 构建/测试/产出不可变容器上下文
         ↓
@@ -408,7 +408,7 @@ L0 floor + 按 affectedModules 的定向部署态 E2E
 记录精确 commit/build/image/业务证据
 ```
 
-本地先做定向 E2E 可以减少唯一 ADO Agent 的无效排队，但不能替代部署态 E2E。若 SYS 配置为同账号单会话，本地与 CI 禁止并发使用同一账号；应使用隔离账号，或等待当前 CI 终态后再跑本地浏览器测试。
+Gitea Actions完成构建、部署态E2E和制品回读后再推GitHub镜像；ADO在逐仓切换验收后保留历史只读。完整Runner、Secret、精确SHA、并发Build与串行Deploy要求见[Gitea Actions内网容器CI/CD标准](gitea-actions-onprem-container-cicd-standard.md)。本地先做定向 E2E 可以减少共享 Runner 的无效排队，但不能替代部署态 E2E。若 SYS 配置为同账号单会话，本地与 CI 禁止并发使用同一账号；应使用隔离账号，或等待当前 CI 终态后再跑本地浏览器测试。
 
 ### 7.2 后端契约触发消费者
 
@@ -505,7 +505,7 @@ L0 floor + 按 affectedModules 的定向部署态 E2E
 | 决策 | 本产品迁移范围、嵌入/独立模式、AppName、API audience、legacy 退出条件 |
 | 源码 | OIDC 配置、业务 Policy、Bridge V1、Dockerfile、健康端点、网关/部署脚本 |
 | 测试 | 鉴权正反例、组织隔离、原业务 Policy、Bridge 单测、真实 BP 定向 E2E |
-| Git | 当前分支、commit SHA、ADO 与 GitHub 远端一致、无未说明脏改 |
+| Git | 当前分支、commit SHA、Gitea主仓与GitHub镜像一致；ADO迁移后允许停留在切换前SHA、无未说明脏改 |
 | CI | buildId、结果、触发的 affectedModules、部署镜像 tag |
 | 运行 | 10.28 容器 healthy、10.31 route/upstream、匿名 401、合法业务 API 200 |
 | 业务 | BP 菜单权限正确、代表页面有真实数据/明确空态、保存则必须 fresh GET 回读 |

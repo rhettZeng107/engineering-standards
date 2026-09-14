@@ -1,7 +1,7 @@
 # 标准 — CI/CD E2E-in-pipeline(部署后自动验证)
 
 > 决策依据:ADR-024(Plan E2E 分级 + CI/CD 接管,修订段确立本标准为硬基线)+ ADR-022(CICD 监控)+ ADR-027(复盘分层蒸馏)+ **ADR-045(部署后 E2E 分层定级治理,§7)**。
-> 模板:`templates/pipeline-e2e/` + `templates/azure-pipelines-e2e-stage.snippet.yml`。
+> 模板:`templates/pipeline-e2e/`；Gitea主交付链见[Gitea Actions内网容器CI/CD标准](gitea-actions-onprem-container-cicd-standard.md)，`templates/azure-pipelines-e2e-stage.snippet.yml`仅供尚未迁移的ADO历史流水线。
 > 钩子:`templates/hooks/cicd-e2e-stage-guard.js`(前端 pipeline 缺 E2E_Verify stage 即警示)。
 > 由来:SYSV2 MDM pipeline(已含 E2E_Verify Stage 3)+ SRMV2 部署 10.8 踩坑(抄了无 E2E 的样板 → CI 绿 + dev render OK,但 prod build 上 10 个菜单点开即崩)。
 
@@ -84,7 +84,7 @@ Stage 1 Build  →  Stage 2 DeployTarget  →  Stage 3 E2EVerify
 
 **两个保险(强制)**:① L0 永远跑；② 改动路径必须映射到直接模块和关联模块。共享层 `components/v2/layouts/router/locales/request`、构建配置和菜单路由必须在 `tier-config.json` 显式维护消费者；判不准直接使影响范围计算失败并补映射，禁止回退全菜单，也禁止只跑 floor 冒充页面验收。
 
-**关键机制**:`@module:<name>` 页级标签→本次提交 diff 选跑；`routes.config` 按实际增删的 `manifestPath` 映射到对应模块，不因菜单文件整体变更扩大为全菜单；后端契约改→**后端 pipeline 绿后 REST queue 消费前端 pipeline + 传 affectedModules→前端定向**(机制 B，详 [ADR-046](../decisions/ADR-046-cross-repo-contract-driven-e2e-trigger.md))；**后端 floor**(API-Health)所有后端必跑。
+**关键机制**:`@module:<name>` 页级标签→本次提交 diff 选跑；`routes.config` 按实际增删的 `manifestPath` 映射到对应模块，不因菜单文件整体变更扩大为全菜单；后端契约改→**后端 pipeline 绿后触发消费前端 pipeline + 传 affectedModules→前端定向**。已迁移仓使用Gitea `workflow_dispatch`与受限服务账号，ADO REST queue仅保留给未迁移仓；契约原则详[ADR-046](../decisions/ADR-046-cross-repo-contract-driven-e2e-trigger.md)，Gitea实现详[Gitea CI/CD标准 §6](gitea-actions-onprem-container-cicd-standard.md#6-后端契约触发消费者)。**后端 floor**(API-Health)所有后端必跑。
 
 > 后端 post-deploy 也要 floor:`dotnet test`(pre-deploy 门,SYS 范式)+ **API-Health Verify**(post-deploy,swagger 200 硬断言 + manifest 非空,TPM 范式)。MDM/SRM/MES 后端现缺,按本标准补。
 

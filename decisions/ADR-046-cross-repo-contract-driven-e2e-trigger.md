@@ -1,5 +1,7 @@
 # ADR-046:跨仓契约驱动的部署后 E2E 触发(后端改 → 触发消费前端 L1 定向)
 
+> **后续实现**：[ADR-050](ADR-050-gitea-actions-onprem-container-delivery.md) 保留本 ADR 的契约感知与 `affectedModules` 语义；已迁移仓改用 Gitea `workflow_dispatch` 和专用服务账号，本文 ADO REST queue 仅用于尚未迁移的历史流水线。
+
 - **Status**: Accepted
 - **Date**: 2026-06-18
 - **Deciders**: 涛哥(拍板 B 机制)
@@ -91,6 +93,6 @@ ADR-045 Decision §3 定了「后端契约改 → 触发消费前端 pipeline �
 | **C 经典 build-completion 触发**(ADO UI 配) | 最简,但**非版本控制(UI 漂移、不可审计)**、无契约感知、无模块定向。与全工作区 YAML-as-code 治理背道。 |
 
 ## References
-- [ADR-045](ADR-045-post-deploy-e2e-tiered-scoping-governance.md) / [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md) / [ADR-024](ADR-024-plan-e2e-tiered-cicd-handover.md) / [ADR-022](ADR-022-cicd-monitoring.md)
+- [ADR-045](ADR-045-post-deploy-e2e-tiered-scoping-governance.md) / [ADR-037](ADR-037-cross-stack-contract-lock-ownership.md) / [ADR-024](ADR-024-plan-e2e-tiered-cicd-handover.md) / [ADR-022](ADR-022-cicd-monitor-feedback.md)
 - 标准:`standards/cicd-e2e-in-pipeline-standard.md` §7
 - Spec:`SYSV2/docs/superpowers/specs/2026-06-18-post-deploy-e2e-tiered-scoping/spec.md` §5

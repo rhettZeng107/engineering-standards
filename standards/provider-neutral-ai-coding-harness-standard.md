@@ -204,7 +204,7 @@ After a push starts CI, monitor the pipeline to a terminal state without occupyi
 
 Preferred implementation order:
 
-1. Bootstrap the global truth-source template `engineering-standards/templates/cicd-ado-monitor.js` into the workspace, then use its `background` subcommand. It starts a detached process, records per-build PID/log/meta/state/terminal artifacts, defaults to a 10-minute interval, and exposes one-time `consume`; project wrappers may remain only for compatibility.
+1. Use the active provider's API and project watcher. For Gitea Actions, read Run、Jobs、job logs and artifacts as defined by [Gitea Actions内网容器CI/CD标准 §8](gitea-actions-onprem-container-cicd-standard.md#8-监控与终态判定)；`cicd-ado-monitor.js`仅服务尚未迁移的ADO历史流水线。
 2. Codex thread/project automation when the monitor should wake the same conversation or run on a schedule.
 3. Shell job under `tmux`/platform-native watcher when already standard for the project.
 4. `nohup <ci-watch-command> ... &` only as a fallback after verifying in the current tool environment that the child process survives the parent command/session.
