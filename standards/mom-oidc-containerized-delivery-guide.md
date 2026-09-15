@@ -1,9 +1,9 @@
 # MOM OIDC 统一认证与容器化部署详细手册
 
-> **状态**：Stable v1.0（2026-09-14）
+> **状态**：Stable v1.1（2026-09-15）
 > **适用范围**：SYS、BP、MDM、SRM、TPM、MES、AIOS 及后续 MOM Web/Api 子应用
 > **目标读者**：产品组开发、测试、DevOps、平台管理员
-> **决策依据**：[ADR-049](../decisions/ADR-049-mom-oidc-containerized-delivery.md)
+> **决策依据**：[ADR-049](../decisions/ADR-049-mom-oidc-containerized-delivery.md)、[ADR-051](../decisions/ADR-051-mom-portal-session-and-idle-renewal.md)
 > **参考实现**：SYS OIDC 授权服务器 + BP Bridge V1 + MDM OIDC-only 资源服务器 + 10.28 容器 / 10.31 APISIX
 
 本手册给出从旧 `JYInfo` Token、独立 IIS 端口迁移到统一 OIDC 与容器平台的完整执行合同。它不是“加一个 JWT 中间件”和“补一个 Dockerfile”的清单；完成标准必须同时覆盖身份、业务授权、组织数据、前端上下文、镜像、网关、CI、回滚和真实业务 E2E。
@@ -64,6 +64,7 @@ SYS 本地账号 / 可选 LDAP·AD / 可选 Kerberos
 | Discovery | `https://172.21.10.31/sys/.well-known/openid-configuration` |
 | 登录流程 | Authorization Code + PKCE（S256） |
 | BP client_id | `business-portal-web` |
+| BP 独立登录 URL | `https://<gateway>/bp/#/login`（路径大小写敏感；业务授权请求的`returnUrl`查询须位于`#/login`之前） |
 | BP API audience | `business-portal` |
 | 必需业务 scope | `sys.api` |
 | Access Token | 签名 JWS；当前 `alg=RS256`、`typ=at+jwt`；资源 API 可经 JWKS 公钥验签 |
@@ -102,6 +103,18 @@ OpenIddict 对 JWT access token 使用 `typ=at+jwt`；为第三方资源服务�
 | Token 有效但缺 scope、错门户职责、无业务权限、组织不允许 | 403 | 已识别身份，但无权执行目标操作 |
 | 上游服务不可用 | 503 | 不得伪装成 401 或空数据 |
 | 合法查询没有业务记录 | 200 + 明确空集合/业务空态 | 不能用 mock 或固定空壳冒充成功 |
+
+### 2.4 Standard 会话与无感续作
+
+| 槽 / 凭据 | 生效边界 | 续期或结束条件 |
+|---|---|---|
+| Access Token | 15 分钟 | BP 在到期前或非终态401后使用本 Client 的 Refresh 无感取得新 Access；继续按权限版本、会话槽和职责校验 |
+| BP 业务中央槽 | 最长空闲4小时，无另一固定绝对上限 | 只接受 BP 页面、已握手且活动的子应用中真实键盘/鼠标操作；后台轮询及 Token 刷新不算活动；达到4小时须重新登录 |
+| BP Refresh Token | 初次授权族固定12小时、轮换，仅在BP当前页面内存持有 | 不进入Web Storage/URL/Cookie；旧族到期或页面重载后若业务中央槽仍有效且未空闲4小时，BP可在同源隐藏回调以`prompt=none`重新走Code+PKCE取得新的有界令牌族，当前页面不跳转 |
+| SYS.3 管理中央槽 | 最多12小时 | 仍只服务管理Client；不能续用业务或审计槽 |
+| AuditPortal 审计中央槽 | 最多8小时 | 审计员角色独立校验，systemadmin仍无AP审计能力 |
+
+业务授权请求未登录时必须返回 BP 独立登录页，仅带经同源授权端点、`business-portal-web`、回调URI、Code+PKCE S256与state校验的`returnUrl`；无权或空闲超时不得跳到SYS控制台登录页。静默授权必须在当前业务槽失效、注销或权限变化时失败。`MlpsLevel2`档位保留更严格的空闲与绝对时长上限，不能被Standard规则绕过。MOM子应用若未上报真实操作，不能声称其iframe内持续作业已被四小时规则覆盖。
 
 ## 3. 子应用 API 改造
 
@@ -238,7 +251,7 @@ subapp-context-applied(requestId, contextVersion)
 允许发起第一笔业务 API
 ```
 
-必须支持的消息族：`subapp-ready`、`bp-context-sync`、`subapp-context-applied`、`bp-route-sync`、`bp-session-clear`、`subapp-auth-error`。schema、requestId、N/N-1 兼容和恢复规则以 [ADR-047](../decisions/ADR-047-bp-subapp-bridge-v1.md) 与 [子应用接入手册附录 O](subapp-onboarding-guide.md#附录-o-bpsubappbridge-v1-与单身份多运行时发布标准) 为准。
+必须支持的消息族：`subapp-ready`、`bp-context-sync`、`subapp-context-applied`、`bp-route-sync`、`bp-session-clear`、`subapp-auth-error`。Standard档业务空闲续会话另需`subapp-user-activity`：仅已握手的活动iframe以exact source/origin和当前contextVersion报告真实操作，不携带Token。schema、requestId、N/N-1 兼容和恢复规则以 [ADR-047](../decisions/ADR-047-bp-subapp-bridge-v1.md) 与 [子应用接入手册附录 O](subapp-onboarding-guide.md#附录-o-bpsubappbridge-v1-与单身份多运行时发布标准) 为准。
 
 ### 4.2 Token 保存与请求
 
@@ -410,6 +423,10 @@ L0 floor + 按 affectedModules 的定向部署态 E2E
 
 Gitea Actions完成构建、部署态E2E和制品回读后再推GitHub镜像；ADO在逐仓切换验收后保留历史只读。完整Runner、Secret、精确SHA、并发Build与串行Deploy要求见[Gitea Actions内网容器CI/CD标准](gitea-actions-onprem-container-cicd-standard.md)。本地先做定向 E2E 可以减少共享 Runner 的无效排队，但不能替代部署态 E2E。若 SYS 配置为同账号单会话，本地与 CI 禁止并发使用同一账号；应使用隔离账号，或等待当前 CI 终态后再跑本地浏览器测试。
 
+SYS OIDC主机覆盖文件是独立于SYS API源码SHA的受控运行配置：先对账仓内`compose.sys-identity.yaml`与10.28`compose.identity.yaml`的SHA-256、保留可恢复备份，再在目标机以发布脚本相同的Compose合并方式执行`config --quiet`。BP专属登录URL、Access15分钟、Refresh固定12小时、管理12小时和审计8小时须在SYS API exact SHA部署后回读容器实际环境；只重新跑业务仓CI不会自动改写主机覆盖文件。配置与代码的两个版本证据必须同批记录。
+
+前一次 Run 若在影响面选择或E2E前失败、取消或超时，下一次仅按`event.before`比较会漏掉上一失败提交的业务改动。此时必须以最近一次**通过部署态E2E的提交**为影响面基准，或对当前exact SHA显式传入上一失败提交完整的`affected_modules`定向重跑；只跑`@smoke`的绿色Run不得作为该批交付终态。
+
 ### 7.2 后端契约触发消费者
 
 后端仓维护 `ci/contract-consumers.json`（名称可按项目约定），至少把以下路径视为消费契约：
@@ -527,6 +544,7 @@ Gitea Actions完成构建、部署态E2E和制品回读后再推GitHub镜像；A
 | 网关 502/503 | route、upstream DNS/port、容器 health/log | 仍指 10.8、容器名不一致、服务未 ready |
 | 本地登录突然被撤销 | CI 队列和相同测试账号 | 同账号单会话策略导致并发 E2E 互踢 |
 | CI 绿但 BP 仍异常 | build SHA、运行镜像、消费者触发、部署态 E2E | 只构建未部署、触发 glob 漏 Authentication、E2E 未看 iframe |
+| 上一Run失败后下一Run仅1条smoke绿 | 影响面base SHA、上一失败提交的业务文件、`affected_modules`输入 | 仅用前一个commit作base，漏掉未通过E2E的变更；对当前exact SHA按完整影响面重跑 |
 
 ## 11. 回滚
 
@@ -551,3 +569,4 @@ Gitea Actions完成构建、部署态E2E和制品回读后再推GitHub镜像；A
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-09-14 | 1.0 | 以 SYS/BP/MDM 实证形成跨产品组 OIDC、Bridge V1、10.28 容器、10.31 APISIX、定向 CI/E2E 与 JYInfo 退出标准 |
+| 2026-09-15 | 1.1 | 增加三门户独立登录与Standard业务4小时空闲续作、有界Refresh/同源再授权、子应用真实操作信号、主机身份覆盖文件对账及失败Run影响面继承 |

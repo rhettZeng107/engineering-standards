@@ -43,10 +43,10 @@ engineering-standards/
 | 我要… | ADR(为什么) | standards(怎么做) | templates / tools |
 |---|---|---|---|
 | **老项目迁移** | ADR-014(执行)+ ADR-028(完成判定) | **legacy-migration-playbook §0 总入口** | tools/migration-fanout(执行) + migration-audit(查漏) + templates/subapp-migration-checklist |
-| **子应用发布 BP + CICD** | ADR-011 / 012 / 038 / 040 | **subapp-bp-release-pipeline-standard(总纲入口)** · subapp-onboarding-guide · subapp-menu-manifest-publish · cicd-onprem-iis-deploy-standard | templates/subapp-migration-checklist · iis-web.config-spa-subapp |
+| **子应用发布 BP + CICD** | ADR-011 / 012 / 038 / 049 / 050 / 051 | **subapp-bp-release-pipeline-standard(总纲入口)** · subapp-onboarding-guide · mom-oidc-containerized-delivery-guide · gitea-actions-onprem-container-cicd-standard | templates/subapp-migration-checklist · pipeline-e2e |
 | **前端页面 / UI** | ADR-020 / 023 / 032 | frontend-ui-standard · frontend-ui-v2-standard · frontend-i18n-standard · react-ui-guidelines | templates/frontend-i18n-init · frontend-env-production |
-| **鉴权** | ADR-007 | (subapp-onboarding-guide 含接入侧) | — |
-| **CICD / E2E / 监控** | ADR-008 / 024 / 022 / 034 | cicd-e2e-in-pipeline-standard · observability-apm-lite-standard | templates/azure-pipelines-e2e · pipeline-e2e · cicd-ado-monitor.js |
+| **鉴权** | ADR-007 / 049 / 051 | mom-oidc-containerized-delivery-guide · subapp-onboarding-guide(接入侧) | — |
+| **CICD / E2E / 监控** | ADR-008 / 024 / 022 / 034 / 050 | gitea-actions-onprem-container-cicd-standard · cicd-e2e-in-pipeline-standard · observability-apm-lite-standard | pipeline-e2e · templates/azure-pipelines-e2e(旧ADO参考) |
 | **主数据消费** | ADR-038 | sys-master-data-api-standard | templates/csharp-list-controller |
 | **项目地图 / codebase** | ADR-025 / 026 | provider-neutral scoped mapping | Codex 本体 / codebase mapper / `codex exec` |
 | **新建工作区** | ADR-029 | workspace-bootstrap-guide | templates/bootstrap-workspace.sh · workspace-AGENTS.md.template |
@@ -56,7 +56,7 @@ engineering-standards/
 | **文档目录规范** | ADR-002 | doc-conventions | — |
 | **工作纪律 / 决策授权** | ADR-005 / 015 / 016 / 017 / 018 / 019 / 027 / 031 | — | — |
 
-### standards/ 全清单(17 篇)
+### standards/ 常用标准索引（非全量）
 
 | 文档 | 是什么 |
 |---|---|

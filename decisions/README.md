@@ -115,6 +115,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-048](ADR-048-app-family-multi-runtime-publishing.md) | 应用家族单身份多运行时发布：AppName 合并边界、原子聚合 manifest 与可逆回滚 | Accepted | 2026-07-14 | 跨项目 | 本仓 |
 | [ADR-049](ADR-049-mom-oidc-containerized-delivery.md) | MOM 子应用统一 OIDC 与容器化交付：SYS IdP、Discovery/JWKS、Bridge V1、10.28 容器、10.31 网关及退出 JYInfo/10.8 IIS | Accepted | 2026-09-14 | 跨项目 | 本仓 |
 | [ADR-050](ADR-050-gitea-actions-onprem-container-delivery.md) | Gitea Actions 内网主交付链：独立Runner、版本标签、并发Build、串行Deploy、精确SHA与部署态E2E | Accepted | 2026-09-15 | 跨项目 | 本仓 |
+| [ADR-051](ADR-051-mom-portal-session-and-idle-renewal.md) | MOM三门户独立登录与业务空闲续会话：BP真实操作4小时、Access15分钟、有界Refresh与同源再授权 | Accepted | 2026-09-15 | 跨项目 | 本仓 |
 
 ---
 
@@ -128,8 +129,8 @@ Deprecated   → 废弃但未被取代
 | **项目地图** | 025·026(~~013 归档~~) | 自适应维护 + MECHANISMS 第8维(013 已 Superseded by 025) |
 | **迁移轨** | 014·028 → [playbook §0](../standards/legacy-migration-playbook.md) | 014 怎么执行 / 028 做什么算完;总入口 playbook §0 |
 | **交付验证** | 008·024·022·034·050 | E2E 8项 / 三轨分级 / CICD监控 / APM-lite / Gitea Actions内网交付 |
-| **安全鉴权** | 007·047·049 | 鉴权 4 条刚性 / BP 子应用内存态认证桥与上下文判活 / SYS OIDC资源服务器标准 |
-| **子应用集成** | 011·012·038·047·048·049 | BP门户边界 / 接入SOP / 主数据走API / v1认证桥 / 单身份多运行时发布 / OIDC与容器交付 |
+| **安全鉴权** | 007·047·049·051 | 鉴权 4 条刚性 / BP 子应用内存态认证桥与上下文判活 / SYS OIDC资源服务器标准 / 三门户独立登录和业务空闲续会话 |
+| **子应用集成** | 011·012·038·047·048·049·051 | BP门户边界 / 接入SOP / 主数据走API / v1认证桥 / 单身份多运行时发布 / OIDC与容器交付 / 嵌入操作活动信号 |
 | **前端工程标准** | 020·023·032 | i18n范围 / 4基建标准 / UI V2 Atlas |
 | **AI工程工作流** | 003·035·037·043 | 编码路由 / LSP网关 / 契约锁归属 / on-prem服务器SSH运维 |
 | **工作纪律/决策授权** | 005·017·018·036·042·050 | 全新部署剔运维 / 批次节奏 / 授权三档 / CR门禁 / 推前必同步禁裸force / Gitea主仓切换 |

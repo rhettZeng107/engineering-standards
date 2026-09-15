@@ -1,6 +1,6 @@
 # 子应用接入业务门户(BP)标准手册
 
-> **状态**:Reference Verified v2.1(2026-09-14；OIDC与容器交付以ADR-049及配套手册为准)
+> **状态**:Reference Verified v2.2(2026-09-15；OIDC、业务空闲续会话与容器交付以ADR-049/051及配套手册为准)
 > **适用范围**:任何要嵌入业务门户(BP)的子应用 — MDM ✅ 已接入(参考实现)/ SRM / MES / EAM / ...
 > **维护规则**:接入流程或契约变更 → 必新建 ADR + 旧条目标 `Superseded by ADR-XXX`,不可改写历史
 > **设计标杆**:MDM 子应用(`AI.Extend.MDM.1` 后端 + `AI.REACT.MDM.1` 前端)
@@ -213,6 +213,7 @@
 - 接收消息必须同时校验 `event.source === window.parent` 与 exact allowed origin；BP 侧也必须绑定登记 iframe 的 contentWindow 与 origin。
 - `bp-context-sync` 原子应用 token/PlantCode/contextVersion 后回 `subapp-context-applied` ACK；未 ACK 不得开始业务请求。
 - `bp-route-sync` 只更新子应用内部路由；`bp-session-clear` 清空内存上下文并阻止后续请求。
+- Standard档业务用户在活动iframe内继续作业时，子应用以`subapp-user-activity`报告真实键盘/鼠标操作；必须绑定当前已应用的contextVersion和受信父源，不得用后台轮询、API响应或页面自动刷新报告活动。Token Refresh只由BP负责。
 - 路由器类型可按部署选择；BrowserRouter 的 basename 必须对齐实际虚拟目录。iframe 初次 src 只含页面路径和业务 query，不含 JWT。
 - legacy 无版本消息仅允许在受控双栈迁移期开启；新应用禁止以 Wujie props、URL hash token 或 localStorage 作为终态。
 
@@ -266,7 +267,7 @@
   1. 子应用加载失败(URL 错 / 网络断)→ ErrorBoundary fallback 显示
   2. 子应用 401 → `subapp-auth-error` → BP 判活；可恢复时只重发认证上下文，终态失效才清会话
   3. 切组织 → token/PlantCode 原子上下文更新 + menuTree/BpApps 重拉
-  4. 4 小时未交互 → 应用层 ttl 自实现销毁 + 下次访问重新加载
+  4. Standard业务槽真实操作空闲满4小时 → SYS拒绝旧Access/Refresh，BP停在独立登录入口；iframe缓存ttl属于另一生命周期，不得代替服务端会话边界
   5. 浏览器深度链接 `/<appName>/<subPath>` → 直接命中子应用对应页面(刷新页不丢失)
 
 **完成标志**:
@@ -1063,6 +1064,7 @@ function PreloadHost() {
 - [ ] **v1 握手已实装**:先注册 listener，再发送 `subapp-ready`；收到原子上下文后回 `subapp-context-applied` ACK，未 ACK 前不发业务请求
 - [ ] **精确信任边界**:子应用校验 `event.source === window.parent` 与 exact origin；BP 绑定登记 iframe 的 `contentWindow + origin`
 - [ ] **路由与会话消息已实装**:`bp-route-sync` 驱动内部路由，`bp-session-clear` 清内存并阻止请求
+- [ ] **Standard真实活动信号**:已握手的活动iframe只把真实键盘/鼠标操作以`subapp-user-activity`报告给受信BP父源；contextVersion必须与当前上下文一致，轮询不报告，Refresh不由子应用执行
 - [ ] **生产嵌入无 JWT 副本**:iframe URL/hash、localStorage、sessionStorage、cookie、IndexedDB 和日志都不写 BP JWT
 - [ ] **全部 service baseURL 显式指向后端**:`grep -L "baseURL\|VITE_" src/service/*` 必为空;dev vite proxy 会兜底掩盖缺失,**production iframe 无 proxy 必网络异常**(对照已知正确的 service 逐文件核)
 - [ ] **嵌入模式隐藏自带 chrome**:iframe/wujie 嵌入时**在 layout 层**按 `isEmbedded`(`__POWERED_BY_WUJIE__` / `window.self!==window.top`)门控,不渲染子应用自己的 Header/Sider/Footer/退出登录(避免双层外框 + 空 Sider 留白 + 多余退出登录)。范本 `AI.REACT.SRM.Contract.2/src/layout/index.jsx`。⚠️ token 仅出现在 `index.jsx` 入口不算 —— 必须是 layout 真隐藏外壳(钩子 2026-05-24 已层级化,见 ADR-012 修订)
@@ -1131,6 +1133,7 @@ function PreloadHost() {
 - iframe registry 必须同时满足：当前组织 BpApps 在线、菜单/AuthTag 已授权、`appName` 匹配、消息 `event.source + event.origin` 都命中。仅校验 origin 不足以信任消息。
 - `contextVersion` 只在 token/PlantCode 元组变化时递增。请求发起时固化完整 context identity；旧上下文的迟到 401 不得影响新上下文。
 - 同一 contextVersion 最多恢复并重发一次认证上下文，绝不自动重放原业务请求。子应用 401 只上报 `subapp-auth-error`；BP 先调用自身会话判活，再决定刷新上下文、给出提示或清理会话，禁止子应用直接把用户“挤下线”。
+- Standard档四小时业务空闲只由真实操作滑动。`subapp-user-activity`为子→BP v1信封，payload仅含当前正整数`contextVersion`，不含Token/PlantCode；子应用仅在`bp-context-sync`已应用、父源exact allowlist命中时发送，BP只接受已登记且活动的iframe `event.source + event.origin`及与已ACK上下文相同的版本。定时轮询、API响应、Token定时刷新和预加载iframe均不得延长业务空闲会话。BP负责向SYS报告活动和更新Access；子应用不得接收Refresh Token。
 - 发布顺序：子应用双栈 → BP 双栈 → 真实 iframe 验证 v1 ACK/401/组织切换 → 关闭 legacy 开关 → 删除 legacy。任一步都必须可回滚。
 
 #### O.3 单 AppName 多模块、多运行时
@@ -1153,6 +1156,7 @@ APS 参考实现：`AppName=aps`、门户根“APS高级计划排程”；5041 �
 - DB：同一 `AppName` 只有一个 active/online `SYS_SubApp`；manifest 当前菜单与可见菜单一致；授权仅复制给已有家族模块权限的账号/组织组合，不默认扩大范围。
 - API：使用同一枚 plant-scoped BP JWT，分别访问每个业务后端的 `[Authorize]` 端点并断言 200；无 token 401，PlantCode 不一致 403。
 - Browser：隔离浏览器从 BP 登录目标组织，逐模块点击至少一个真实叶子页；断言 iframe path 指向正确虚拟目录、业务请求命中正确后端、无 4xx/5xx、无 console/page error、未跳回登录页。
+- 业务空闲：从小写`/bp/#/login`进入；在受信活动iframe真实操作时验`subapp-user-activity`使SYS业务活动端点成功，轮询不触发；无活动满4小时及主动注销后旧Access/Refresh/静默授权均不能复活业务槽。跨门户账号不得串槽。
 - 构建/发布：组件、聚合器、BP 的 CI 全部到达成功终态后，才能执行菜单扫描和授权更新。
 
 ---
@@ -1169,6 +1173,7 @@ APS 参考实现：`AppName=aps`、门户根“APS高级计划排程”；5041 �
 | 2026-06-18 | 1.5 | **新增附录 N 子应用 i18n locale 自托管**(TPM 实证:loadPath 指 BP 门户 /Static → SPA fallback → 全 t() key 裸显中英混杂):loadPath 须指子应用自己 base + 自带 locale 文件;部署后 curl 验 application/json;E2E 加 i18n 视觉校验(截图地面真值,ADR-024 ⑥) |
 | 2026-07-14 | 2.0 | **ADR-047/048 + 附录 O**：生产嵌入升级为 BpSubAppBridge v1；BP 独占持久 JWT，子应用内存态、精确 source/origin、ready/ACK、版本化上下文与 401 判活；新增单 AppName 多模块/多运行时原子发布标准，并以 APS 5041/5042 双后端真实 BP E2E 作参考实现 |
 | 2026-09-14 | 2.1 | **ADR-049**：附录 M 由 JYInfo/HS256 共享密钥迁移为 SYS OIDC Discovery/JWKS；附录 O 对齐签名 `at+jwt`、业务 audience/scope 与 Refresh Token 不下发边界 |
+| 2026-09-15 | 2.2 | **ADR-051**：增加BP独立业务登录、Standard真实操作4小时空闲续会话、子应用`subapp-user-activity`版本化信号与部署态验收 |
 
 ---
 
@@ -1180,6 +1185,7 @@ APS 参考实现：`AppName=aps`、门户根“APS高级计划排程”；5041 �
 - [ADR-047:BP 子应用认证桥 v1](../decisions/ADR-047-bp-subapp-bridge-v1.md) — token/组织上下文、401 判活与 N/N-1 协议迁移
 - [ADR-048:应用家族单身份多运行时发布](../decisions/ADR-048-app-family-multi-runtime-publishing.md) — AppName 合并边界、原子 manifest 与发布回滚
 - [ADR-049:MOM 子应用统一 OIDC 与容器化交付](../decisions/ADR-049-mom-oidc-containerized-delivery.md) — 资源服务器、JYInfo 退出、10.28 容器与10.31网关标准
+- [ADR-051:MOM三门户独立登录与业务空闲续会话](../decisions/ADR-051-mom-portal-session-and-idle-renewal.md) — BP四小时真实操作、短期Access和有界Refresh续作
 - [MOM OIDC 统一认证与容器化部署详细手册](mom-oidc-containerized-delivery-guide.md) — TPM/MES/AIOS 等产品组执行入口
 - **ADR-006:SubApp 跨进程鉴权 IP allowlist** — 当前为 SYSV2 项目级 ADR(`SYSV2/docs/decisions/ADR-006-...md`,该项目内可达);其他项目接入时**沿用同模式**(IP allowlist 中间件 + 本手册附录 C 范式),若多项目实际接入后存在共性需求,由后续 ADR 升级到本仓 `decisions/`
 - [frontend-ui-standard.md](frontend-ui-standard.md) — antd 5 + ProTable 列表页统一标准(子应用 UI 一致性)

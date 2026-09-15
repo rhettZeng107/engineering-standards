@@ -84,6 +84,8 @@ Stage 1 Build  →  Stage 2 DeployTarget  →  Stage 3 E2EVerify
 
 **两个保险(强制)**:① L0 永远跑；② 改动路径必须映射到直接模块和关联模块。共享层 `components/v2/layouts/router/locales/request`、构建配置和菜单路由必须在 `tier-config.json` 显式维护消费者；判不准直接使影响范围计算失败并补映射，禁止回退全菜单，也禁止只跑 floor 冒充页面验收。
 
+**失败Run继承影响面**：影响面映射失败、Job取消或超时发生在部署态E2E之前时，随后只改映射/流水线文件的提交不能把基准缩成“前一个commit”。必须从最近一次已完成受影响E2E的SHA累计变更，或对当前exact SHA显式调度此前未验的完整`affected_modules`；人工回读JUnit/Run日志确认不是仅1条smoke。绿色Run若漏模块，仍为`partial`。
+
 **关键机制**:`@module:<name>` 页级标签→本次提交 diff 选跑；`routes.config` 按实际增删的 `manifestPath` 映射到对应模块，不因菜单文件整体变更扩大为全菜单；后端契约改→**后端 pipeline 绿后触发消费前端 pipeline + 传 affectedModules→前端定向**。已迁移仓使用Gitea `workflow_dispatch`与受限服务账号，ADO REST queue仅保留给未迁移仓；契约原则详[ADR-046](../decisions/ADR-046-cross-repo-contract-driven-e2e-trigger.md)，Gitea实现详[Gitea CI/CD标准 §6](gitea-actions-onprem-container-cicd-standard.md#6-后端契约触发消费者)。**后端 floor**(API-Health)所有后端必跑。
 
 > 后端 post-deploy 也要 floor:`dotnet test`(pre-deploy 门,SYS 范式)+ **API-Health Verify**(post-deploy,swagger 200 硬断言 + manifest 非空,TPM 范式)。MDM/SRM/MES 后端现缺,按本标准补。

@@ -1,6 +1,6 @@
 # Gitea Actions 内网容器 CI/CD 标准
 
-> 状态：Stable v1.0（2026-09-15）
+> 状态：Stable v1.1（2026-09-15）
 > 决策依据：[ADR-050](../decisions/ADR-050-gitea-actions-onprem-container-delivery.md)
 > 适用：已容器化或正在迁入容器平台的内网业务仓。尚未容器化的 IIS 存量应用继续使用其现行发布标准，完成迁移验收后再切换。
 
@@ -80,6 +80,8 @@ Gitea Actions ──调度──> 独立 Linux Runner
 7. **Affected E2E**：L0 floor 永远跑；再跑改动页面、直接关联项和共享消费者。映射未知时失败并补映射，不以全量测试掩盖缺失的影响关系。
 8. **Evidence artifact**：保留版本、JUnit/TRX、截图/诊断、上下文 hash、migration bundle hash和影响面决策，默认至少 14 天。
 
+如果生效配置位于目标主机而非业务仓，例如SYS的OIDC Compose覆盖文件，源码exact SHA不能证明该配置已同步。部署前须独立对账配置的仓内版本/目标文件SHA-256、保留可恢复备份并按真实Compose合并验证；部署后回读容器实际环境和代码revision，把两个版本证据一起纳入Run/交付记录。CI重新发布业务仓不会自动更新主机覆盖文件。
+
 Gitea 内网环境应使用明确 URL 的内网 Action，例如 `uses: https://<gitea>/<owner>/<action>@<version>`；不要在受限网络中隐式依赖 GitHub 下载。Action 升级先用试验仓验证 checkout、cache、artifact 上传与下载回读。
 
 ### 4.1 Runner共享缓存
@@ -129,6 +131,7 @@ Gitea 内网环境应使用明确 URL 的内网 Action，例如 `uses: https://<
 - 同一目标环境的替换部署必须互斥，即使来自不同仓库。部署锁覆盖 build image、compose replace、health 和失败回滚，不能只锁上传。
 - 前后端可并行构建；若后端 migration 或共享认证契约会改变前端验收前提，应按依赖顺序部署。
 - 排队持续时间、CPU、内存、磁盘、Docker layer、cache 命中率与失败率达到项目阈值后，再增加 Runner。不得仅为消除正常 CD 串行而扩槽。
+- 影响面计算基准是最近一次**完成部署态受影响E2E**的提交，而非无条件取前一个commit。若前一次Run在影响面选择/E2E前失败、取消或超时，后续修复提交必须继承上一失败提交的业务影响面；可由受控manifest记录最后成功SHA，或在当前exact SHA的`workflow_dispatch`显式传完整`affected_modules`。仅`@smoke`成功不得消除之前未验的模块债。
 
 ## 8. 监控与终态判定
 
@@ -154,6 +157,7 @@ Gitea Web 的仓库 `Actions` 页面是人工入口；自动化使用 Actions AP
 ## 9. 回滚与故障处理
 
 - Build/Test 失败：不部署、不推 GitHub；修复后以新 commit 重跑，不覆盖失败历史。
+- 影响面守卫失败：即使容器部署步骤已成功，当前Run仍不是交付终态。修复映射后必须以最近一次通过部署态E2E的SHA为base或对新exact SHA显式重跑完整模块；不得因修复提交只改CI配置而接受1条smoke绿色结果。
 - DB migration 失败：停止部署，保留 bundle、日志和目标库；禁止跳过迁移强行换容器。
 - 部署或 health 失败：目标网关回滚到上一已验证镜像/compose状态，并记录失败 SHA；不得把容器 `running` 当健康。
 - Consumer dispatch 失败：后端即使已健康也保持交付未闭环；恢复专用账号/权限后重试调度并监控消费 Run。
