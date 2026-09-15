@@ -82,6 +82,16 @@ Gitea Actions ──调度──> 独立 Linux Runner
 
 Gitea 内网环境应使用明确 URL 的内网 Action，例如 `uses: https://<gitea>/<owner>/<action>@<version>`；不要在受限网络中隐式依赖 GitHub 下载。Action 升级先用试验仓验证 checkout、cache、artifact 上传与下载回读。
 
+### 4.1 Runner共享缓存
+
+- Actions依赖缓存使用Gitea Runner提供的HTTP缓存协议，Redis不能直接作为`actions/cache`或`cache.external_server`后端。需要多Runner共享时，运行独立的`gitea-runner cache-server`进程，并让各Runner通过`external_server`连接。
+- 单Runner或小规模内网环境可把独立Cache Server作为同一Runner VM上的单独systemd服务，使用独立目录、端口和非root账号；缓存是可丢弃加速数据，不要求为其单独增加VM。只有缓存I/O、磁盘或故障域需要独立隔离时再拆机。
+- Cache Server共享密钥不得进入仓库、日志或制品。若当前Runner版本只支持`external_secret`，服务端和客户端配置文件必须归Runner专用账号所有且权限为`0600`；升级验证支持密钥文件后再改用`external_secret_file`。
+- 受限网络中的缓存Action必须镜像到内网Gitea，并固定到已验证兼容版本。Runner 2.0的缓存服务为v1协议时，使用仍支持v1协议的Action版本；不得直接跟随外部`latest`。
+- 前端缓存pnpm store，缓存键至少包含Node/pnpm主版本和全部相关`pnpm-lock.yaml`哈希；后端缓存NuGet packages，缓存键至少包含目标SDK及`csproj/props/targets/global.json/NuGet.config`哈希。恢复旧前缀仅用于内容寻址包缓存，最终安装仍必须使用锁文件和`--frozen-lockfile`/等价确定性门。
+- 正式扩展业务仓前必须在隔离仓证明：首次miss后保存、同键精确hit、依赖哈希变化后miss、缓存不可用时构建可回退或明确失败。业务仓首次运行应记录save，第二次同SHA运行应记录restore；不能以缓存目录增长代替协议日志。
+- 缓存目录不进入业务备份。持续监控容量和磁盘余量；缓存使用率超过约定阈值时优先按Runner原生保留策略清理或升级支持该策略的版本，禁止在Cache Server运行期间直接删除其数据库或blob文件。
+
 ## 5. Secret 与部署边界
 
 - Gitea Actions Secret 按最小作用域创建；同名时仓库级优先，跨仓共享前先评估是否真的需要组织级。
@@ -148,6 +158,7 @@ Gitea Web 的仓库 `Actions` 页面是人工入口；自动化使用 Actions AP
 - 部署或 health 失败：目标网关回滚到上一已验证镜像/compose状态，并记录失败 SHA；不得把容器 `running` 当健康。
 - Consumer dispatch 失败：后端即使已健康也保持交付未闭环；恢复专用账号/权限后重试调度并监控消费 Run。
 - Runner 失联：检查服务、Docker、磁盘、Gitea可达性和标签声明；禁止直接把 workflow 改成 host 执行绕过。
+- Cache Server失联：停止把缓存命中当交付前提，检查独立服务、端口、共享密钥和磁盘；恢复后重跑miss/hit探针。不得临时改接Redis或直接删除运行中的缓存数据文件。
 - Gitea 升级、Runner 升级或 Action 协议变化：先在隔离仓验证正常、失败、取消、artifact和并发样本，再滚动到业务仓。
 
 ## 10. 工作区采用清单
@@ -156,6 +167,7 @@ Gitea Web 的仓库 `Actions` 页面是人工入口；自动化使用 Actions AP
 - [ ] 旧 CI 等价矩阵已覆盖 build/test/migration/deploy/E2E/artifact/消费者触发
 - [ ] Actions 已启用，workflow 使用明确且已预置的 Runner 标签
 - [ ] 工具链版本与运行镜像已固定并在 Job 起始校验
+- [ ] 独立Cache Server（如启用）已验证miss/hit/依赖变更失效，密钥未进仓库，pnpm/NuGet键包含锁文件或项目依赖哈希
 - [ ] 仓库部署 Secret、强制命令与单应用权限已验证
 - [ ] 同目标环境部署锁已实跑，Build 并发不绕过 CD 串行
 - [ ] 精确 SHA、容器 revision、网关 smoke和部署态定向 E2E 已闭环
@@ -167,6 +179,7 @@ Gitea Web 的仓库 `Actions` 页面是人工入口；自动化使用 Actions AP
 
 - [Gitea Actions Quick Start](https://docs.gitea.com/usage/actions/quickstart/)：Runner与Gitea服务分离部署的基础入口。
 - [Gitea Runner Labels](https://docs.gitea.com/runner/labels/)：`runs-on`、标签与Job容器镜像的映射语义。
+- [Gitea Runner Caching](https://docs.gitea.com/runner/2/cache/)：内置缓存、独立Cache Server、多Runner共享及协议兼容边界。
 - [Gitea Actions Secrets](https://docs.gitea.com/usage/actions/secrets/)：用户、组织和仓库Secret作用域。
 - [Gitea API](https://docs.gitea.com/api/)：Run、Job、日志和制品的自动化查询入口。
 - [Gitea Actions Job permissions](https://docs.gitea.com/usage/actions/token-permissions/)：默认Job令牌边界及跨仓操作需要显式凭据的依据。
