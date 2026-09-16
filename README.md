@@ -1,7 +1,7 @@
 # Engineering Standards
 
 > **跨项目通用工程标准与决策记录**
-> 适用范围:涛哥本人主导的多个项目复用基线(SYSV2 / 后续新项目)。
+> 适用范围:多个企业应用工作区复用基线(SYSV2 / 后续新项目)。
 > 本仓不绑定任何具体业务 / 客户 / DB 数据,仅承载工程实践模式 + 决策框架。
 
 ---
@@ -14,7 +14,7 @@
 | **远程** | GitHub `rhettZeng107/engineering-standards`(公开仓 / 单远程,**不推内网 ADO**) |
 | **使用方式** | 各项目仓内文档通过相对路径引用 `../engineering-standards/<path>` |
 | **更新节奏** | 跨项目通用规则变更时即时更新;变更走"新 ADR + 旧 ADR 标 Superseded"链路,不改写历史 |
-| **协作模式** | 单人维护(涛哥 + Claude)+ GitHub 公开供工程师参考 |
+| **协作模式** | 产品负责人维护决策，Codex/工程团队按事实更新；GitHub 公开供工程师参考 |
 
 ---
 
@@ -23,8 +23,12 @@
 ```
 engineering-standards/
 ├── README.md            # 本文件(全仓总索引 / 知识地图)
-├── decisions/           # ADR — 为什么这样定(35 ADR + README 九簇导航)
-├── standards/           # 工程标准 — 怎么做(14 篇)
+├── analyzers/           # 可执行静态分析器与测试
+├── decisions/           # ADR — 为什么这样定(48 篇跨项目/项目索引 ADR + README 导航)
+├── eval/                # Harness 评估任务、报告与模板
+├── learning/            # 工程方法学习材料
+├── references/          # 可复用参考实现与组件
+├── standards/           # 工程标准 — 怎么做(20 篇)
 ├── templates/           # 可复制模板(CLAUDE.md / CICD / web.config / controller…)
 └── tools/               # 可执行工具(lsp-nav / migration-fanout / migration-audit)
 ```
@@ -70,7 +74,9 @@ engineering-standards/
 | frontend-i18n-standard | 前端中英 i18n 标准 |
 | react-ui-guidelines | React 列表页/编辑页交互规约 |
 | cicd-e2e-in-pipeline-standard | CI/CD E2E-in-pipeline(部署后自动验证) |
-| cicd-onprem-iis-deploy-standard | 自托管 Agent → 内网 IIS 部署通道(MsDepSvc 远程代理)|
+| gitea-actions-onprem-container-cicd-standard | Gitea 主仓、独立 Linux Runner、容器精确 SHA 交付与命令行验真 |
+| mom-oidc-containerized-delivery-guide | SYS OIDC、三门户会话槽、Bridge V1、容器与统一网关迁移合同 |
+| cicd-onprem-iis-deploy-standard | 未容器化存量应用的 IIS 部署通道；不得用于已容器化应用 |
 | observability-apm-lite-standard | APM-lite 应用层可观测体系接入 |
 | workspace-bootstrap-guide | 新工作区 Bootstrap 指南 |
 | doc-conventions | 文档目录规范(spec/plan/ADR 命名) |
@@ -103,7 +109,7 @@ engineering-standards/
 
 ---
 
-## 归集判定原则(2026-05-06 涛哥拍板)
+## 归集判定原则(2026-05-06 决策)
 
 **唯一标准:评估后可 100% 跨项目的才归集到本仓**。
 
@@ -135,7 +141,7 @@ engineering-standards/
 本仓 GitHub 公开,**禁含**以下任一类型数据:
 
 - ❌ 客户名 / 工厂 PlantCode / 业务字段
-- ❌ DB 密码 / 内网 IP / 内网域名 / 端口硬编码
+- ❌ DB、SSH、Token、私钥等凭据，或未经批准的客户/生产网络标识
 - ❌ 等保 / 合规 / 安全配置细节
 - ❌ 个人 / 员工身份信息
 
@@ -144,8 +150,9 @@ engineering-standards/
 - ✅ 通用工程模式(antd ProTable / wujie / SubApp 注册流程等)
 - ✅ 项目代号(SYSV2 / MDM / BP / SYS.3 等已在 GitHub 公开仓存在的)
 - ✅ 决策语境抽象描述("客户全新部署"语义,不绑定具体客户)
+- ✅ 已批准且必要的集成环境拓扑锚点；可复用正文仍优先使用`<gateway>`、`<runner>`等占位符，真实IP只放运维/实证章节且不携带凭据
 
-变更前 grep 自检敏感词:
+变更前 grep 检出待人工复核项（命中不等于违规）:
 
 ```bash
 grep -rE '璟岩|JingYan|淮海|HuaiHai|S100[0-9]|172\.21\.|172\.\d+\.\d+\.\d+|\.intranet\.|\.local|JYDevOps|JYPrdCollection' .
@@ -157,7 +164,7 @@ grep -rE '璟岩|JingYan|淮海|HuaiHai|S100[0-9]|172\.21\.|172\.\d+\.\d+\.\d+|\
 
 | 时间 | 事件 |
 |---|---|
-| 2026-05-06 | 涛哥拍板方案 E,从 SYSV2 抽离跨项目通用文档独立成仓;首版 7 ADR + 3 standards |
+| 2026-05-06 | 采用方案 E，从 SYSV2 抽离跨项目通用文档独立成仓；首版 7 ADR + 3 standards |
 | ~~2026-05-05~~ | 跨项目 ADR 机制 + 文档目录规范 + 前端 UI 标准在 SYSV2 内沉淀(本仓内容来源) |
 
 ---

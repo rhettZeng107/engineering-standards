@@ -1,6 +1,6 @@
 # SYS 主数据基础设施接口标准 — 子应用统一调用规约
 
-> **状态**:Active(2026-06-15 立)
+> **状态**:Active v2.0(2026-09-16；OIDC/JWKS与统一网关口径)
 > **适用**:所有嵌入 BP 业务门户的子应用(MDM / SRM / MES / WMS / EAM / TPM 及后续),需消费 SYS 控制台**人员 / 岗位主数据**时,**统一按本标准调用,不得直查 SYS 库表、不得对接已下线的 HRIS**。
 > **真理源后端**:新 SYS 管理控制台 `AI.Extend.SYS`(.NET 8,三层 + MediatR/CQRS,**非 ABP**)。旧 `AI.Extend.HRIS`(`/HRISWebApi/`,EmpController/PositionController)已下线,**禁引用/对接/抄**。
 > **首个落地案例**:TPM 设备组织迁移(`TPMV2/.../2026-06-15-eam-organization-migration/sys-api-contract.md`)。
@@ -23,12 +23,12 @@
 
 | 项 | 规约 | SYS 实证锚 |
 |---|---|---|
-| **鉴权** | 统一 BP SSO token 透传:子应用后端 HttpClient 调 SYS 时,把当前登录用户的 token 原样带 `Authorization: Bearer <token>`。全门户共用一套 JWT 密钥体系(BP 登录 token 由 SYS 签发,各子应用后端共用同密钥校验)。 | `Program.cs`(AddJwtBearer,`Jwt:SecretKey/Issuer/Audience`) |
+| **鉴权** | 透传当前业务槽的 SYS OIDC Access Token：子应用后端 HttpClient 调 SYS 时带 `Authorization: Bearer <token>`。Token 由 SYS IdP 签发；消费方按 HTTPS Discovery/JWKS 校验签名、issuer、audience、`typ=at+jwt`、scope、`portal=business`、`BusinessPortalAccess` 与 `PlantCode`，禁止共享 HMAC 密钥或 SYS 私钥。 | `Program.cs`(OpenIddict/JwtBearer)；`SysOidcProtocolContract` |
 | **当前工厂语义** | SYS 读 token 的 `PlantCode` claim 作当前工厂。HR 接口入参 `orgCode`/`OrgCode` **省略即落当前工厂**;显式传值时仅放行「当前工厂 / 用户 AuthPlant 授权工厂 / 其祖先链公司·集团」,否则抛「无权操作该组织数据」。**子应用一般省略,按登录工厂取数最安全。** | `ICurrentUser.PlantCode`;`HrTargetOrgResolver.ResolveAsync` |
 | **`orgCode` == 工厂编码** | HR 接口的 `orgCode`/`OrgCode` 即库列 `PlantCode`(工厂级组织编码)。 | `BaseEmpDto` OrgCode 注释「库列 PlantCode」 |
 | **分页壳** | `Pagination<T> = { Data: T[], Total: int }`(**后端→后端壳**,字段名 `Data`/`Total`,非前端 ProTable 的 `items/totalCount`)。子应用解包后再包自身前端信封。 | `Application/Dtos/Pagination.cs` |
 | **响应体** | 现有 HR 端点**直接返业务对象 / 数组**(无 `{IsSuccess,Data,Message}` 包裹)。 | 各 action 签名 |
-| **访问基址** | prod:`http(s)://<BP网关host>/JYCoreSysWebApi`(测试 `172.21.10.8:8001/JYCoreSysWebApi`,SYS-Api 挂 SYS3-Console 8001 子应用,经 BP 反代)/ dev:`http://localhost:5213`。 | BP `.env.production`;SYS `launchSettings.json` |
+| **访问基址** | 容器化生产/集成环境统一走网关同源路径：`https://<gateway>/sys/JYCoreSysWebApi`；开发环境按项目 `launchSettings`/dev proxy。已容器化 SYS API 不再把 10.8 IIS 端口作为默认基址。 | APISIX route；BP/子应用运行配置；SYS `launchSettings.json` |
 | **跨进程** | 子应用后端 → SYS 为 server-to-server,**CORS 不适用**(CORS 仅浏览器);网络可达 + 路由前缀由运维保障。 | — |
 | **鉴权属性** | 端点继承 `BaseApiController [Authorize]`,无 AllowAnonymous → 必带有效 token。 | `BaseApiController.cs` |
 
@@ -108,7 +108,7 @@
 public sealed class SysApi
 {
     private readonly HttpClient _http;          // BaseAddress = <SYS基址>
-    private readonly ITokenProvider _token;     // 取当前请求 BP SSO token
+    private readonly ITokenProvider _token;     // 取当前请求的业务槽OIDC Access Token
 
     public async Task<List<BaseEmpDto>> GetEmpsByPlantAsync(string? keyword, CancellationToken ct)
     {
@@ -144,8 +144,9 @@ public sealed class Pagination<T> { public List<T>? Data { get; set; } public in
 ## 8. 联调前置 + 维护
 
 **接入前置(运维/实证确认)**:
-1. SYS 部署期 `Jwt:SecretKey/Issuer/Audience` 与全门户统一密钥一致(现状 BP→各子应用可用即反证一致),否则透传 token 调 SYS 会 401。
-2. `/JYCoreSysWebApi` 路由对子应用后端可达(server-to-server)。
-3. BP 登录/选厂后 token 必带 `PlantCode` claim。
+1. SYS OIDC Discovery/JWKS 通过受信 HTTPS 可达，Access Token 的issuer、audience、type、lifetime和签名均通过；不得通过复制共享密钥解决401。
+2. `/sys/JYCoreSysWebApi` 网关路由对子应用后端可达(server-to-server)，匿名请求按契约返回401而非SPA HTML。
+3. BP 登录/选厂后 Token 必含`sys.api`、`portal=business`、`BusinessPortalAccess=true`与非空`PlantCode`；显式组织参数与claim不一致返回403。
+4. CI/E2E使用专用业务测试身份，不与人工业务账号并发建立单活动会话；真实数据、菜单与组织授权从SYS回读。
 
 **维护**:新增/调整端点须回写本标准 + 对应子应用 `sys-api-contract.md`;字段大小写变更视为破坏性契约变更,需通知所有消费子应用。横向影响 ≥2 子应用的基线变更,落 ADR。

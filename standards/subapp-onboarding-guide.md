@@ -1,6 +1,6 @@
 # 子应用接入业务门户(BP)标准手册
 
-> **状态**:Reference Verified v2.2(2026-09-15；OIDC、业务空闲续会话与容器交付以ADR-049/051及配套手册为准)
+> **状态**:Reference Verified v2.3(2026-09-16；OIDC、业务空闲续会话、CI身份隔离与容器交付以ADR-049/050/051及配套手册为准)
 > **适用范围**:任何要嵌入业务门户(BP)的子应用 — MDM ✅ 已接入(参考实现)/ SRM / MES / EAM / ...
 > **维护规则**:接入流程或契约变更 → 必新建 ADR + 旧条目标 `Superseded by ADR-XXX`,不可改写历史
 > **设计标杆**:MDM 子应用(`AI.Extend.MDM.1` 后端 + `AI.REACT.MDM.1` 前端)
@@ -259,7 +259,7 @@
   - `GET /api/SubApp/BpApps?plantCode=xxx` 返回数组含子应用 + `FullUrl` 字段
   - `GET /api/AuthInfo/List?portalType=bp&plantCode=xxx` 返回菜单树含子应用菜单(三条件 JOIN 通过)
 - **E2 UI 端到端层**:
-  - Bpuser 登录 BP @ 8002
+  - 使用专用、最小权限、可审计的业务CI账号从部署环境的`/bp/#/login`登录；不得默认复用人工或演示账号
   - 看到子应用菜单(顶栏 / 侧栏)
   - 点击菜单 → 原生 iframe 加载正确运行目录，src 不含 JWT
   - 业务路径走通(如 MDM 物料列表 → 编辑 → 保存)
@@ -1044,7 +1044,7 @@ function PreloadHost() {
 **反模式**:
 - 浏览器肉眼看 console + 截屏诊断
 - 在子组件层(SubAppHostPool / iframe)反复改方案
-- 涛哥肉眼一次只看一个截屏,**第二次 render 缺某子组件日志这种关键证据看不出来**
+- 人工一次只看一个截屏，**第二次 render 缺某子组件日志这种关键证据看不出来**
 
 **正确流程**:
 1. **每个关键组件加 `[XXX-DIAG] render` trace**(mount/render/unmount/state 关键值)
@@ -1156,6 +1156,7 @@ APS 参考实现：`AppName=aps`、门户根“APS高级计划排程”；5041 �
 - DB：同一 `AppName` 只有一个 active/online `SYS_SubApp`；manifest 当前菜单与可见菜单一致；授权仅复制给已有家族模块权限的账号/组织组合，不默认扩大范围。
 - API：使用同一枚 plant-scoped BP JWT，分别访问每个业务后端的 `[Authorize]` 端点并断言 200；无 token 401，PlantCode 不一致 403。
 - Browser：隔离浏览器从 BP 登录目标组织，逐模块点击至少一个真实叶子页；断言 iframe path 指向正确虚拟目录、业务请求命中正确后端、无 4xx/5xx、无 console/page error、未跳回登录页。
+- CI身份：部署态E2E使用专用业务账号并从Gitea Secret注入凭据；存在单活动会话限制时不得与本地E2E或人工验收共用账号并发登录。账号的门户准入、组织、菜单和业务权限须从SYS真理源回读，不能把脚本里的账号名当作授权证据。
 - 业务空闲：从小写`/bp/#/login`进入；在受信活动iframe真实操作时验`subapp-user-activity`使SYS业务活动端点成功，轮询不触发；无活动满4小时及主动注销后旧Access/Refresh/静默授权均不能复活业务槽。跨门户账号不得串槽。
 - 构建/发布：组件、聚合器、BP 的 CI 全部到达成功终态后，才能执行菜单扫描和授权更新。
 
@@ -1174,6 +1175,7 @@ APS 参考实现：`AppName=aps`、门户根“APS高级计划排程”；5041 �
 | 2026-07-14 | 2.0 | **ADR-047/048 + 附录 O**：生产嵌入升级为 BpSubAppBridge v1；BP 独占持久 JWT，子应用内存态、精确 source/origin、ready/ACK、版本化上下文与 401 判活；新增单 AppName 多模块/多运行时原子发布标准，并以 APS 5041/5042 双后端真实 BP E2E 作参考实现 |
 | 2026-09-14 | 2.1 | **ADR-049**：附录 M 由 JYInfo/HS256 共享密钥迁移为 SYS OIDC Discovery/JWKS；附录 O 对齐签名 `at+jwt`、业务 audience/scope 与 Refresh Token 不下发边界 |
 | 2026-09-15 | 2.2 | **ADR-051**：增加BP独立业务登录、Standard真实操作4小时空闲续会话、子应用`subapp-user-activity`版本化信号与部署态验收 |
+| 2026-09-16 | 2.3 | 部署态E2E改用专用最小权限CI身份，禁止默认复用人工/演示账号；登录入口统一按部署网关`/bp/#/login`验收 |
 
 ---
 

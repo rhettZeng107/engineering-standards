@@ -16,14 +16,18 @@
 | `frontend-env-production.template` | Vite 前端 production 环境变量 | `<前端>/.env.production` |
 | `iis-web.config-spa-root.template.xml` | IIS SPA 主应用 web.config(含 inheritInChildApplications=false 防穿透) | `<前端>/public/web.config` |
 | `iis-web.config-spa-subapp.template.xml` | IIS SPA 子应用 web.config(wujie 子 VDir 用) | `<子应用前端>/public/web.config` |
-| `pipeline-pre-check.snippet.yml` | ADO pipeline pre-check YAML 片段 | `<项目>/azure-pipelines.yml` Stage 1 第 1 步 |
+| `pipeline-pre-check.snippet.yml` | 尚未迁移仓的 ADO pipeline pre-check 历史片段 | `<项目>/azure-pipelines.yml` Stage 1 第 1 步 |
 | `onprem-ssh-pubkey-install.ps1` | 已授权 On-Prem 服务器安装运维 SSH 公钥(管理员组;含 ACL 坑) | 服务器管理员 PowerShell；先确认目标与实际公钥路径 |
+
+`azure-pipelines-*`、`docs-ops-baseline/cicd-ado-*`、IIS `web.config` 与 MsDepSvc 模板只服务尚未迁移的存量链。新建或已容器化业务仓使用 Gitea Actions、独立 Linux Runner、不可变容器、统一网关和部署态定向 E2E；不得把历史 ADO/IIS 模板复制成新的默认发布链。
 
 ## 关联标准
 
 - `standards/frontend-i18n-standard.md` — i18n 完整规范
 - `standards/frontend-ui-standard.md` — UI 完整规范
 - `decisions/ADR-008-end-to-end-8-checks.md` — 端到端交付 8 项核对
+- `standards/gitea-actions-onprem-container-cicd-standard.md` — 已容器化业务仓的现行 CI/CD 标准
+- `standards/mom-oidc-containerized-delivery-guide.md` — MOM 统一认证、Bridge 与容器交付合同
 - `docs/ops/deployment-ip-map.md` — IP 中心化表(SYSV2 项目内)
 - `standards/onprem-server-ssh-ops-standard.md` — On-Prem 部署服务器 SSH 运维完整 SOP(ADR-043)
 

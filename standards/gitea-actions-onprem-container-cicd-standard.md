@@ -1,6 +1,6 @@
 # Gitea Actions 内网容器 CI/CD 标准
 
-> 状态：Stable v1.1（2026-09-15）
+> 状态：Stable v1.2（2026-09-16）
 > 决策依据：[ADR-050](../decisions/ADR-050-gitea-actions-onprem-container-delivery.md)
 > 适用：已容器化或正在迁入容器平台的内网业务仓。尚未容器化的 IIS 存量应用继续使用其现行发布标准，完成迁移验收后再切换。
 
@@ -80,6 +80,8 @@ Gitea Actions ──调度──> 独立 Linux Runner
 7. **Affected E2E**：L0 floor 永远跑；再跑改动页面、直接关联项和共享消费者。映射未知时失败并补映射，不以全量测试掩盖缺失的影响关系。
 8. **Evidence artifact**：保留版本、JUnit/TRX、截图/诊断、上下文 hash、migration bundle hash和影响面决策，默认至少 14 天。
 
+部署态 E2E 使用专用、最小权限、可审计的 CI 身份，不复用产品负责人、开发人员或演示用户账号。存在单账号单活动会话约束时，不同并发 Job 必须使用隔离账号或由环境锁串行；测试账号只授予目标门户、组织和本次验收所需菜单权限，凭据只从 Gitea Actions Secret 注入。账号、角色或权限矩阵变化必须由 SYS/身份真理源回读，不能只改测试脚本。
+
 如果生效配置位于目标主机而非业务仓，例如SYS的OIDC Compose覆盖文件，源码exact SHA不能证明该配置已同步。部署前须独立对账配置的仓内版本/目标文件SHA-256、保留可恢复备份并按真实Compose合并验证；部署后回读容器实际环境和代码revision，把两个版本证据一起纳入Run/交付记录。CI重新发布业务仓不会自动更新主机覆盖文件。
 
 Gitea 内网环境应使用明确 URL 的内网 Action，例如 `uses: https://<gitea>/<owner>/<action>@<version>`；不要在受限网络中隐式依赖 GitHub 下载。Action 升级先用试验仓验证 checkout、cache、artifact 上传与下载回读。
@@ -135,7 +137,7 @@ Gitea 内网环境应使用明确 URL 的内网 Action，例如 `uses: https://<
 
 ## 8. 监控与终态判定
 
-Gitea Web 的仓库 `Actions` 页面是人工入口；自动化使用 Actions API读取：
+Gitea Web 的仓库 `Actions` 页面是可选人工入口；日常自动化和 Agent 验真默认使用 Actions API、Runner 主机服务日志以及部署主机容器/网关命令，不依赖操作用户本机浏览器：
 
 - Run：`GET /api/v1/repos/{owner}/{repo}/actions/runs/{run}`
 - Jobs/Steps：`GET .../actions/runs/{run}/jobs`
@@ -153,6 +155,8 @@ Gitea Web 的仓库 `Actions` 页面是人工入口；自动化使用 Actions AP
 | Deploy | 运行容器 healthy，revision 与 Run SHA一致 |
 | Gateway | 受影响静态/API入口成功，错误 audience/匿名反例按契约返回 |
 | E2E | floor + 本次改动 + 直接关联项通过；真实数据不可用则标 `blocked` |
+
+除非验收对象本身是 Gitea 页面，否则不得为了查看 CI 状态启动或接管操作用户本机 Chrome。API/SSH 已能证明的 Run、Job、日志、Runner 槽位、容器 revision 与健康状态，应直接用命令行取得；浏览器仅用于真实业务 UI/E2E 或 API 未暴露的人工管理操作。
 
 ## 9. 回滚与故障处理
 
@@ -177,6 +181,7 @@ Gitea Web 的仓库 `Actions` 页面是人工入口；自动化使用 Actions AP
 - [ ] 精确 SHA、容器 revision、网关 smoke和部署态定向 E2E 已闭环
 - [ ] JUnit/TRX/截图/hash制品已下载回读
 - [ ] Gitea 成功后 GitHub 镜像已对账；ADO 已转历史只读且未再触发
+- [ ] 部署态 E2E 使用专用 CI 身份，未与人工/演示账号并发互踢；凭据仅来自 Secret
 - [ ] 失败、取消、超时、Runner失联与回滚路径已至少演练或明确记录为 `pending`
 
 ## 11. 官方依据

@@ -1,6 +1,6 @@
 # MOM OIDC 统一认证与容器化部署详细手册
 
-> **状态**：Stable v1.1（2026-09-15）
+> **状态**：Stable v1.2（2026-09-16）
 > **适用范围**：SYS、BP、MDM、SRM、TPM、MES、AIOS 及后续 MOM Web/Api 子应用
 > **目标读者**：产品组开发、测试、DevOps、平台管理员
 > **决策依据**：[ADR-049](../decisions/ADR-049-mom-oidc-containerized-delivery.md)、[ADR-051](../decisions/ADR-051-mom-portal-session-and-idle-renewal.md)
@@ -373,7 +373,7 @@ Authentication__SysOidc__RequireHttpsMetadata=true
 - 统一部署用户名：`webdeploy`。
 - 当前集成主机已创建该账户（UID 1001），属于 `sudo` 组但不属于 `docker` 组；容器管理必须通过受控 `sudo` 执行。不得仅为省去 `sudo` 把账户加入 `docker` 组，因为 Docker daemon 权限等价于主机 root 能力。
 - 首选认证方式：由平台管理员把产品组 SSH 公钥安装到 10.28 的 `webdeploy` 账户，并按最小权限配置 Docker 部署能力。
-- 必须使用密码的自动化场景：从 ADO Secret 变量 `DEPLOY_SSH_PASSWORD` 或企业密码库在运行时注入；禁止写入仓库、Dockerfile、compose、流水线明文、日志或交接文档。
+- 必须使用密码的自动化场景：从 Gitea Actions Secret 或企业密码库在运行时注入；禁止写入仓库、Dockerfile、compose、流水线明文、日志或交接文档。尚未迁移的历史ADO流水线只按其原Secret机制维持，不得成为新仓模板。
 - 开发机临时运维：凭据存本机系统 Keychain/凭据管理器，执行时即时读取；不得复制到 shell history。
 - 手册只登记账户名和凭据获取渠道，不登记实际密码。密码轮换不需要修改代码或重写 Git 历史。
 
@@ -421,7 +421,9 @@ L0 floor + 按 affectedModules 的定向部署态 E2E
 记录精确 commit/build/image/业务证据
 ```
 
-Gitea Actions完成构建、部署态E2E和制品回读后再推GitHub镜像；ADO在逐仓切换验收后保留历史只读。完整Runner、Secret、精确SHA、并发Build与串行Deploy要求见[Gitea Actions内网容器CI/CD标准](gitea-actions-onprem-container-cicd-standard.md)。本地先做定向 E2E 可以减少共享 Runner 的无效排队，但不能替代部署态 E2E。若 SYS 配置为同账号单会话，本地与 CI 禁止并发使用同一账号；应使用隔离账号，或等待当前 CI 终态后再跑本地浏览器测试。
+Gitea Actions完成构建、部署态E2E和制品回读后再推GitHub镜像；ADO在逐仓切换验收后保留历史只读。完整Runner、Secret、精确SHA、并发Build与串行Deploy要求见[Gitea Actions内网容器CI/CD标准](gitea-actions-onprem-container-cicd-standard.md)。本地先做定向 E2E 可以减少共享 Runner 的无效排队，但不能替代部署态 E2E。部署态E2E必须使用专用、最小权限的CI身份，不能默认使用人工或演示账号；若SYS配置为同账号单会话，本地与CI还必须使用不同账号或由环境锁串行，避免互相撤销会话。
+
+CI终态默认从Gitea Actions API读取Run、Jobs、日志和制品，并通过Runner/部署主机SSH回读服务、容器revision、health与网关探针。除非验收对象就是Gitea管理页面，否则不要为了查看CI状态接管操作用户本机Chrome；浏览器资源保留给真实门户/子应用E2E。
 
 SYS OIDC主机覆盖文件是独立于SYS API源码SHA的受控运行配置：先对账仓内`compose.sys-identity.yaml`与10.28`compose.identity.yaml`的SHA-256、保留可恢复备份，再在目标机以发布脚本相同的Compose合并方式执行`config --quiet`。BP专属登录URL、Access15分钟、Refresh固定12小时、管理12小时和审计8小时须在SYS API exact SHA部署后回读容器实际环境；只重新跑业务仓CI不会自动改写主机覆盖文件。配置与代码的两个版本证据必须同批记录。
 
@@ -491,7 +493,7 @@ SYS OIDC主机覆盖文件是独立于SYS API源码SHA的受控运行配置：�
 
 ### 批次 4：CI 与部署态 E2E
 
-- 本地定向测试通过后提交、双推。
+- 本地定向测试通过后提交并推Gitea主仓；只有Gitea终态、精确SHA部署、制品回读和部署态E2E全部通过后，才推GitHub镜像。ADO不再同步新提交。
 - CI 部署精确 SHA；后端鉴权变化触发 BP 消费者 E2E。
 - 从 BP 真实登录，逐业务模块至少进入一个代表叶子页，断言真实 API、真实数据/业务空态、URL 无 Token。
 - 验证刷新、切厂、撤销、单门户退出、全局退出和 401 恢复。
@@ -570,3 +572,4 @@ SYS OIDC主机覆盖文件是独立于SYS API源码SHA的受控运行配置：�
 |---|---|---|
 | 2026-09-14 | 1.0 | 以 SYS/BP/MDM 实证形成跨产品组 OIDC、Bridge V1、10.28 容器、10.31 APISIX、定向 CI/E2E 与 JYInfo 退出标准 |
 | 2026-09-15 | 1.1 | 增加三门户独立登录与Standard业务4小时空闲续作、有界Refresh/同源再授权、子应用真实操作信号、主机身份覆盖文件对账及失败Run影响面继承 |
+| 2026-09-16 | 1.2 | 清理ADO Secret/双推旧口径；部署态E2E要求专用CI身份，CI终态默认通过Gitea API及Runner/部署主机CLI验真 |
