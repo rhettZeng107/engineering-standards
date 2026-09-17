@@ -1,6 +1,6 @@
 # 标准 — CI/CD E2E-in-pipeline(部署后自动验证)
 
-> 决策依据:ADR-024(Plan E2E 分级 + CI/CD 接管,修订段确立本标准为硬基线)+ ADR-022(CICD 监控)+ ADR-027(复盘分层蒸馏)+ **ADR-045(部署后 E2E 分层定级治理,§7)**。
+> 决策依据:ADR-024(Plan E2E 分级 + CI/CD 接管,修订段确立本标准为硬基线)+ ADR-022(CICD 监控)+ ADR-027(复盘分层蒸馏)+ **ADR-045(部署后 E2E 分层定级治理,§7)**。日常页面改动的本机主门、真实数据和完成定义见[页面变更轻量验收标准](page-change-acceptance-standard.md)。
 > 模板:`templates/pipeline-e2e/`；Gitea主交付链见[Gitea Actions内网容器CI/CD标准](gitea-actions-onprem-container-cicd-standard.md)，`templates/azure-pipelines-e2e-stage.snippet.yml`仅供尚未迁移的ADO历史流水线。
 > 钩子:`templates/hooks/cicd-e2e-stage-guard.js`(前端 pipeline 缺 E2E_Verify stage 即警示)。
 > 由来:SYSV2 MDM pipeline(已含 E2E_Verify Stage 3)+ SRMV2 部署 10.8 踩坑(抄了无 E2E 的样板 → CI 绿 + dev render OK,但 prod build 上 10 个菜单点开即崩)。
