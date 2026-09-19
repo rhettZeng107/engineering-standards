@@ -70,7 +70,7 @@ engineering-standards/
 | subapp-menu-manifest-publish | 子应用菜单发布(manifest + ScanMenus) |
 | sys-master-data-api-standard | SYS 主数据接口调用规约 |
 | frontend-ui-standard | 前端 UI 设计标准(antd5 + ProTable) |
-| frontend-ui-v2-standard | 前端 UI V2(Atlas)业务页三范式 |
+| frontend-ui-v2-standard | 前端 UI V2(Atlas)业务页与天然 1:N 物料明细范式 |
 | page-change-acceptance-standard | 页面变更轻量方案 C：本机 staged-diff 主门 + exact SHA CI 二次门 |
 | frontend-i18n-standard | 前端中英 i18n 标准 |
 | react-ui-guidelines | React 列表页/编辑页交互规约 |
