@@ -75,7 +75,7 @@
 - **request 函数**:try-catch + 错误 toast + 兜底返回 `{ data: [], success: true, total: 0 }`(避免空数据 UI 崩)
 - **列定义结构**:`{ title, dataIndex, width, order, search, fieldProps, render }`
 
-## 5. 工具栏 / Toolbar(强制三图标)
+## 5. 工具栏 / Toolbar(字段列表四图标)
 
 ```jsx
 toolBarRender={() => []}  // 空数组,不是 false(false 会禁掉整个 toolbar 含 options 三图标)
@@ -89,6 +89,7 @@ options={{
 
 - **必加中文注释**说明"为什么是 `() => []` 不是 `false`"(防 AI 误改回);详见 `docs/superpowers/specs/2026-05-04-protable-options-toolbar-icons/spec.md`
 - 顶部页头操作按钮(新增 / 导入 / 批量删除等)放 `<ListPage.Title extra>` 而非 `toolBarRender`
+- 有有效查询字段的列表，在原生三工具前放“筛选”小图标，默认关闭独立字段面板；条件数、清除全部、表头少数枚举快捷筛选须与服务端全集查询同步。桌面四工具均为 32×32px/约 14×14px 图形，触控视口至少 44×44px；结果数同排。单层同名面包屑不重复标题。详见 [`react-ui-guidelines.md`](react-ui-guidelines.md) §3–4。
 
 ## 6. 字段大小写 + 空值
 

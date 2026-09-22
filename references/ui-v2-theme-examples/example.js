@@ -26,8 +26,17 @@ const listForm = document.getElementById('list-filters');
 if (listForm) {
   const rows = [...document.querySelectorAll('[data-record]')];
   const count = document.getElementById('result-count');
+  const filterButton = document.getElementById('filter-list');
+  const filterCount = document.getElementById('filter-count');
+  const setPanelOpen = (open) => {
+    listForm.hidden = !open;
+    filterButton.setAttribute('aria-expanded', String(open));
+  };
   const runQuery = () => {
     const data = new FormData(listForm);
+    const active = ['keyword', 'owner', 'usage', 'risk'].filter((key) => String(data.get(key) || '').trim()).length;
+    filterCount.textContent = String(active);
+    filterCount.hidden = active === 0;
     let visible = 0;
     rows.forEach((row) => {
       const match = (!data.get('keyword') || row.dataset.keyword.includes(String(data.get('keyword')).trim().toLowerCase()))
@@ -40,8 +49,11 @@ if (listForm) {
     count.textContent = String(visible);
     document.getElementById('empty-row').hidden = visible !== 0;
   };
-  listForm.addEventListener('submit', (event) => { event.preventDefault(); runQuery(); });
+  filterButton.addEventListener('click', () => setPanelOpen(listForm.hidden));
+  document.getElementById('clear-filters').addEventListener('click', () => { listForm.reset(); runQuery(); });
+  listForm.addEventListener('submit', (event) => { event.preventDefault(); runQuery(); setPanelOpen(false); });
   listForm.addEventListener('reset', () => requestAnimationFrame(runQuery));
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setPanelOpen(false); });
   document.getElementById('refresh-list').addEventListener('click', runQuery);
   document.getElementById('density-list').addEventListener('click', (event) => {
     const panel = document.querySelector('.table-panel');

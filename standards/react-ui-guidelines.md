@@ -35,9 +35,8 @@
 ┌─ ListPage ─────────────────────────────────────┐
 │  Title              [+ 新增]                    │  ← Title.extra
 ├────────────────────────────────────────────────┤
-│  [字段 1] [字段 2] [字段 3] [字段 4] [重置][查询]│  ← 过滤区(ProTable.search)
-├────────────────────────────────────────────────┤
-│  共 N 条 · 排序说明       [刷新][密度][列设置]   │  ← 工具栏(ProTable.options)
+│  共 N 条 · 排序说明 [筛选][刷新][密度][列设置]   │  ← 紧凑工具栏
+│  筛选打开时：独立面板内显示字段、重置、查询      │
 ├────────────────────────────────────────────────┤
 │  序号 | 字段... | 操作                         │  ← 表格列头
 │  ...                                           │  ← 数据行
@@ -50,14 +49,14 @@
 ```jsx
 <ListPage>
   <ListPage.Title title="..." subtitle="..." extra={...} banner={...} />
-  <ListPage.Filters>{/* ≤6 个 FilterChip */}</ListPage.Filters>
+  <ListPage.Filters>{/* 按业务需要放快捷业务分组；字段条件收在面板 */}</ListPage.Filters>
   <ListPage.Toolbar search={...} actions={[...]} />
   <ListPage.Table>{/* 单个 ProTable / Table 子节点 */}</ListPage.Table>
 </ListPage>
 ```
 
 **规约**：
-- Filters 最多 6 个 chip，超过改路由子页
+- 页面级 Filters 仅放确需常显的业务分组；字段条件进入筛选面板
 - Toolbar 留空自动不渲染
 - Table 只接受**单个**子节点（不允许包一层 div）
 
@@ -69,19 +68,14 @@
 
 ### 3.1 搜索（Search）
 
-**实施载体**：ProTable 内置 `search` prop，不另写 `<Form>` 包裹。
+**实施载体**：优先把 ProTable 内置 `search` 表单放在工具栏“筛选”面板内，复用 `columns` 字段声明，不另写重复 `<Form>`。已有定制筛选组件可迁入同一面板，但请求条件须有单一来源。
 
 ```jsx
 <ProTable
   search={{
     labelWidth: "auto",
-    collapsed: !filterExpanded,                   // 受控展开
-    onCollapse: (c) => setFilterExpanded(!c),
-    collapseRender: (c) => (
-      <a onClick={() => setFilterExpanded(!c)}>
-        {filterExpanded ? '收起' : '展开'}
-      </a>
-    ),
+    defaultCollapsed: false,                     // 面板内部完整展示
+    collapseRender: false,
     optionRender: (cfg, props, dom) => [
       dom[1],   // [重置] 在前
       dom[0],   // [查询] 在后
@@ -89,6 +83,7 @@
   }}
   columns={columns}  // 字段过滤声明在 columns 内
 />
+// 项目封装负责：默认隐藏 search、四工具并排、面板开关、已应用数与清除全部。
 ```
 
 **字段级过滤声明**（在 `columns` 内）：
@@ -100,24 +95,24 @@
 | 日期范围 | `valueType: 'dateRange'` | 创建日期 |
 | 不参与过滤 | `search: false` | 序号 / 操作列 |
 
-**展开/收起默认**：默认收起 1 行；超过 1 行的过滤条件点击"展开"显示全部。
+**默认状态**：整块筛选面板默认关闭，不占列表纵向空间；打开后显示当前页所有有效字段条件。
 
-**布局与行为**：字段采用上标签、下控件，文本、下拉和日期控件顶线/底线对齐；宽屏常用筛选项按业务优先级最多四列展示，查询/重置靠右且与字段区同层。可用宽度不足时先变两列，再变一列，按钮保持可见；更多条件走展开，不裁掉字段。查询触发后保留条件，重置要清空全部当前筛选并回到第一页。列表页的视觉参考为 [`UI V2 明暗列表示例`](../references/ui-v2-theme-examples/list.html)，实现仍以 ProTable 字段过滤为准，不复制示例的静态数据或自造第二套搜索状态。
+**布局与行为**：字段采用上标签、下控件；面板宽屏最多两列，窄屏一列，并限制高度使内部滚动。查询/重置在面板内，提交关闭面板并保留条件；重置与“清除全部”均清空所有已应用条件并回第一页。表头仅给少数低基数枚举列保留快捷筛选，与面板条件同步并走服务端全集过滤。列表视觉参考为 [`UI V2 明暗列表示例`](../references/ui-v2-theme-examples/list.html)。
 
 ### 3.2 重置（Reset）
 
-由 ProTable 内置搜索表单提供，**不自建**。**强制** `optionRender` 调换为 `[重置, 查询]` 顺序（重置在前，让用户改完字段先一键清空再查询）。
+面板内优先使用 ProTable 内置重置；`optionRender` 维持 `[重置, 查询]`。四工具中的筛选按钮显示已应用数，并提供不必逐字段操作的“清除全部”。
 
 ### 3.3 过滤（Filter）
 
 | 类型 | 处理位置 | 组件 |
 |---|---|---|
-| **枚举单/多选**（≤ 6 项）| `<ListPage.Filters>` 段 | `<FilterChip>` 自定义芯片 |
-| **多列字段过滤** | `<ProTable.search>` 内 columns | 见 §3.1 字段级声明 |
-| **日期 / 数字区间** | `<ListPage.Toolbar actions>` 段 | antd 原生 `<RangePicker>` / `<InputNumber>` |
-| **级联 / 远端搜索** | 同上 | antd 原生 `<Cascader>` / `<Select showSearch>` |
+| **少数低基数枚举** | 表头快捷筛选，同时进入面板 | `filters` / `filterDropdown` |
+| **多列字段过滤** | 筛选面板内 columns | 见 §3.1 字段级声明 |
+| **日期 / 数字区间** | 筛选面板 | antd 原生 `<RangePicker>` / `<InputNumber>` |
+| **级联 / 远端搜索** | 筛选面板 | antd 原生 `<Cascader>` / `<Select showSearch>` |
 
-> FilterChip 仅处理枚举筛选，不与 ProTable.search 重复。
+> 页面级 FilterChip 只用于必须常显的业务分组；同一字段不同时维护两套筛选状态。
 
 ### 3.4 新增（Create）
 
@@ -195,19 +190,20 @@ return (
 
 ---
 
-## 4. ProTable 工具栏三图标（强制）
+## 4. ProTable 工具栏四图标（强制）
 
 ### 4.1 必须开启
 
-每个列表页**必须**显式配置 `options`，渲染右上角三图标：
+有可过滤字段的列表页在 ProTable 原生三工具前增加“筛选”；无有效字段的局部表不造空面板。每个列表页仍须显式配置 `options`：
 
 | 图标 | 功能 |
 |---|---|
+| **筛选** | 打开字段级独立面板，显示已应用条件数，提供清除全部 |
 | **刷新** (`reload`) | 一键 reload，不需手动 |
 | **密度** (`density`) | 默认 / 中等 / 紧凑切换，长列表用户必备 |
 | **列设置** (`setting`) | 列**显隐勾选** + **拖拽改位置** + **固定列**，宽列表必备 |
 
-工具区左侧显示真实结果数及适用的排序说明，右侧三个图标按上表顺序独立排列；每个图标提供可访问名称、悬停提示及可见键盘焦点。桌面命中区不小于 32×32px，触控视口不小于 44×44px。刷新应按当前查询、排序和分页重新取数，不清空条件。业务主动作仍位于页头；工具区不重复放查询、重置或新增。
+工具区左侧显示真实结果数及适用的排序说明，右侧四个图标按上表顺序独立排列；每个图标提供可访问名称、悬停提示及可见键盘焦点。桌面边框盒统一 32×32px、图形约 14×14px，触控视口命中区不小于 44×44px。刷新按当前查询、排序和分页重新取数，不清空条件；业务主动作仍位于页头。单层面包屑与标题同名时只显示标题。
 
 ### 4.2 关键陷阱（必读）
 
@@ -492,7 +488,7 @@ antd `Upload` / `Image` / `<img>` 不走 axios 拦截器！需手动注入鉴权
 - ❌ 新增、编辑、详情或流程业务页禁止使用侧滑Drawer、固定窄宽Modal或覆盖式全屏Modal（统一为Main框架内路由独立页）
 - ❌ 一般主 CTA 文案禁止裸用"提交" / "保存"（必须"动词+业务名词"）；§3.5统一新增/编辑页头的“保存”除外
 - ❌ 删除 / 危险动作禁止无二次确认（Popconfirm 或 Modal.confirm）
-- ❌ Filters 段超过 6 个 chip（改路由子页）
+- ❌ 常显 Filters 段超过 6 个 chip（更多字段收进筛选面板）
 - ❌ 引入第二套图标库（`@ant-design/icons` 单一）
 - ❌ 引入新状态管理库 / 升级 antd / pro-components 主版本
 - ❌ 改字段名 / 接口 URL / 请求/响应 payload（属业务契约）
@@ -507,7 +503,8 @@ antd `Upload` / `Image` / `<img>` 不走 axios 拦截器！需手动注入鉴权
 - [ ] 列表页 `toolBarRender` 是否为 `() => []`（不是 `false`）？
 - [ ] 是否配置 `options={{reload, density, setting:{draggable, checkable}}}`？
 - [ ] 过滤区 `optionRender` 是否调换为 `[重置, 查询]`？
-- [ ] 是否提供 `collapseRender` 自定义中文"展开/收起"文案？
+- [ ] 筛选面板是否默认关闭、打开后可查询/重置，且条件数和清除全部同步？
+- [ ] 表头快捷筛选是否只用于少数枚举字段，并与面板和服务端分页同步？
 - [ ] 原Drawer/宽Modal业务页是否已使用Main框架内路由独立页，且新增/编辑/详情页头按契约显示返回、删除、保存或已授权业务动作？
 - [ ] 删除 / 危险动作是否 `<Popconfirm>` 包裹？
 - [ ] 主 CTA 文案是否"动词+业务名词"？
