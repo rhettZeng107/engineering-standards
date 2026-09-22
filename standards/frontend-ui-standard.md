@@ -98,13 +98,22 @@ options={{
 
 ## 7. 状态徽章 / Status Badge
 
-- 用 `<Tag color="processing|success|warning|error|default">` 语义颜色
-- 颜色语义对照:`processing`=进行中(蓝)/ `success`=成功(绿)/ `warning`=警告(橙)/ `error`=错误(红)/ `default`=中性(灰)
+- 状态须同时显示文字；可配圆点或图标，不能仅靠颜色。先判业务含义，再映射 `<Tag>`/状态组件的语义 token；浅色和深色分别配置底色、文字与圆点色。
+
+| 语义 | 典型业务状态 | 色系 |
+|---|---|---|
+| 正常/就绪 | 可用、校验通过、已就绪 | 青绿 `success` |
+| 信息/处理中 | 正在处理、同步中、仅作提示 | 蓝 `processing` |
+| 待处理/风险 | 待复核、临期、需关注、未完结 | 琥珀 `warning` |
+| 阻断/失败 | 证照过期、校验失败、不可用、已阻断 | 红 `error` |
+| 中性/历史 | 从未使用、已关闭、已归档、无业务风险的停用 | 灰 `default` |
+
+“关闭”与“未使用”不能仅凭字面标红或标绿；是否有业务风险由领域状态决定。不同状态维度应分列展示，例如业务占用、自动校验与最终资格不合并成一个颜色标签。具体布局和主题规则见 [`react-ui-guidelines.md`](react-ui-guidelines.md) §8 与 [`frontend-ui-v2-standard.md`](frontend-ui-v2-standard.md) §3。
 
 ## 8. 主题 / CSS 变量
 
 - 颜色用 `var(--sys-text-primary)` / `var(--sys-text-secondary)` / `var(--sys-text-tertiary)` 等 token,**不 hardcode 颜色值**
-- 自动支持 dark/light 主题切换
+- 新增或修改的页面须具备浅/深语义 token；提供切换的产品须同时切换 antd 组件、浮层及 iframe 子应用实际主题。跟随系统模式由系统配色求值，外观偏好可本地持久化；未接入的页面不能宣称全站双主题完成。
 
 ## 9. 新增 / 编辑 / 详情路由页
 

@@ -35,9 +35,9 @@
 ┌─ ListPage ─────────────────────────────────────┐
 │  Title              [+ 新增]                    │  ← Title.extra
 ├────────────────────────────────────────────────┤
-│  [字段 1] [字段 2] [字段 3] | [重置][查询][展开] │  ← 过滤区(ProTable.search)
+│  [字段 1] [字段 2] [字段 3] [字段 4] [重置][查询]│  ← 过滤区(ProTable.search)
 ├────────────────────────────────────────────────┤
-│                       [刷新][密度][列设置]      │  ← 工具栏(ProTable.options)
+│  共 N 条 · 排序说明       [刷新][密度][列设置]   │  ← 工具栏(ProTable.options)
 ├────────────────────────────────────────────────┤
 │  序号 | 字段... | 操作                         │  ← 表格列头
 │  ...                                           │  ← 数据行
@@ -61,7 +61,7 @@
 - Toolbar 留空自动不渲染
 - Table 只接受**单个**子节点（不允许包一层 div）
 
-参考实现：[`SYSV2 src/components/ListPage/ListPage.jsx`](../../AI.REACT.SYS.3/src/components/ListPage/ListPage.jsx)
+参考实现：[`SYSV2 src/components/ListPage/ListPage.jsx`](../../SYSV2/AI.REACT.SYS.3/src/components/ListPage/ListPage.jsx)
 
 ---
 
@@ -101,6 +101,8 @@
 | 不参与过滤 | `search: false` | 序号 / 操作列 |
 
 **展开/收起默认**：默认收起 1 行；超过 1 行的过滤条件点击"展开"显示全部。
+
+**布局与行为**：字段采用上标签、下控件，文本、下拉和日期控件顶线/底线对齐；宽屏常用筛选项按业务优先级最多四列展示，查询/重置靠右且与字段区同层。可用宽度不足时先变两列，再变一列，按钮保持可见；更多条件走展开，不裁掉字段。查询触发后保留条件，重置要清空全部当前筛选并回到第一页。列表页的视觉参考为 [`UI V2 明暗列表示例`](../references/ui-v2-theme-examples/list.html)，实现仍以 ProTable 字段过滤为准，不复制示例的静态数据或自造第二套搜索状态。
 
 ### 3.2 重置（Reset）
 
@@ -204,6 +206,8 @@ return (
 | **刷新** (`reload`) | 一键 reload，不需手动 |
 | **密度** (`density`) | 默认 / 中等 / 紧凑切换，长列表用户必备 |
 | **列设置** (`setting`) | 列**显隐勾选** + **拖拽改位置** + **固定列**，宽列表必备 |
+
+工具区左侧显示真实结果数及适用的排序说明，右侧三个图标按上表顺序独立排列；每个图标提供可访问名称、悬停提示及可见键盘焦点。桌面命中区不小于 32×32px，触控视口不小于 44×44px。刷新应按当前查询、排序和分页重新取数，不清空条件。业务主动作仍位于页头；工具区不重复放查询、重置或新增。
 
 ### 4.2 关键陷阱（必读）
 
@@ -405,13 +409,15 @@ box-shadow: var(--sys-shadow-card);
 box-shadow: var(--sys-shadow-elevated);
 ```
 
-### 8.2 双主题（推荐）
+### 8.2 双主题与宿主同步
 
-`body[data-theme="light"]` / `body[data-theme="dark"]` 两套 CSS 变量定义，业务页 0 改动即跟随。参考 [`SYSV2 src/styles/theme-variables.css`](../../AI.REACT.SYS.3/src/styles/theme-variables.css)。
+`body[data-theme="light"]` / `body[data-theme="dark"]` 两套 CSS 变量定义，antd `ConfigProvider` 的算法和 token 须与实际主题一致；不能仅更换页面背景。支持系统模式时，由 `prefers-color-scheme` 求实际浅/深值，系统变化即时生效；用户明确选择浅/深后不被系统变化覆盖。参考 [`SYSV2 src/styles/theme-variables.css`](../../SYSV2/AI.REACT.SYS.3/src/styles/theme-variables.css)。iframe 子应用有独立文档和样式上下文，宿主须通过已验证的消息契约同步实际主题；子应用独立访问仍能自行选择或继承系统模式。
+
+主题持久化只保存外观偏好；切换不能刷新页面、重挂载业务组件或丢弃未保存输入。页面色值用语义 token 表示画布/容器/浮层/表头/文字/边界/焦点/状态，产品品牌色可覆盖默认值，业务状态色不得随品牌色改变含义。
 
 ### 8.3 可访问性
 
-文字与背景**对比度 ≥ 4.5:1**（WCAG AA）。新增主色或菜单选中态时用 Chrome DevTools Lighthouse 抽查，不达 AA 就调深 / 调浅。
+普通文字与背景**对比度 ≥ 4.5:1**，非文字控件边界、焦点及状态图形至少 3:1。浅色和深色分别检查；状态还须有文字、图标或形状，不以颜色单独传达。新增主色或菜单选中态时用渲染后的实际色值检查，不达标就调整 token。
 
 ---
 
@@ -517,9 +523,9 @@ antd `Upload` / `Image` / `<img>` 不走 axios 拦截器！需手动注入鉴权
 
 ## 14. 引用与扩展
 
-- SYSV2 项目内组件实现：[`AI.REACT.SYS.3/src/components/README.md`](../../AI.REACT.SYS.3/src/components/README.md)
+- SYSV2 项目内组件实现：[`AI.REACT.SYS.3/src/components/README.md`](../../SYSV2/AI.REACT.SYS.3/src/components/README.md)
 - HC SRM 借鉴文档：`HC/.planning/phases/03.2-srmcolud-react-supplier-frontend-rewrite/03.2-UI-SPEC.md`
-- ProTable 三图标 spike 闭环：[`docs/superpowers/specs/2026-05-04-protable-options-toolbar-icons/spec.md`](../superpowers/specs/2026-05-04-protable-options-toolbar-icons/spec.md)
+- ProTable 三图标 spike 闭环：[`SYSV2 docs/superpowers/specs/2026-05-04-protable-options-toolbar-icons/spec.md`](../../SYSV2/docs/superpowers/specs/2026-05-04-protable-options-toolbar-icons/spec.md)
 - 内网老 systemBase 操作员视角对照：`http://<INTERNAL_HOST>/systemBase/#/`
 
 后续扩展（视项目需求）：

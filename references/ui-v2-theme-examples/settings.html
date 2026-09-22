@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UI V2 明暗示例 · 参数页</title>
+  <script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light';</script>
+  <link rel="stylesheet" href="theme.css">
+  <script defer src="example.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">跳到内容</a>
+  <div class="shell">
+    <aside class="side" aria-label="示例导航"><div class="brand">UI V2 <small>业务工作界面 · 明暗示例</small></div><div class="side-label">页面类型</div><nav aria-label="页面类型"><a href="list.html" data-example-link>资源档案列表</a><a href="settings.html" data-example-link aria-current="page">业务参数配置</a></nav></aside>
+    <div class="work">
+      <header class="top"><span class="crumb">设计标准 / 独立业务页 / 参数配置</span><div class="theme-controls" role="group" aria-label="示例主题"><button type="button" data-theme-choice="light" aria-pressed="true">白天</button><button type="button" data-theme-choice="dark" aria-pressed="false">夜晚</button></div></header>
+      <main id="main">
+        <div class="demo-note">视觉与交互示例：字段不是任何产品的正式配置契约，保存按钮不会写入业务数据。</div>
+        <section class="page-head" aria-labelledby="page-title"><div><h1 id="page-title">业务参数配置</h1><p>在一个入口查看配置范围、调整新业务规则并预览影响。已发生业务的规则快照仍由所属产品契约决定。</p></div><div class="head-actions"><button class="button" type="button" id="restore-settings">恢复示例值</button><button class="button primary" type="submit" form="settings-form">保存更改</button></div></section>
+        <form id="settings-form">
+          <div class="config-grid">
+            <div class="config-stack">
+              <section class="section" aria-labelledby="scope-title"><div class="section-head"><div><h2 id="scope-title">配置范围</h2><p>明确参数作用对象和维护边界。</p></div><span class="pill neutral">示例范围</span></div><div class="section-body form-grid"><div class="field"><label for="tenant">业务空间</label><input id="tenant" value="示例业务空间" disabled></div><div class="field"><label for="app">应用实例</label><input id="app" value="主数据服务" disabled></div><div class="full notice">本页只演示页面结构和主题；具体权限、字段、生效时点由各产品确定。</div></div></section>
+              <section class="section" aria-labelledby="review-title"><div class="section-head"><div><h2 id="review-title">复核规则</h2><p>设置新记录的默认复核方式。</p></div><span class="pill warn">影响新记录</span></div><div class="section-body form-grid"><div class="field"><label for="review-mode">默认复核方式</label><select id="review-mode" name="reviewMode"><option value="automatic">规则自动复核</option><option value="manual">人工复核</option></select><p class="hint">异常记录始终进入人工待办。</p></div><div class="field"><label for="review-days">提醒提前天数</label><input id="review-days" name="reviewDays" type="number" min="1" max="90" value="14"><p class="hint">示例取值 1–90 天。</p></div><div class="field full"><label for="review-owner">复核责任组</label><select id="review-owner" name="reviewOwner"><option value="master">主数据维护组</option><option value="quality">质量管理组</option></select></div></div></section>
+              <section class="section" aria-labelledby="notify-title"><div class="section-head"><div><h2 id="notify-title">通知与保留</h2><p>让变更结果可查、异常可处理。</p></div><span class="pill info">信息提示</span></div><div class="section-body form-grid"><div class="field"><label for="notify-mode">通知方式</label><select id="notify-mode" name="notifyMode"><option value="inbox">站内消息</option><option value="none">不主动通知</option></select></div><div class="field"><label for="history-days">历史保留天数</label><input id="history-days" name="historyDays" type="number" min="30" max="365" value="180"></div></div></section>
+              <section class="section" aria-labelledby="reason-title"><div class="section-head"><div><h2 id="reason-title">修改说明</h2><p>正式产品应按契约校验并记录变更原因。</p></div><span class="pill warn">保存前填写</span></div><div class="section-body field"><label for="reason">本次调整原因</label><textarea id="reason" name="reason" placeholder="说明规则调整的业务依据"></textarea></div></section>
+            </div>
+            <aside class="config-stack" aria-label="配置影响预览"><section class="section"><div class="section-head"><div><h2>当前影响</h2><p>依据示例输入即时预览。</p></div><span class="pill info">预览</span></div><div class="section-body"><div class="impact-row"><strong>新记录复核</strong><p id="review-impact">新记录按规则自动复核；异常仍进入人工队列</p><span class="pill ok" id="review-pill">自动复核</span></div><div class="impact-row"><strong>历史记录</strong><p>示例不修改已产生的业务结果。</p><span class="pill neutral">保持原状</span></div><div class="impact-row"><strong>异常提醒</strong><p>超出规则范围时需要人工处理。</p><span class="pill warn">需关注</span></div></div></section><section class="section"><div class="section-head"><div><h2>保存前核对</h2><p>真实系统还需校验权限、并发版本和服务端规则。</p></div></div><div class="section-body notice">演示按钮不会提交请求，也不会显示虚假的“保存成功”。</div></section></aside>
+          </div>
+          <div class="savebar"><span id="save-state" role="status" aria-live="polite">当前显示示例默认值</span><div class="head-actions"><button class="button" type="button" id="return-top">返回顶部</button><button class="button primary" type="submit">保存更改</button></div></div>
+        </form>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

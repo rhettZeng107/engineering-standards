@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UI V2 明暗示例 · 列表页</title>
+  <script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light';</script>
+  <link rel="stylesheet" href="theme.css">
+  <script defer src="example.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">跳到内容</a>
+  <div class="shell">
+    <aside class="side" aria-label="示例导航">
+      <div class="brand">UI V2 <small>业务工作界面 · 明暗示例</small></div>
+      <div class="side-label">页面类型</div>
+      <nav aria-label="页面类型"><a href="list.html" data-example-link aria-current="page">资源档案列表</a><a href="settings.html" data-example-link>业务参数配置</a></nav>
+    </aside>
+    <div class="work">
+      <header class="top">
+        <span class="crumb">设计标准 / 列表页 / 资源档案</span>
+        <div class="theme-controls" role="group" aria-label="示例主题"><button type="button" data-theme-choice="light" aria-pressed="true">白天</button><button type="button" data-theme-choice="dark" aria-pressed="false">夜晚</button></div>
+      </header>
+      <main id="main">
+        <div class="demo-note">视觉与交互示例：数据仅在本页内筛选，未连接业务 API。正式列表应使用项目的 ListPage、ProTable 和完整列设置能力。</div>
+        <section class="page-head" aria-labelledby="page-title">
+          <div><h1 id="page-title">资源档案</h1><p>查看资源当前归属、使用情况和合规风险。不同业务维度分列显示，避免用一个颜色代替完整判断。</p></div>
+          <div class="head-actions"><button class="button" type="button" disabled title="设计示例不提供业务新增">新增资源</button></div>
+        </section>
+        <form class="filters" id="list-filters" aria-label="资源筛选">
+          <div class="filter-grid">
+            <div class="field"><label for="keyword">编号 / 名称</label><input id="keyword" name="keyword" placeholder="输入编号或名称" autocomplete="off"></div>
+            <div class="field"><label for="owner">归属单位</label><select id="owner" name="owner"><option value="">全部单位</option><option value="east">东区</option><option value="west">西区</option></select></div>
+            <div class="field"><label for="usage">业务使用</label><select id="usage" name="usage"><option value="">全部</option><option value="active">使用中</option><option value="idle">未使用</option></select></div>
+            <div class="field"><label for="risk">资格状态</label><select id="risk" name="risk"><option value="">全部</option><option value="ready">可用</option><option value="review">待复核</option><option value="blocked">不可用</option></select></div>
+            <div class="filter-actions"><button class="button" type="reset">重置</button><button class="button primary" type="submit">查询</button></div>
+          </div>
+        </form>
+        <section class="table-panel" data-density="loose" aria-label="资源查询结果">
+          <div class="table-tools"><div class="count">共 <strong id="result-count">3</strong> 条 · 默认按风险与到期时间排序</div><div class="tools"><button class="tool" type="button" id="refresh-list" title="刷新当前结果" aria-label="刷新当前结果">↻</button><button class="tool" type="button" id="density-list" title="密度：宽松" aria-label="切换表格密度" aria-pressed="false">≡</button><button class="tool" type="button" id="columns-list" title="列设置：隐藏车型" aria-label="切换车型列显示" aria-pressed="false">⚙</button></div></div>
+          <div class="table-wrap"><table><thead><tr><th scope="col">资源编号</th><th scope="col">资源名称</th><th scope="col">归属单位</th><th scope="col" data-optional-column>类型</th><th scope="col">业务使用</th><th scope="col">自动校验</th><th scope="col">资格</th><th scope="col">操作</th></tr></thead><tbody>
+            <tr data-record data-keyword="res-00286 示例资源a" data-owner="east" data-usage="active" data-risk="ready"><td class="mono">RES-00286</td><td>示例资源 A</td><td>东区</td><td data-optional-column>标准型</td><td><span class="pill warn">使用中</span></td><td><span class="pill ok">通过</span></td><td><span class="pill ok">可用</span></td><td><span class="row-link">查看</span></td></tr>
+            <tr data-record data-keyword="res-00315 示例资源b" data-owner="east" data-usage="idle" data-risk="blocked"><td class="mono">RES-00315</td><td>示例资源 B</td><td>东区</td><td data-optional-column>扩展型</td><td><span class="pill neutral">从未使用</span></td><td><span class="pill bad">证照过期</span></td><td><span class="pill bad">不可用</span></td><td><span class="row-link">查看</span></td></tr>
+            <tr data-record data-keyword="res-00437 示例资源c" data-owner="west" data-usage="idle" data-risk="review"><td class="mono">RES-00437</td><td>示例资源 C</td><td>西区</td><td data-optional-column>标准型</td><td><span class="pill neutral">未使用</span></td><td><span class="pill warn">缺少资料</span></td><td><span class="pill warn">待复核</span></td><td><span class="row-link">复核</span></td></tr>
+            <tr id="empty-row" hidden><td colspan="8" class="empty-row">没有符合当前条件的示例记录。请调整筛选条件。</td></tr>
+          </tbody></table></div><div class="table-foot">第 1 / 1 页 · 20 条 / 页</div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
