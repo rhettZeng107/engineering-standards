@@ -24,7 +24,7 @@
 ## 关联标准
 
 - `standards/frontend-i18n-standard.md` — i18n 完整规范
-- `standards/frontend-ui-standard.md` — UI 完整规范
+- `standards/frontend-ui-v2-standard.md` — 现行页面 UI V2 工程标准；`standards/frontend-ui-standard.md` — 基础技术细则
 - `decisions/ADR-008-end-to-end-8-checks.md` — 端到端交付 8 项核对
 - `standards/gitea-actions-onprem-container-cicd-standard.md` — 已容器化业务仓的现行 CI/CD 标准
 - `standards/mom-oidc-containerized-delivery-guide.md` — MOM 统一认证、Bridge 与容器交付合同

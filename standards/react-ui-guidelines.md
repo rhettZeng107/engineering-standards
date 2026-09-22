@@ -241,9 +241,9 @@ return (
 **注释模板**（强制加，避免误改回 false）：
 
 ```jsx
-// 现状：toolBarRender={false} 会把整个 toolbar 区域禁用，连带 options 三图标一起没了
+// 现状：toolBarRender={false} 会把整个 toolbar 区域禁用，连带原生三个工具一起没了
 // 为什么改：用户需要刷新/密度/列设置（含拖拽位置 + 显隐 + 固定列）能力
-// 改成什么样：传 () => [] 空数组保留 toolbar 区域渲染（左空），由 options 渲染右侧三图标
+// 改成什么样：传 () => [] 保留 toolbar，由 options 渲染原生三工具；有查询字段时在前方增加独立筛选工具
 toolBarRender={() => []}
 ```
 
@@ -502,6 +502,7 @@ antd `Upload` / `Image` / `<img>` 不走 axios 拦截器！需手动注入鉴权
 - [ ] 是否用 `<ListPage>` 四段式（或等价封装）？
 - [ ] 列表页 `toolBarRender` 是否为 `() => []`（不是 `false`）？
 - [ ] 是否配置 `options={{reload, density, setting:{draggable, checkable}}}`？
+- [ ] 有字段条件的列表是否让筛选与上述原生三工具同排，桌面 32×32px、触控至少 44×44px，表头单行约 38px？
 - [ ] 过滤区 `optionRender` 是否调换为 `[重置, 查询]`？
 - [ ] 筛选面板是否默认关闭、打开后可查询/重置，且条件数和清除全部同步？
 - [ ] 表头快捷筛选是否只用于少数枚举字段，并与面板和服务端分页同步？

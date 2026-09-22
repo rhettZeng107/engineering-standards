@@ -105,7 +105,7 @@ cd <项目目录> && git push origin master && git push <第二远程> master
 
 ## 前端 UI 标准 / 子应用接入(若适用)
 
-> 前端列表页 / 表单默认套 `engineering-standards/standards/frontend-ui-standard.md`(前端统一 4 标准)。
+> 前端页面编码统一按 `engineering-standards/standards/frontend-ui-v2-standard.md` 判定页面类型并验收；`frontend-ui-standard.md` 仅补充基础组件技术细则，不能豁免 UI V2。
 > 嵌入业务门户的子应用按 `engineering-standards/standards/subapp-onboarding-guide.md` 接入。
 
 ---

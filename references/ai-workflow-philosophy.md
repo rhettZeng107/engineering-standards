@@ -122,7 +122,8 @@ flowchart LR
 
 | 标准文档 | 适用 |
 |---|---|
-| `frontend-ui-standard.md` | 所有前端列表页/表单/过滤/工具栏统一(antd5 + pro-components + ListPage 四段式 + AutoHeightProTable) |
+| `frontend-ui-v2-standard.md` | 所有前端页面编码的现行工程标准；明暗主题、紧凑列表、独立业务页、参数页和逐页验收 |
+| `frontend-ui-standard.md` | antd 5 / ProTable 基础技术细则；页面范式以 UI V2 为准 |
 | `react-ui-guidelines.md` | React UI 通用准则 |
 | `frontend-i18n-standard.md` | 前端中英双语范围与落盘校验(配 ADR-020) |
 | `subapp-onboarding-guide.md` | 子应用接入 BP 业务门户 10 步主体 + 9 高级附录(MDM 为参考实现) |
@@ -224,7 +225,7 @@ flowchart LR
 | 029 | 工作区治理与 bootstrap | 跨项目 |
 | 030 | GSD 能力融合(含 Claim 来源 A3) | 跨项目 |
 | 031 | 工作流自动接续(progress.md) | 跨项目 |
-| 032 | 前端 UI V2 标准图集 | 跨项目 |
+| 032 | 前端 UI V2 工程标准 | 跨项目 |
 | 033 | 治理分层与削减 / BP shell 架构 | 跨项目 / 项目 |
 | 034 | 可观测性 APM-lite 标准 | 跨项目 |
 

@@ -312,6 +312,6 @@ document.cookie = `lng=${lang};path=/;domain=.example.com;max-age=31536000`;
 ## 9. 配套引用
 
 - 上游决策:ADR-020(候选)— 前端中英 i18n 范围边界
-- 工程标准:[`frontend-ui-standard.md`](frontend-ui-standard.md)— UI 设计标准(含 i18n 配套段)
+- 页面工程标准：[`frontend-ui-v2-standard.md`](frontend-ui-v2-standard.md)；antd 5 / ProTable 与 i18n 基础细则：[`frontend-ui-standard.md`](frontend-ui-standard.md)
 - 工程标准:[`subapp-onboarding-guide.md`](subapp-onboarding-guide.md)— 子应用接入手册(wujie 跨子域 Cookie 同步)
 - SYSV2 实证:`docs/superpowers/specs/2026-05-10-frontend-i18n-zh-en-default/spec.md`(v3 完整方案)

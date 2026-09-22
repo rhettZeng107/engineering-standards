@@ -26,6 +26,7 @@
 - Task-triggered ADR/spec sources: <paths and when needed; not a mandatory history bundle>
 - Semantic navigation: <LSP/tool and solution, when relevant>
 - Verification specialization: <project-specific checks; inherit review policy, do not add default reviewers>
+- Frontend UI, if applicable: <project theme tokens/components and real UI/E2E entry; inherit the UI V2 page standard without copying its rules>
 - Task records: <docs/tasks/YYYY-MM-DD-topic/ when needed; spec/plan/progress are not a mandatory bundle>
 - Authoritative task record: <one progress path for long work, or session plan for short work>
 - Continuation entry: <thin pointer to current record, or not needed>

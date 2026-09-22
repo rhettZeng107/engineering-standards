@@ -1190,5 +1190,5 @@ APS 参考实现：`AppName=aps`、门户根“APS高级计划排程”；5041 �
 - [ADR-051:MOM三门户独立登录与业务空闲续会话](../decisions/ADR-051-mom-portal-session-and-idle-renewal.md) — BP四小时真实操作、短期Access和有界Refresh续作
 - [MOM OIDC 统一认证与容器化部署详细手册](mom-oidc-containerized-delivery-guide.md) — TPM/MES/AIOS 等产品组执行入口
 - **ADR-006:SubApp 跨进程鉴权 IP allowlist** — 当前为 SYSV2 项目级 ADR(`SYSV2/docs/decisions/ADR-006-...md`,该项目内可达);其他项目接入时**沿用同模式**(IP allowlist 中间件 + 本手册附录 C 范式),若多项目实际接入后存在共性需求,由后续 ADR 升级到本仓 `decisions/`
-- [frontend-ui-standard.md](frontend-ui-standard.md) — antd 5 + ProTable 列表页统一标准(子应用 UI 一致性)
+- [frontend-ui-v2-standard.md](frontend-ui-v2-standard.md) — 子应用现行页面工程标准；明暗主题、紧凑四工具列表、状态风险色和独立业务页逐页验收。antd 5 + ProTable 基础细则见 [frontend-ui-standard.md](frontend-ui-standard.md)
 - [doc-conventions.md](doc-conventions.md) — spec/plan/ADR 命名约定

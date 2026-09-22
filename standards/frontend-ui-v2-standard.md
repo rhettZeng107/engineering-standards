@@ -1,10 +1,11 @@
 # Frontend UI V2（Atlas）标准
 
-> 状态：正式。适用于 React 18、antd 5 与 `@ant-design/pro-components` 项目。
+> 状态：正式。React 18、antd 5 与 `@ant-design/pro-components` 项目按本文直接实施；其他前端技术栈提供等价实现与验收证据。
 > 本文只规定 V2 的强制边界；列表交互细则直接引用
 > [`frontend-ui-standard.md`](frontend-ui-standard.md) 与
 > [`react-ui-guidelines.md`](react-ui-guidelines.md)，不在三份文档中重复维护。
-> 共享组件真理源：`references/v2-components/`。
+> 组件参考片段：`references/v2-components/`；页面规则以本文与引用的列表细则为准，产品 token 由实际项目维护。
+> 2026-09-22 视觉验收基线：SYSV2 的 BP 门户与 MDM 试点已在 10.31 完成明暗主题、紧凑列表及参数页的真实入口核对；涛哥确认 MDM 页面效果达到预期。此结论只覆盖页面视觉与交互方向，业务写入回读、权限反例及未保存导航仍按项目矩阵独立验收。
 
 ## 1. 适用原则
 
@@ -31,6 +32,8 @@
 - 业务页复用 `SectionCard`、`StepAnchorNav`、`InlineDetailTable` 和 `V2States`；禁止自造同职能组件或用空卡片冒充业务分区。
 
 设计效果对照：列表页[白天](../references/ui-v2-theme-examples/list-light.png)／[夜晚](../references/ui-v2-theme-examples/list-dark.png)，参数页[白天](../references/ui-v2-theme-examples/settings-light.png)／[夜晚](../references/ui-v2-theme-examples/settings-dark.png)。HTML 可切换主题并查看窄屏排布；示例数据不代表任何业务契约。
+
+视觉试点实现参考：MDM [`VFilterProTable`](../../SYSV2/AI.REACT.MDM.1/src/v2/components/VFilterProTable.jsx)、[`VToolbar`](../../SYSV2/AI.REACT.MDM.1/src/v2/components/VToolbar.jsx)、[`VPageHeader`](../../SYSV2/AI.REACT.MDM.1/src/v2/components/VPageHeader.jsx) 与[参数页](../../SYSV2/AI.REACT.MDM.1/src/setting/index.jsx)；BP [主题上下文](../../SYSV2/AI.REACT.SYS.BusinessPortal/src/context/ThemeContext.jsx)和[工作台](../../SYSV2/AI.REACT.SYS.BusinessPortal/src/views/Workbench/index.jsx)。这些文件展示已落地的交互，子应用按自己的数据、权限和路由契约实现，不把 MDM 组件当成跨仓依赖。
 
 ## 3. 列表页（强制）
 
@@ -88,6 +91,6 @@
 - AI UI 能力按职责分层：`frontend-design`负责页面创作与设计方向，`frontend-quality-gate`负责基于源码、渲染结果和项目规范的证据化审查；`impeccable`仅作为显式调用的补充工具，用于确定性检测或可信本地环境的可选 Live Mode。不得用任一技能的审美偏好覆盖本标准、项目设计系统和业务契约，也不得把检测无告警当作真实 UI、可访问性或业务验收通过。
 - `impeccable`默认关闭隐式触发、自动 Hook 和遥测；确定性检测先作为人工审查证据，不直接成为 CI 阻断条件。Live Mode 只允许在用户明确要求后操作可信本地源码与开发服务器，不得为其放宽生产 CSP、浏览器安全或部署边界。
 - 任一任务轨只要涉及页面编码，编码前必须登记受影响页面及 `pageType`，编码中实施对应 V2 条款，批次验收提供页面级静态证据和真实 UI 行为证据。任一适用项未通过，页面与批次不得标记完成。
-- 后续每个接入门户的子应用按其实际页面矩阵逐页实施本文与引用的列表标准：在子应用内使用主题 token 渲染明暗两套页面，从真实门户入口核对主题同步、列表工具和状态语义；只修改门户外壳或共享样式，不能代替子应用页面代码及业务行为的验收。
+- 后续每个接入门户的子应用按其实际页面矩阵逐页实施本文与引用的列表标准：在子应用内使用主题 token 渲染明暗两套页面，从真实门户入口核对主题同步、列表工具和状态语义；只修改门户外壳或共享样式，不能代替子应用页面代码及业务行为的验收。MDM 的视觉评审结论允许复用设计方向，不替代其他应用的页面矩阵、业务写入回读和独立评审。
 - 日常页面变更按[页面变更轻量验收标准](page-change-acceptance-standard.md)执行“最终 staged diff 本机主门 + exact SHA 部署后 CI 二次门”；按影响面验收不等于省略入口、保存回读或兄弟消费者，也不要求每次跑全菜单。
 - 迁移项目额外把“源功能等价”和“目标 UI V2 符合性”作为同一迁移单元的两个并列合同：源页面清单保证不漏业务，本文及其列表细则保证目标形态。两者同批编码、同批提交、同批 E2E；任何一项未通过，迁移状态只能是 `partial`、`pending` 或 `blocked`，不得记为 `complete`。

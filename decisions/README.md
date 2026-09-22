@@ -96,7 +96,7 @@ Deprecated   → 废弃但未被取代
 | [ADR-029](ADR-029-workspace-governance-bootstrap.md) | 工作区治理三层模型与新工作区 bootstrap 模板 | Accepted | 2026-05-18 | 跨项目 | 本仓 |
 | [ADR-030](ADR-030-gsd-capability-fusion.md) | 选择性融合 GSD 能力到工作流(A 档 4 + B 档 4) | Accepted | 2026-05-18 | 跨项目 | 本仓 |
 | [ADR-031](ADR-031-workflow-auto-resume.md) | 工作流断点续作(进度文件 + socket 异常自动接续) | Accepted | 2026-05-20 | 跨项目 | 本仓 |
-| [ADR-032](ADR-032-frontend-ui-v2-standard-atlas.md) | 前端 UI V2 标准图集 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
+| [ADR-032](ADR-032-frontend-ui-v2-standard-atlas.md) | 前端 UI V2 工程标准；2026-09-22 按 BP/MDM 视觉试点校准现行入口 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-033](ADR-033-governance-layering-and-reduction.md) | 治理分层金字塔 + 减法纪律 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-034](ADR-034-observability-apm-lite-standard.md) | APM-lite 应用层可观测体系工程标准 | Accepted | 2026-05-21 | 跨项目 | 本仓 |
 | [ADR-035](ADR-035-lsp-subclaude-gateway.md) | LSP Sub-Claude Gateway — Multi-repo workspace 的 LSP 使用模式 | Accepted | 2026-05-27 | 跨项目 | 本仓 |

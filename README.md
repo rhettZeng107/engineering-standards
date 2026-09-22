@@ -48,7 +48,7 @@ engineering-standards/
 |---|---|---|---|
 | **老项目迁移** | ADR-014(执行)+ ADR-028(完成判定) | **legacy-migration-playbook §0 总入口** | tools/migration-fanout(执行) + migration-audit(查漏) + templates/subapp-migration-checklist |
 | **子应用发布 BP + CICD** | ADR-011 / 012 / 038 / 049 / 050 / 051 | **subapp-bp-release-pipeline-standard(总纲入口)** · subapp-onboarding-guide · mom-oidc-containerized-delivery-guide · gitea-actions-onprem-container-cicd-standard | templates/subapp-migration-checklist · pipeline-e2e |
-| **前端页面 / UI** | ADR-008 / 020 / 023 / 032 / 045 | frontend-ui-standard · frontend-ui-v2-standard · page-change-acceptance-standard · frontend-i18n-standard · react-ui-guidelines | templates/frontend-i18n-init · frontend-env-production |
+| **前端页面 / UI** | ADR-008 / 020 / 023 / 032 / 045 | **frontend-ui-v2-standard（页面入口）** · frontend-ui-standard（基础细则） · react-ui-guidelines（列表交互） · page-change-acceptance-standard · frontend-i18n-standard | references/ui-v2-theme-examples · templates/frontend-i18n-init · frontend-env-production |
 | **鉴权** | ADR-007 / 049 / 051 | mom-oidc-containerized-delivery-guide · subapp-onboarding-guide(接入侧) | — |
 | **CICD / E2E / 监控** | ADR-008 / 024 / 022 / 034 / 045 / 050 | gitea-actions-onprem-container-cicd-standard · cicd-e2e-in-pipeline-standard · page-change-acceptance-standard · observability-apm-lite-standard | pipeline-e2e · hooks/page-change-e2e-guard · templates/azure-pipelines-e2e(旧ADO参考) |
 | **主数据消费** | ADR-038 | sys-master-data-api-standard | templates/csharp-list-controller |
@@ -69,8 +69,8 @@ engineering-standards/
 | subapp-onboarding-guide | 子应用接入业务门户(BP)手册 |
 | subapp-menu-manifest-publish | 子应用菜单发布(manifest + ScanMenus) |
 | sys-master-data-api-standard | SYS 主数据接口调用规约 |
-| frontend-ui-standard | 前端 UI 设计标准(antd5 + ProTable) |
-| frontend-ui-v2-standard | 前端 UI V2(Atlas)业务页与天然 1:N 物料明细范式 |
+| frontend-ui-v2-standard | 前端 UI V2 现行页面工程标准：明暗主题、紧凑列表与筛选、语义色、独立业务页和参数页；MDM 视觉试点已评审 |
+| frontend-ui-standard | antd 5 + ProTable 基础技术细则，页面适用与验收以 UI V2 为准 |
 | page-change-acceptance-standard | 页面变更轻量方案 C：本机 staged-diff 主门 + exact SHA CI 二次门 |
 | frontend-i18n-standard | 前端中英 i18n 标准 |
 | react-ui-guidelines | React 列表页/编辑页交互规约 |
@@ -92,7 +92,7 @@ engineering-standards/
 ### 在项目仓 markdown 内引用本仓内容
 
 ```markdown
-参见跨项目标准 [`frontend-ui-standard.md`](../engineering-standards/standards/frontend-ui-standard.md)
+参见跨项目页面标准 [`frontend-ui-v2-standard.md`](../engineering-standards/standards/frontend-ui-v2-standard.md)
 参见跨项目决策 [ADR-005](../engineering-standards/decisions/ADR-005-customer-fresh-deploy-no-ops.md)
 ```
 
@@ -103,10 +103,10 @@ engineering-standards/
 当文档需要在 GitHub 网页上跨仓跳转时,使用绝对 URL:
 
 ```markdown
-参见 [frontend-ui-standard.md](https://github.com/rhettZeng107/engineering-standards/blob/master/standards/frontend-ui-standard.md)
+参见 [frontend-ui-v2-standard.md](https://github.com/rhettZeng107/engineering-standards/blob/master/standards/frontend-ui-v2-standard.md)
 ```
 
-推荐核心锚点(如 CLAUDE.md / 各仓 README)用双链:`[本地](../engineering-standards/...) ([GitHub](https://...))`。
+推荐核心锚点（如项目 `AGENTS.md` / README）同时提供本地相对链接与对应 GitHub 页面链接；以上 UI V2 示例可直接复用。
 
 ---
 

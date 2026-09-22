@@ -1,9 +1,9 @@
 # 前端 UI 设计标准 / Frontend UI Design Standard
 
-> **⚠ 2026-05-21 降级为 V1 备用基线**:公司前端 UI 已确立 **V2 统一工程标准「Atlas」(ADR-032)** 为新默认;本文档(V1)保留作备用基线 —— 存量未重构页面继续可用,特殊场景(快速交付/第三方嵌入)可降级用 V1。新建/重构/迁移默认套 V2。效果图 `SYSV2/docs/mockups/v2/`。
+> **现行入口**：所有新增、修改、重构、迁移的前端页面先执行 [`Frontend UI V2`](frontend-ui-v2-standard.md)。本文保留 antd 5、ProTable、表单与 token 的基础技术细则；旧页面可保留现状，但一旦进入页面编码批次，不因“快速交付”或第三方嵌入而豁免 V2。明暗效果参见[列表示例](../references/ui-v2-theme-examples/list.html)与[参数页示例](../references/ui-v2-theme-examples/settings.html)。2026-05-21 的 V1 备用基线决定见 [ADR-032](../decisions/ADR-032-frontend-ui-v2-standard-atlas.md)；现行适用边界以 V2 为准。
 >
 > **2026-05-05 涛哥拍板,跨前端通用设计标准**
-> **2026-05-09 涛哥校准**:适用范围精确限定 **List Page**(含 Table + Toolbar + Pagination 的 CRUD Index Page),非列表型页面只做技术栈迁移 + 功能骨架等价
+> **2026-05-09 历史范围**：本文的 ProTable 列表细则针对 List Page；非列表型页面的现行页面要求已由 UI V2 覆盖。
 
 ## 适用范围(精确判定)
 
@@ -16,9 +16,9 @@
 
 通常是 **CRUD Index Page**(`material/index.jsx` / `supplier/index.jsx` / `HREmp/index.jsx`)。
 
-### ❌ 不适用 — 非列表型页面
+### 本文件的列表细则不适用 — 非列表型页面仍执行 V2
 
-只做技术栈迁移(craco→Vite / antd 4→5 / class→hooks)+ 功能骨架等价(详 ADR-014 + memory `feedback_skeleton_equivalent_migration.md`),**不强制**套用本标准:
+本文件的 ProTable 列表细则不套到非列表型页面；这类页面仍须按 V2 的独立业务路由页、参数页、看板或短事务 Modal 范式实施并验证，业务功能等价继续保留：
 
 | 页面类型(术语) | 特征 | 示例 |
 |---|---|---|
@@ -46,7 +46,7 @@
 ```jsx
 <ListPage>
   <ListPage.Title title="..." subtitle="..." extra={<Space>...</Space>} />
-  <ListPage.Filters>{/* 外置过滤组件,可选 */}</ListPage.Filters>
+  <ListPage.Filters>{/* 仅常显业务分组，可选；字段筛选默认收在面板 */}</ListPage.Filters>
   <ListPage.Toolbar search={...} actions={...} />
   <ListPage.Table>
     <AutoHeightProTable ... />
@@ -60,7 +60,7 @@
 
 ## 3. 过滤组件 / Filter Components
 
-- **优先策略**:ProTable 内置 search 表单(列定义 `renderFormItem`),不自建外置 Form
+- **优先策略**：复用 ProTable 列声明中的 search 字段；V2 列表默认把表单收进独立筛选面板，页面顶部不常驻搜索条。
 - **下拉**:`<Select allowClear placeholder showSearch optionFilterProp="label" loading options={[{value, label}]} />`
 - **级联**:多级联动通过 `useState` + `useMemo` + `setSearchXxx(v); tableRef.current?.reloadAndRest?.()`(典例:集团 → 公司 → 工厂)
 - **search 容器**:`search={{ labelWidth: "auto" }}` 标签宽度自适应
@@ -72,13 +72,13 @@
 - **分页**:`pagination={defaultPaginationProps}` — 全局 `showSizeChanger: true` / `defaultPageSize: 20` / `pageSizeOptions: ['10','20','50','100']`(`@/config/commonSettings`)
 - **rowKey**:函数式 + 大小写兼容 `rowKey={(r) => r.empId ?? r.EmpId}`
 - **params**:全局上下文参数 `params={{ activeOrgCode }}`(从 `useOrgContext()` 拿)
-- **request 函数**:try-catch + 错误 toast + 兜底返回 `{ data: [], success: true, total: 0 }`(避免空数据 UI 崩)
+- **request 函数**：捕获并展示接口错误，保持失败态可重试；不得把失败伪装成 `{ data: [], success: true, total: 0 }`。真实空结果才返回成功的空数组。
 - **列定义结构**:`{ title, dataIndex, width, order, search, fieldProps, render }`
 
 ## 5. 工具栏 / Toolbar(字段列表四图标)
 
 ```jsx
-toolBarRender={() => []}  // 空数组,不是 false(false 会禁掉整个 toolbar 含 options 三图标)
+toolBarRender={() => []}  // 空数组,不是 false(false 会禁掉整个 toolbar 含 options 原生三工具)
 options={{
   reload: true,
   density: true,
@@ -251,7 +251,7 @@ SYS.3 当前 60 处 `PrivateProTableAutoHeight` 用法可在后续独立 spec `2
 
 ## 不变量(违反即 review reject)
 
-- ❌ 不用 `toolBarRender={false}`(禁三图标)
+- ❌ 不用 `toolBarRender={false}`(会禁用原生三工具及当前列表的工具栏)
 - ❌ 不 hardcode 颜色值(必须用 CSS 变量)
 - ❌ 不嵌套 `Card`/`Collapse` 等多层壳(用 `ListPage` 平铺)
 - ❌ 不直接用静态 `import { message } from "antd"`(用 `App.useApp()`)

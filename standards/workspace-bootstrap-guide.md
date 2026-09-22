@@ -61,6 +61,7 @@ Legacy provider files remain optional compatibility adapters. A stale Claude/Qwe
 - Keep one authoritative task record; continuation files are thin pointers, not another plan. Machine-readable records are added only for an actual consumer.
 - Record each project's delivery order explicitly: verification, any candidate deployment/UAT prerequisites, commit, sync/push, CI and final acceptance as applicable. Preserve approved project exceptions. A repo without remotes needs only a local commit; root and nested repos close independently.
 - Observe acceptance and rework using the existing monthly template; do not treat historical review PASS counts as business acceptance.
+- For a workspace with frontend pages, inherit [UI V2](frontend-ui-v2-standard.md) as the page design and acceptance standard. Record only project-specific theme tokens, component locations and real UI/E2E commands in its `AGENTS.md`; [frontend-ui-standard](frontend-ui-standard.md) is supplemental technical guidance and cannot waive UI V2. Backend-only workspaces omit this specialization.
 
 See `provider-neutral-ai-coding-harness-standard.md` and `legacy-migration-playbook.md` for the full policy.
 

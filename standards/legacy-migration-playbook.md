@@ -2,7 +2,7 @@
 
 > 决策依据:[ADR-028](../decisions/ADR-028-legacy-migration-baseline-two-step.md)(迁移基线与两步走)+ [ADR-014](../decisions/ADR-014-migration-refactor-workflow.md)(迁移轨工作流)。
 > 适用：老项目迁移改造；具体项目阶段、源分支与部署环境以最近 AGENTS 和当前 progress 为准，不以本文历史实例判断。
-> 配套:[frontend-ui-standard.md](frontend-ui-standard.md)(前端统一 4 标准)、[subapp-onboarding-guide.md](subapp-onboarding-guide.md)。
+> 配套：[frontend-ui-v2-standard.md](frontend-ui-v2-standard.md)（现行页面标准）、[frontend-ui-standard.md](frontend-ui-standard.md)（基础技术细则）、[subapp-onboarding-guide.md](subapp-onboarding-guide.md)。
 
 ---
 
@@ -70,9 +70,9 @@
 |---|---|---|
 | 后端运行时 | 目标 .NET / JVM / Node 等 | .NET Core 8(三层 / 单层 WebApi 按既有架构) |
 | 前端工具链 | 目标构建工具(Vite / Rspack / Next.js / Webpack…) | Vite + pnpm |
-| 前端工程标准 | 项目前端工程标准 | antd 5 + pro-components + 前端统一 4 标准(ADR-023):ListPage 四段式 / AutoHeightProTable / 工具栏三图标 / 字段大小写双兼容 / react-i18next |
+| 前端工程标准 | 项目前端工程标准 | UI V2 为页面强制入口；antd 5 + pro-components / AutoHeightProTable / react-i18next 等基础技术细则按项目实际选用。列表默认收起字段筛选、四工具同排，字段大小写以真实接口契约为准 |
 | **源仓分支范围**(规则1,2026-06-22 涛哥定) | **Fork 全分支避污染**;默认看 master/develop + 最新活跃分支;**基线分支涛哥拍板** | develop>master 取功能更全者 |
-| **前端 UI 标准**(2026-06-22 涛哥定) | 迁移默认套 **UI V2(Atlas)标准**同步更新,不复刻老 UI | `frontend-ui-v2-standard.md`(SectionCard 三范式,ADR-032) |
+| **前端 UI 标准**(2026-06-22 涛哥定) | 迁移同批套 **UI V2(Atlas)标准**，不复刻老 UI | `frontend-ui-v2-standard.md`（页面类型、明暗主题、列表/业务路由/参数/导入范式；ADR-032） |
 
 > 其他项目(如 HC)按自身技术栈声明基线,本手册方法不挑栈。
 
@@ -143,7 +143,7 @@
 迁移一个模块,四层全过才算「迁移完成」:
 
 - [ ] **① 工具链等价**:迁到项目声明的目标构建栈 / 运行时完成(SYSV2 系列 = CRA→Vite / 旧 .NET→.NET 8),`build` 0 error。
-- [ ] **② UI V2 同批落盘**:迁移单元必须在搬迁业务能力的同时套用目标项目声明的 [`frontend-ui-v2-standard.md`](frontend-ui-v2-standard.md)，不得先复刻旧 UI、只换技术栈或只加 V2 页头后把页面标准留到后续批次。列表页同步满足 V1/React 列表细则：`ListPage` 四段式、`ProTable` 字段级带标签过滤、刷新/密度/列设置三图标、稳定列宽和统一操作列；原 Drawer/宽 Modal 的新增、编辑、详情和流程业务同步改为 Main 内独立路由页；附件与导入同步使用 `FileUploader`/`ImportModal` 的 `Upload.Dragger`。业务等价与 UI V2 是同一迁移单元的并列合同，必须同批编码、提交和 E2E，任一未通过均不得标记迁移完成。
+- [ ] **② UI V2 同批落盘**:迁移单元必须在搬迁业务能力的同时套用目标项目声明的 [`frontend-ui-v2-standard.md`](frontend-ui-v2-standard.md)，不得先复刻旧 UI、只换技术栈或只加 V2 页头后把页面标准留到后续批次。列表页采用紧凑 `ListPage`、默认收起的字段级筛选面板、与结果数同排的筛选/刷新/密度/列设置四工具、稳定列宽和统一操作列；条件数、清除全部及少数枚举表头快捷筛选须与服务端全集查询一致。原 Drawer/宽 Modal 的新增、编辑、详情和流程业务同步改为 Main 内独立路由页；附件与导入同步使用 `FileUploader`/`ImportModal` 的 `Upload.Dragger`。业务等价与 UI V2 是同一迁移单元的并列合同，必须同批编码、提交和 E2E，任一未通过均不得标记迁移完成。
 - [ ] **③ 功能骨架等价**:源页面的功能 / 字段 / 交互在新页面 1:1 可用;活动能力中的半成品/Bug(`fix-source-defect`)已补完。仅登记欠债不能勾绿；只有经产品拍板从当前迁移单元边界移出的边缘项可记 `approved-defer`,且该项不得仍计入本模块“已完成”。**以等价回归测试(老↔新行为比对)为强制证据**,不靠「应该能用」的假设;已上线系统并行运行 + 等价验证后切换。
 - [ ] **④ 入口可达性等价**:迁移单元的菜单**实种进门户菜单库 + 权限码挂到测试角色**,从门户菜单**点得进**页面(不止路由可达)。锚点 ADR-008 E2E #5 入口可达性全链(路由→菜单种子→权限码→登录看到→渲染)。
 
@@ -153,7 +153,7 @@
 > **UI 功能清单铁律(老视图 → 新页面全程基准,2026-06-11 涛哥定)**:迁移源是 cshtml(MVC Razor)等老视图时,必须先**逐行提取成 UI 功能清单** —— 每列 / 每按钮 / 每弹窗 / 每必填(含校验规则)/ 每交互(联动、默认值、显隐条件)逐项列出当 checklist。清单**贯穿迁移全程,不只验收兜底**:① **提取**:随源工件清单(§3.1)在迁移启动时由**持有完整上下文的主会话提取并锁定,作为契约锁基准**(ADR-037),**禁下放上下文不完整的子 Agent 自行提取**(context 隔离传话失真),落 `<spec-dir>/contract/` 或 `.planning/artifacts/contract/`;② **实现**:派单 prompt 必附清单,子 Agent **按清单逐项 1:1 等价落盘**(边迁边对,不是迁完再核 —— 避免返工),完成时自报逐项勾选;③ **验收**:CR 静态比对 + E2E 断言均以此清单为基准,**对清单逐项打钩**,任一项未勾即 ③ 功能骨架等价不通过;不靠「看了一遍差不多」放行。
 > **字段契约实测铁律**:列 `dataIndex` / 字段名与后端是否匹配,**必须 curl 实测接口真实 JSON 响应为准**,严禁靠读 EF 实体 / 后端代码推断序列化大小写。MDM 迁移踩坑实证:审计靠「读实体」推断后端 PascalCase,实际全局 camelCase,据此把本来正确的页面 `dataIndex` 改坏。
 > **E2E 冒烟必查 `-` 占位**:列表页 `dataIndex` 与后端字段不匹配时 ProTable 渲染 `-` 占位。冒烟「页面渲染通过 + 无 JS 报错」不足以验收 —— **必须断言关键列(编码/名称类)首数据行单元格非 `-`、非空**(列有真实数据);数据为空的页降级标注「数据为空未验列值」,不算通过。
-> **UI V2 符合性铁律**:迁移矩阵对每个前端页面增加 `pageType` 与 `uiV2Evidence`。列表页证据至少包含 `ListPage`、`ProTable.search` 字段标签、三图标、列宽/操作列和真实查询/重置/列设置；业务表单/详情页证据至少包含独立 route、按 route id 取数、右上角返回/业务动作和刷新恢复；上传页证据至少包含统一 Dragger 及成功/失败。只写“UI V2 页面”、截图页头、build 通过或 API 200 均不是符合性证据。
+> **UI V2 符合性铁律**:迁移矩阵对每个前端页面增加 `pageType` 与 `uiV2Evidence`。列表页证据至少包含紧凑 `ListPage`、默认关闭且字段有标签的筛选面板、四工具及条件数/清除入口、列宽/操作列和真实查询/重置/列设置；业务表单/详情页证据至少包含独立 route、按 route id 取数、右上角返回/业务动作和刷新恢复；上传页证据至少包含统一 Dragger 及成功/失败。只写“UI V2 页面”、截图页头、build 通过或 API 200 均不是符合性证据。
 
 ### 3.3 半成品 / 坏工件处置
 
@@ -252,7 +252,7 @@
 2. [ ] 老视图(cshtml 等)源工件**逐行提取 UI 功能清单**(每列/每按钮/每弹窗/每必填)作契约锁基准,贯穿提取→派单实现 1:1 对照→验收打钩全程(持有完整上下文的主会话锁定,§3.2 铁律)；同时给每页登记 `pageType` 与 `uiV2Evidence`，UI V2 与业务迁移同批落盘
 3. [ ] 半成品/Bug 的活动能力走 `fix-source-defect` 并在 STEP1 前补完；仅登记为 `blocking debt` 不放行。只有产品拍板移出边界才可 `approved-defer`。死行为走 `exclude-proven-dead` 前必须完成 calls/routes/menus/config 反查、可得日志、异常复现与 adversarial vote
 4. [ ] 四层等价 DoD 逐项核对(② UI V2 按页面类型逐项给实证；③ 功能骨架等价 = 对 UI 功能清单逐项打钩；④ 入口可达走真实菜单/权限链)
-4a. [ ] E2E 同时验证功能骨架和 UI V2：列表页查带标签过滤、查询/重置、刷新/密度/列设置、统一操作列且关键列无 `-`；路由业务页查进入/返回/刷新恢复；上传查拖拽/点选及成功/失败；字段大小写以 curl 实测接口为准
+4a. [ ] E2E 同时验证功能骨架和 UI V2：列表页查默认收起的字段筛选面板、查询/重置/条件数/清除、四工具与紧凑表头、统一操作列且关键列无 `-`；路由业务页查进入/返回/刷新恢复；上传查拖拽/点选及成功/失败；字段大小写以 curl 实测接口为准
 5. [ ] 模块级 STEP 1 验收(套 §3.5 验收质量闸:目标导向 / 验证欠债 / 跨阶段回归 / 需求覆盖)→ 解锁 STEP 2
 6. [ ] STEP 2 功能演进:先出现有页清点表,默认增强、禁造新
 7. [ ] 若迁移的是 **BP iframe 子应用**:套 `subapp-onboarding-guide.md` 的 BpSubAppBridge v1 自检(ready/context/ACK + 精确 source/origin + 内存态 JWT + 全 service `baseURL` + 嵌入隐藏 chrome + manifest/IP allowlist + production iframe 逐菜单验收),禁 dev proxy 假通过
