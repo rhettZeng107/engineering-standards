@@ -50,7 +50,7 @@ engineering-standards/
 | **子应用发布 BP + CICD** | ADR-011 / 012 / 038 / 049 / 050 / 051 | **subapp-bp-release-pipeline-standard(总纲入口)** · subapp-onboarding-guide · mom-oidc-containerized-delivery-guide · gitea-actions-onprem-container-cicd-standard | templates/subapp-migration-checklist · pipeline-e2e |
 | **前端页面 / UI** | ADR-008 / 020 / 023 / 032 / 045 | **frontend-ui-v2-standard（页面入口）** · frontend-ui-standard（基础细则） · react-ui-guidelines（列表交互） · page-change-acceptance-standard · frontend-i18n-standard | references/ui-v2-theme-examples · templates/frontend-i18n-init · frontend-env-production |
 | **鉴权** | ADR-007 / 049 / 051 | mom-oidc-containerized-delivery-guide · subapp-onboarding-guide(接入侧) | — |
-| **CICD / E2E / 监控** | ADR-008 / 024 / 022 / 034 / 045 / 050 | gitea-actions-onprem-container-cicd-standard · cicd-e2e-in-pipeline-standard · page-change-acceptance-standard · observability-apm-lite-standard | pipeline-e2e · hooks/page-change-e2e-guard · templates/azure-pipelines-e2e(旧ADO参考) |
+| **CICD / E2E / 监控** | ADR-008 / 024 / 022 / 034 / 045 / 050 | gitea-actions-onprem-container-cicd-standard · cicd-e2e-in-pipeline-standard · page-change-acceptance-standard · observability-apm-lite-standard | pipeline-e2e · hooks/page-change-e2e-guard · hooks/ui-v2-contract-guard · templates/azure-pipelines-e2e(旧ADO参考) |
 | **主数据消费** | ADR-038 | sys-master-data-api-standard | templates/csharp-list-controller |
 | **项目地图 / codebase** | ADR-025 / 026 | provider-neutral scoped mapping | Codex 本体 / codebase mapper / `codex exec` |
 | **新建工作区** | ADR-029 | workspace-bootstrap-guide | templates/bootstrap-workspace.sh · workspace-AGENTS.md.template |

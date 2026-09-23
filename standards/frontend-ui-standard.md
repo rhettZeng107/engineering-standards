@@ -46,7 +46,7 @@
 ```jsx
 <ListPage>
   <ListPage.Title title="..." subtitle="..." extra={<Space>...</Space>} />
-  <ListPage.Filters>{/* 仅常显业务分组，可选；字段筛选默认收在面板 */}</ListPage.Filters>
+  <ListPage.Filters>{/* 仅常显业务分组，可选；字段筛选不得放入页面流 */}</ListPage.Filters>
   <ListPage.Toolbar search={...} actions={...} />
   <ListPage.Table>
     <AutoHeightProTable ... />
@@ -60,11 +60,12 @@
 
 ## 3. 过滤组件 / Filter Components
 
-- **优先策略**：复用 ProTable 列声明中的 search 字段；V2 列表默认把表单收进独立筛选面板，页面顶部不常驻搜索条。
+- **优先策略**：复用 ProTable 列声明中的 search 字段；V2 列表默认把表单收进工具栏筛选按钮触发的弹层，页面顶部不常驻搜索条，点击筛选也不得把表单插入页面文档流。
 - **下拉**:`<Select allowClear placeholder showSearch optionFilterProp="label" loading options={[{value, label}]} />`
 - **级联**:多级联动通过 `useState` + `useMemo` + `setSearchXxx(v); tableRef.current?.reloadAndRest?.()`(典例:集团 → 公司 → 工厂)
 - **search 容器**:`search={{ labelWidth: "auto" }}` 标签宽度自适应
 - **列定义控制**:`order` 控筛选项显示顺序;非筛选列 `search: false`;`fieldProps` 传 `placeholder` 等 antd props
+- **弹层载体**：优先复用项目的 ProTable 筛选封装；SYSV2 MDM 的 `VFilterProTable` 为已落地参考。桌面使用定位到筛选按钮右下的 Popover/等价浮层，窄屏可改为受控全宽或底部弹层；查询后关闭，Esc/点击外部关闭且不误提交，焦点回到触发按钮。
 
 ## 4. 列表样式 / Table Style
 
@@ -74,6 +75,7 @@
 - **params**:全局上下文参数 `params={{ activeOrgCode }}`(从 `useOrgContext()` 拿)
 - **request 函数**：捕获并展示接口错误，保持失败态可重试；不得把失败伪装成 `{ data: [], success: true, total: 0 }`。真实空结果才返回成功的空数组。
 - **列定义结构**:`{ title, dataIndex, width, order, search, fieldProps, render }`
+- **同构集合**：服务范围、证照、关系、途经点、费率阶梯及单据明细等共享一套字段结构的多行记录，查看使用语义表格，维护使用 `EditableRecordTable`/等价可编辑表格；一个表头、一行一记录、操作列固定在右侧。禁止 `Form.List` 将每条记录渲染成重复卡片、分块表单或重复字段标签。
 
 ## 5. 工具栏 / Toolbar(字段列表四图标)
 
@@ -89,7 +91,7 @@ options={{
 
 - **必加中文注释**说明"为什么是 `() => []` 不是 `false`"(防 AI 误改回);详见 `docs/superpowers/specs/2026-05-04-protable-options-toolbar-icons/spec.md`
 - 顶部页头操作按钮(新增 / 导入 / 批量删除等)放 `<ListPage.Title extra>` 而非 `toolBarRender`
-- 有有效查询字段的列表，在原生三工具前放“筛选”小图标，默认关闭独立字段面板；条件数、清除全部、表头少数枚举快捷筛选须与服务端全集查询同步。桌面四工具均为 32×32px/约 14×14px 图形，触控视口至少 44×44px；结果数同排。单层同名面包屑不重复标题。详见 [`react-ui-guidelines.md`](react-ui-guidelines.md) §3–4。
+- 有有效查询字段的列表，在原生三工具前放“筛选”小图标，默认关闭筛选弹层；点击后弹层覆盖在工作面上，不增加列表纵向高度或推挤表格。条件数、清除全部、表头少数枚举快捷筛选须与服务端全集查询同步。桌面四工具均为 32×32px/约 14×14px 图形，触控视口至少 44×44px；结果数同排。单层同名面包屑不重复标题。详见 [`react-ui-guidelines.md`](react-ui-guidelines.md) §3–4。
 
 ## 6. 字段大小写 + 空值
 
@@ -109,7 +111,7 @@ options={{
 | 阻断/失败 | 证照过期、校验失败、不可用、已阻断 | 红 `error` |
 | 中性/历史 | 从未使用、已关闭、已归档、无业务风险的停用 | 灰 `default` |
 
-“关闭”与“未使用”不能仅凭字面标红或标绿；是否有业务风险由领域状态决定。不同状态维度应分列展示，例如业务占用、自动校验与最终资格不合并成一个颜色标签。具体布局和主题规则见 [`react-ui-guidelines.md`](react-ui-guidelines.md) §8 与 [`frontend-ui-v2-standard.md`](frontend-ui-v2-standard.md) §3。
+“关闭”与“未使用”不能仅凭字面标红或标绿；是否有业务风险由领域状态决定。不同状态维度应分列展示，例如业务占用、自动校验与最终资格不合并成一个颜色标签。具体布局和主题规则见 [`react-ui-guidelines.md`](react-ui-guidelines.md) §9 与 [`frontend-ui-v2-standard.md`](frontend-ui-v2-standard.md) §3。
 
 ## 8. 主题 / CSS 变量
 
@@ -252,6 +254,8 @@ SYS.3 当前 60 处 `PrivateProTableAutoHeight` 用法可在后续独立 spec `2
 ## 不变量(违反即 review reject)
 
 - ❌ 不用 `toolBarRender={false}`(会禁用原生三工具及当前列表的工具栏)
+- ❌ 字段筛选不得常驻页面或点击后以内联块推挤表格；必须由工具栏按钮打开弹层
+- ❌ 同构多行记录不得使用重复 Card、分块列表或 `Form.List + div/Flex` 逐行重复字段名；必须使用共享表头表格
 - ❌ 不 hardcode 颜色值(必须用 CSS 变量)
 - ❌ 不嵌套 `Card`/`Collapse` 等多层壳(用 `ListPage` 平铺)
 - ❌ 不直接用静态 `import { message } from "antd"`(用 `App.useApp()`)

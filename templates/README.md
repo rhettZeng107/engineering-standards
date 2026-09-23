@@ -14,6 +14,7 @@
 | `MEMORY.md.template` | 明确授权后可选的人工召回索引；非默认初始化产物 | 项目明确指定的文档位置，非 Codex 生成目录 |
 | `frontend-i18n-init.template.js` | React i18next 标准初始化(单 ns + cookie + zh-CN 强制 + useSuspense:false) | `<前端>/src/utils/i18n.js` |
 | `frontend-env-production.template` | Vite 前端 production 环境变量 | `<前端>/.env.production` |
+| `hooks/ui-v2-contract-guard.mjs` + `ui-v2-guard.config.example.json` | staged UI V2 结构门：筛选弹层、工具栏及同构多行表格的确定性反模式 | `<前端>/scripts/` 与仓根配置；项目按组件名收窄 |
 | `iis-web.config-spa-root.template.xml` | IIS SPA 主应用 web.config(含 inheritInChildApplications=false 防穿透) | `<前端>/public/web.config` |
 | `iis-web.config-spa-subapp.template.xml` | IIS SPA 子应用 web.config(wujie 子 VDir 用) | `<子应用前端>/public/web.config` |
 | `pipeline-pre-check.snippet.yml` | 尚未迁移仓的 ADO pipeline pre-check 历史片段 | `<项目>/azure-pipelines.yml` Stage 1 第 1 步 |

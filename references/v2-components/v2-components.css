@@ -133,22 +133,26 @@
   border-radius: 2px;
 }
 
-/* ========== InlineDetailTable 行内明细(EditableProTable 视觉层) ========== */
-.v2-inline-detail-table .ant-pro-table-list-toolbar {
+/* ========== EditableRecordTable 同构多行记录(EditableProTable 视觉层) ========== */
+.v2-inline-detail-table .ant-pro-table-list-toolbar,
+.v2-editable-record-table .ant-pro-table-list-toolbar {
   padding-block: 0 12px;
 }
-.v2-inline-detail-table .ant-table-thead > tr > th {
+.v2-inline-detail-table .ant-table-thead > tr > th,
+.v2-editable-record-table .ant-table-thead > tr > th {
   background: var(--v2-paper-2);
   color: var(--v2-muted);
   font-weight: 500;
   font-size: 12px;
   border-bottom: 1px solid var(--v2-line);
 }
-.v2-inline-detail-table .ant-table-tbody > tr > td {
+.v2-inline-detail-table .ant-table-tbody > tr > td,
+.v2-editable-record-table .ant-table-tbody > tr > td {
   border-bottom: 1px solid var(--v2-line-2);
 }
 /* 整宽虚线「+ 添加行」 */
-.v2-inline-detail-table .ant-btn.v2-inline-detail-table__add-btn {
+.v2-inline-detail-table .ant-btn.v2-inline-detail-table__add-btn,
+.v2-editable-record-table .ant-btn.v2-editable-record-table__add-btn {
   width: 100%;
   height: 38px;
   border: 1px dashed var(--v2-brand-line);
@@ -158,7 +162,8 @@
   font-weight: 500;
   transition: 0.15s var(--v2-ease);
 }
-.v2-inline-detail-table .ant-btn.v2-inline-detail-table__add-btn:hover {
+.v2-inline-detail-table .ant-btn.v2-inline-detail-table__add-btn:hover,
+.v2-editable-record-table .ant-btn.v2-editable-record-table__add-btn:hover {
   border-color: var(--v2-brand);
   background: var(--v2-brand-soft-2);
   color: var(--v2-brand);

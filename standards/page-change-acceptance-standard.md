@@ -60,17 +60,20 @@
 - 使用仓库 Playwright CLI headless 跑最小代表集；每个改动入口/关键页面为独立场景。
 - 字段变更至少证明：真实数据加载、真实 UI 提交、后端持久化、编辑或详情再次读取、缺失/非法/依赖失败中的一个适用反例。
 - 天然 `1:N` 的多物料业务单据发生明细字段或操作变化时，使用真实 UI 覆盖受影响的添加、编辑、删除及适用导入；保存后重新读取并核对明细数量、稳定标识和每行关键字段。仅一条明细、接口 200 或前端表格内存值不能证明多行契约完成。
+- 服务范围、证照、关系、途经点、费率阶梯、参数明细等其他同构多行集合执行相同门：共享表头表格维护，至少两条真实记录保存后回读数量、稳定标识、关键字段与顺序，并覆盖一个重复键、日期/区间重叠或非法值反例；重复卡片或分块表单不能通过静态门。
+- 列表筛选须从工具栏打开默认关闭的弹层，真实浏览器证明打开不推挤表格、查询后关闭并保留条件、重置/清除回第一页、Esc或点击外部不误提交且焦点返回触发按钮；只检查 `useState(false)` 或“筛选”文字不能证明符合。
 - 下拉证明数据源、搜索/分页、`value/label`、关联 ID、回填及上游清空/重选。
 - 页面断言业务主键、标题、关键字段、状态、关联对象及数量；扫描 `undefined/null/[object Object]/NaN/Invalid Date` 和裸 i18n key。
 - 有 staged-diff 指纹 guard 时，先 stage 最终相关文件，再由 guard 运行/记录证据；staged diff 变化后旧证据失效。
 
-可复用机械门位于 [`templates/hooks/page-change-e2e-guard.js`](../templates/hooks/page-change-e2e-guard.js)。项目接入时把它放在稳定路径，并让 `.git/hooks/pre-commit` 执行：
+可复用页面证据门位于 [`templates/hooks/page-change-e2e-guard.js`](../templates/hooks/page-change-e2e-guard.js)，结构门位于 [`templates/hooks/ui-v2-contract-guard.mjs`](../templates/hooks/ui-v2-contract-guard.mjs)。项目接入时把它们放在稳定路径，并让 `.git/hooks/pre-commit` 先执行 UI V2 结构门，再执行 staged 指纹证据门：
 
 ```bash
+node <guard-path>/ui-v2-contract-guard.mjs --staged
 node <guard-path>/page-change-e2e-guard.js check --repo-path <frontend-repo>
 ```
 
-验收人先 stage 最终相关文件，再通过 `record --repo-path ... -- <项目定向E2E命令>`生成本地证据。模板只验证“证据与 staged diff 同指纹且命令实际成功”，受影响入口清单及 E2E 命令仍由项目的影响映射和任务记录决定；禁止给模板硬编码某个业务仓账号、URL 或模块。
+验收人先 stage 最终相关文件，再通过 `record --repo-path ... -- <项目定向E2E命令>`生成本地证据。结构门只阻断可确定识别的内联筛选、禁用工具栏和同构记录重复块；项目通过配置登记共享组件名，例外指令必须带原因并进入任务记录审查。指纹模板只验证“证据与 staged diff 同指纹且命令实际成功”。两者都不能判断业务同构性、真实布局、保存回读或权限；受影响入口清单及 E2E 命令仍由项目的影响映射和任务记录决定，禁止给模板硬编码某个业务仓账号、URL 或模块。
 
 阻断条件：只有 API 200、页面打开、控件可见、测试替身、截图或 build 绿；未证明保存回读；入口之一未验；真实数据/账号/环境不可用但仍声称通过。
 

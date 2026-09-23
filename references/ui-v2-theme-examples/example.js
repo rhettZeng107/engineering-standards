@@ -28,9 +28,11 @@ if (listForm) {
   const count = document.getElementById('result-count');
   const filterButton = document.getElementById('filter-list');
   const filterCount = document.getElementById('filter-count');
-  const setPanelOpen = (open) => {
+  const setPanelOpen = (open, restoreFocus = true) => {
     listForm.hidden = !open;
     filterButton.setAttribute('aria-expanded', String(open));
+    if (open) requestAnimationFrame(() => document.getElementById('keyword').focus());
+    else if (restoreFocus) requestAnimationFrame(() => filterButton.focus());
   };
   const runQuery = () => {
     const data = new FormData(listForm);
@@ -49,11 +51,14 @@ if (listForm) {
     count.textContent = String(visible);
     document.getElementById('empty-row').hidden = visible !== 0;
   };
-  filterButton.addEventListener('click', () => setPanelOpen(listForm.hidden));
+  filterButton.addEventListener('click', () => setPanelOpen(listForm.hidden, false));
   document.getElementById('clear-filters').addEventListener('click', () => { listForm.reset(); runQuery(); });
   listForm.addEventListener('submit', (event) => { event.preventDefault(); runQuery(); setPanelOpen(false); });
   listForm.addEventListener('reset', () => requestAnimationFrame(runQuery));
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setPanelOpen(false); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !listForm.hidden) setPanelOpen(false); });
+  document.addEventListener('pointerdown', (event) => {
+    if (!listForm.hidden && !listForm.contains(event.target) && !filterButton.contains(event.target)) setPanelOpen(false);
+  });
   document.getElementById('refresh-list').addEventListener('click', runQuery);
   document.getElementById('density-list').addEventListener('click', (event) => {
     const panel = document.querySelector('.table-panel');

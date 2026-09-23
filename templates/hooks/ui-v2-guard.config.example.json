@@ -1,0 +1,7 @@
+{
+  "forbidRawProTable": true,
+  "listTableComponents": ["V2ListTable"],
+  "inlineFilterComponents": ["ListPageFilters"],
+  "filterOverlayComponents": ["ListFilterOverlay"],
+  "repeatedBlockTokens": ["Card", "SectionCard", "v2-detail-row", "form-list-row"]
+}
