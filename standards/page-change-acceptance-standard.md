@@ -61,12 +61,12 @@
 - 字段变更至少证明：真实数据加载、真实 UI 提交、后端持久化、编辑或详情再次读取、缺失/非法/依赖失败中的一个适用反例。
 - 天然 `1:N` 的多物料业务单据发生明细字段或操作变化时，使用真实 UI 覆盖受影响的添加、编辑、删除及适用导入；保存后重新读取并核对明细数量、稳定标识和每行关键字段。仅一条明细、接口 200 或前端表格内存值不能证明多行契约完成。
 - 服务范围、证照、关系、途经点、费率阶梯、参数明细等其他同构多行集合执行相同门：共享表头表格维护，至少两条真实记录保存后回读数量、稳定标识、关键字段与顺序，并覆盖一个重复键、日期/区间重叠或非法值反例；重复卡片或分块表单不能通过静态门。
-- 列表筛选须从工具栏打开默认关闭的弹层，真实浏览器证明打开不推挤表格、查询后关闭并保留条件、重置/清除回第一页、Esc或点击外部不误提交且焦点返回触发按钮；只检查 `useState(false)` 或“筛选”文字不能证明符合。
+- Atlas 默认列表的字段筛选从工具栏打开默认关闭的弹层，真实浏览器证明打开不推挤表格、查询后关闭并保留条件、重置/清除回第一页、Esc或点击外部不误提交且焦点返回触发按钮；项目批准其他布局时按其源图验收筛选位置及同等功能。只检查 `useState(false)` 或“筛选”文字不能证明符合。
 - 下拉证明数据源、搜索/分页、`value/label`、关联 ID、回填及上游清空/重选。
 - 页面断言业务主键、标题、关键字段、状态、关联对象及数量；扫描 `undefined/null/[object Object]/NaN/Invalid Date` 和裸 i18n key。
 - 有 staged-diff 指纹 guard 时，先 stage 最终相关文件，再由 guard 运行/记录证据；staged diff 变化后旧证据失效。
 
-可复用页面证据门位于 [`templates/hooks/page-change-e2e-guard.js`](../templates/hooks/page-change-e2e-guard.js)，结构门位于 [`templates/hooks/ui-v2-contract-guard.mjs`](../templates/hooks/ui-v2-contract-guard.mjs)。项目接入时把它们放在稳定路径，并让 `.git/hooks/pre-commit` 先执行 UI V2 结构门，再执行 staged 指纹证据门：
+可复用页面证据门位于 [`templates/hooks/page-change-e2e-guard.js`](../templates/hooks/page-change-e2e-guard.js)，Atlas 默认结构门位于 [`templates/hooks/ui-v2-contract-guard.mjs`](../templates/hooks/ui-v2-contract-guard.mjs)。项目选择接入机械门时放在稳定路径；批准的其他设计源与结构门冲突时不注册该门，改用源图对照与人工静态检查。适用的 staged 指纹证据门仍可独立执行：
 
 ```bash
 node <guard-path>/ui-v2-contract-guard.mjs --staged
@@ -116,5 +116,5 @@ L0 floor + affected modules + direct associated modules
 
 - 字段/DTO/消费者深度要求来自 [ADR-008](../decisions/ADR-008-end-to-end-8-checks.md)。
 - CI 影响面和分层执行来自 [CI/CD E2E 标准](cicd-e2e-in-pipeline-standard.md)及 ADR-045。
-- 页面结构和交互外观仍执行 [Frontend UI V2](frontend-ui-v2-standard.md)。
+- 页面结构和交互外观执行[已批准项目设计源与 Frontend UI V2 默认规则](frontend-ui-v2-standard.md)；有批准 HTML/设计稿时逐页对照该源，保留项目指定共享控件，不让冲突的通用结构 Hook 覆盖项目设计。
 - 本标准提供日常页面改动的轻量执行组合，不削弱鉴权、迁移、DB、生产和项目现场门。
