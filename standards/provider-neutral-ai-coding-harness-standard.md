@@ -64,6 +64,16 @@ The 2026-09-07 workflow pilot is governed by [ADR-039](../decisions/ADR-039-stan
 | Hooks/rules/CI | Enforce mechanical checks: secret scan, destructive command guard, pull-before-push, production write guard and migration verify; no mandatory independent-review receipt. |
 | Memory | Helps recall preferences and pitfalls; it is never the only source for required policy or current facts. |
 
+## Business Constraints During Implementation
+
+User decision, 2026-11-14: do not add extra prechecks, gates, or business interceptions while coding. Implement the agreed behavior with the basic constraints needed for correct data and the business flow.
+
+- Preserve confirmed rules such as valid references, organization and supplier scope, required fields, quantities, amounts, state transitions, and duplicate-submit consistency.
+- Do not invent additional eligibility checks, approvals, confirmations, prerequisite records, or submission blockers for speculative risk, audit convenience, future extensibility, or testing convenience.
+- Reuse existing checks only when their actual business purpose applies to the approved scope. A similar field or a rule in a reference system is not sufficient justification to copy its restriction.
+- If evidence reveals a necessary new restriction beyond the agreed contract, explain the concrete business problem and proposed behavior and obtain the user's decision before adding it.
+- Existing development verification and explicit authorization boundaries still apply; they must not become new product steps or extra user-facing blockers.
+
 ## Multi-Repo Preflight
 
 Standard, migration, cross-repo, DB, auth, production, deployment, and long-running tasks must start with a workspace preflight before edits:
